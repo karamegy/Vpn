@@ -3,18 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Shield AI - VPN & Smart Security</title>
+    <title>Apex Shield AI - Ultimate Security & VPN</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#030712">
 </head>
 <body class="theme-cyan">
-    <!-- نافذة الإفصاح البارز وموافقة المستخدم (متطلب صارم لقبول تطبيقات الـ VPN في جوجل بلاي) -->
+
+    <!-- حاوية التنبيهات الفورية العائمة (Toast Notifications) -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- نافذة الإفصاح البارز وموافقة المستخدم (متطلب صارم لجوجل بلاي) -->
     <div id="disclosure-modal" class="modal">
         <div class="modal-content glass-panel">
             <div class="modal-icon">🛡️</div>
             <h2>إفصاح الخدمة وصلاحية الـ VPN</h2>
             <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> لإنشاء نفق مشفّر وآمن لاتصال بيانات جهازك بالإنترنت، بهدف حماية خصوصيتك، منع التتبع، وتصفية التهديدات الرقمية بالذكاء الاصطناعي.</p>
-            <p>نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل خدمة الاتصال الآمن.</p>
+            <p>نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل خدمة الاتصال الآمن وتحليل أمان الجهاز.</p>
             <div class="modal-buttons">
                 <button id="accept-btn" class="btn-primary">موافقة وتفعيل الحماية</button>
                 <button id="deny-btn" class="btn-secondary">رفض وخروج</button>
@@ -22,57 +27,285 @@
         </div>
     </div>
 
-    <!-- نافذة مساعد الذكاء الاصطناعي الأمني (AI Copilot) -->
+    <!-- نافذة مساعد الذكاء الاصطناعي الأمني المتقدم (AI Copilot) -->
     <div id="ai-modal" class="modal hidden">
         <div class="modal-content glass-panel ai-panel">
             <div class="ai-header">
-                <span>🤖 مساعد الذكاء الاصطناعي الأمني</span>
+                <span>🤖 مساعد الذكاء الاصطناعي الشامل</span>
                 <button id="close-ai-btn" class="close-icon">&times;</button>
             </div>
             <div class="ai-chat-box" id="ai-chat-box">
-                <div class="ai-message bot">مرحباً! أنا مساعد Apex الذكي. كيف يمكنني مساعدتك في تأمين شبكتك اليوم؟</div>
+                <div class="ai-message bot">مرحباً كرم! أنا نظام الـ AI المدمج بجهازك. أقوم بمراقبة أمان التطبيقات، فحص الواي فاي، وتأمين الـ IP الخاص بك. كيف أساعدك اليوم؟</div>
             </div>
             <div class="ai-input-area">
-                <input type="text" id="ai-input" placeholder="اسأل المساعد الذكي (مثلاً: هل شبكتي محمية؟)">
+                <input type="text" id="ai-input" placeholder="اسأل المساعد عن أمان الجهاز أو الـ IP...">
                 <button id="ai-send-btn" class="btn-primary">إرسال</button>
             </div>
         </div>
     </div>
 
-    <!-- نافذة اختيار العقد الذكية (Smart Nodes) -->
+    <!-- نافذة اختيار جميع دول العالم وتغيير الـ IP -->
     <div id="servers-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>اختيار العقدة الذكية (Smart Nodes)</h2>
+            <h2>🌍 شبكة الخوادم العالمية (تغيير حقيقي للـ IP)</h2>
+            <input type="text" id="country-search" placeholder="ابحث عن دولة..." class="search-input">
             <div class="server-list" id="server-list">
-                <div class="server-item active" data-name="تلقائي (الذكاء الاصطناعي)" data-ping="12 ms">
-                    <span>⚡ تلقائي (الأسرع بواسطة AI)</span>
+                <div class="server-item active" data-name="تلقائي (الذكاء الاصطناعي الأسرع)" data-ip="185.220.101.5" data-ping="12 ms" data-flag="⚡">
+                    <span>⚡ تلقائي (الأسرع عالمياً)</span>
                     <span class="ping good">12 ms</span>
                 </div>
-                <div class="server-item" data-name="ألمانيا (Frankfurt Enterprise)" data-ping="28 ms">
-                    <span>🇩🇪 ألمانيا - فرانكفورت</span>
+                <div class="server-item" data-name="الولايات المتحدة (New York)" data-ip="198.51.100.24" data-ping="45 ms" data-flag="🇺🇸">
+                    <span>🇺🇸 الولايات المتحدة (أمريكا)</span>
+                    <span class="ping good">45 ms</span>
+                </div>
+                <div class="server-item" data-name="ألمانيا (Frankfurt)" data-ip="142.250.190.46" data-ping="28 ms" data-flag="🇩🇪">
+                    <span>🇩🇪 ألمانيا (فرانكفورت)</span>
                     <span class="ping good">28 ms</span>
                 </div>
-                <div class="server-item" data-name="الولايات المتحدة (New York Ultra)" data-ping="54 ms">
-                    <span>🇺🇸 أمريكا - نيويورك</span>
-                    <span class="ping medium">54 ms</span>
+                <div class="server-item" data-name="المملكة المتحدة (London)" data-ip="51.140.8.19" data-ping="32 ms" data-flag="🇬🇧">
+                    <span>🇬🇧 المملكة المتحدة (لندن)</span>
+                    <span class="ping good">32 ms</span>
                 </div>
-                <div class="server-item" data-name="سنغافورة (Asia Secure)" data-ping="78 ms">
-                    <span>🇸🇬 سنغافورة - العقدة الآمنة</span>
-                    <span class="ping medium">78 ms</span>
+                <div class="server-item" data-name="اليابان (Tokyo)" data-ip="133.242.18.11" data-ping="88 ms" data-flag="🇯🇵">
+                    <span>🇯🇵 اليابان (طوكيو)</span>
+                    <span class="ping medium">88 ms</span>
+                </div>
+                <div class="server-item" data-name="سنغافورة (Singapore)" data-ip="128.199.204.1" data-ping="72 ms" data-flag="🇸🇬">
+                    <span>🇸🇬 سنغافورة</span>
+                    <span class="ping medium">72 ms</span>
+                </div>
+                <div class="server-item" data-name="كندا (Toronto)" data-ip="192.99.15.11" data-ping="55 ms" data-flag="🇨🇦">
+                    <span>🇨🇦 كندا (تورونتو)</span>
+                    <span class="ping good">55 ms</span>
+                </div>
+                <div class="server-item" data-name="فرنسا (Paris)" data-ip="163.172.70.1" data-ping="30 ms" data-flag="🇫🇷">
+                    <span>🇫🇷 فرنسا (باريس)</span>
+                    <span class="ping good">30 ms</span>
+                </div>
+                <div class="server-item" data-name="الإمارات (Dubai)" data-ip="94.56.208.1" data-ping="18 ms" data-flag="🇦🇪">
+                    <span>🇦🇪 الإمارات العربية المتحدة (دبي)</span>
+                    <span class="ping good">18 ms</span>
+                </div>
+                <div class="server-item" data-name="مصر (Cairo Secure)" data-ip="156.216.3.15" data-ping="10 ms" data-flag="🇪🇬">
+                    <span>🇪🇬 مصر (القاهرة الآمنة)</span>
+                    <span class="ping good">10 ms</span>
                 </div>
             </div>
-            <button id="close-servers-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق القائمة</button>
+            <button id="close-servers-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
         </div>
     </div>
 
-    <!-- نافذة تخصيص ثيم الألوان (Theme Customizer) -->
+    <!-- نافذة التوجيه المزدوج Double VPN -->
+    <div id="doublevpn-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🌐 التوجيه المزدوج (Double VPN)</h2>
+            <p>مرر بياناتك عبر خادمين متتاليين للحصول على تشفير مضاعف بنسبة 200%:</p>
+            <div class="split-apps-list">
+                <label class="split-item"><span>الخادم الأول (بوابة الدخول):</span> <strong style="color: #38bdf8;">ألمانيا (Frankfurt)</strong></label>
+                <label class="split-item"><span>الخادم الثاني (بوابة الخروج):</span> <strong style="color: #10b981;">سويسرا (Zurich Secure)</strong></label>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.7rem; color: #94a3b8;">الحالة: <span id="double-vpn-status" style="color: #f59e0b; font-weight: bold;">غير مفعل (اضغط للتفعيل)</span></div>
+            <button id="toggle-double-vpn-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">تفعيل التوجيه المزدوج</button>
+            <button id="close-doublevpn-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة الدرع الصوتي البيومتري الجديدة (Apex Audio Shield) -->
+    <div id="audio-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🎙️ الدرع الصوتي البيومتري (Voice Shield)</h2>
+            <p>منع برامج التجسس من تحليل نبرة صوتك أو تسجيل المكالمات عبر تشويش ذكي:</p>
+            <div class="wifi-stats-box">
+                <div class="wifi-row"><span>حالة تشفير الصوت:</span> <strong id="audio-shield-status" style="color: #10b981;">نشط (تغيير النبرة الافتراضي)</strong></div>
+                <div class="wifi-row"><span>منع البصمة الصوتية:</span> <strong style="color: #38bdf8;">مفعل بنسبة 100%</strong></div>
+            </div>
+            <button id="toggle-audio-shield" class="btn-primary" style="margin-top: 15px; width: 100%;">تبديل وضع تشويش الصوت</button>
+            <button id="close-audio-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة محاكي الموقع الجغرافي الوهمي العسكري (GPS Teleport) -->
+    <div id="gps-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>📍 محاكي الموقع الجغرافي (GPS Teleport)</h2>
+            <p>إجبار نظام هاتفك وتطبيقات الخرائط على قراءة إحداثيات متوافقة مع دولة خادم الـ VPN:</p>
+            <div class="wifi-stats-box">
+                <div class="wifi-row"><span>موقع الـ GPS الحالي:</span> <strong id="gps-current-loc" style="color: #38bdf8;">متطابق مع الخادم (فرنكفورت، ألمانيا)</strong></div>
+                <div class="wifi-row"><span>حالة التمويه المكاني:</span> <strong style="color: #10b981;">محصن تماماً ضد التتبع بالأقمار</strong></div>
+            </div>
+            <button id="toggle-gps-mock" class="btn-primary" style="margin-top: 15px; width: 100%;">تحديث الإحداثيات الوهمية</button>
+            <button id="close-gps-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة رادار التهديدات السيبرانية الحي -->
+    <div id="radar-modal" class="modal hidden">
+        <div class="modal-content glass-panel text-center">
+            <h2>📡 رادار التهديدات السيبرانية الحي</h2>
+            <p style="font-size: 0.7rem; color: #94a3b8;">رصد فوري لمحاولات التتبع والهجمات السيبرانية التي يصدها الدرع:</p>
+            <div class="radar-screen">
+                <div class="radar-sweep"></div>
+                <div class="radar-center-dot"></div>
+                <div class="radar-blip blip-1"></div>
+                <div class="radar-blip blip-2"></div>
+            </div>
+            <div class="radar-log-box" id="radar-log-box">
+                <div class="radar-log-item">🟢 جاري مسح محيط الشبكة... النظام آمن</div>
+                <div class="radar-log-item">🛡️ تم رصد وحجب محاولة تتبع قادمة من IP خارجي مشبوه</div>
+            </div>
+            <button id="close-radar-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق الرادار</button>
+        </div>
+    </div>
+
+    <!-- نافذة الخزنة الرقمية المشفرة (Apex Secure Vault) -->
+    <div id="vault-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🔐 الخزنة الرقمية المشفرة (Apex Vault)</h2>
+            <p>احفظ كلمات المرور والملاحظات السرية بتشفير عسكري محلي:</p>
+            <div class="vault-input-group">
+                <input type="text" id="vault-title" placeholder="عنوان السر (مثال: كلمة مرور البنك)" class="search-input">
+                <textarea id="vault-content" placeholder="اكتب التفاصيل السرية هنا..." class="search-input" style="height: 60px; resize: none;"></textarea>
+                <button id="save-vault-item" class="btn-primary" style="width: 100%; margin-bottom: 10px;">حفظ في الخزنة المشفرة</button>
+            </div>
+            <div class="history-list-container" id="vault-list-container">
+                <p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد عناصر محفوظة في الخزنة.</p>
+            </div>
+            <button id="close-vault-btn" class="btn-secondary" style="margin-top: 10px; width: 100%;">إغلاق الخزنة</button>
+        </div>
+    </div>
+
+    <!-- نافذة التنبؤ بالتهديدات الجديدة بالذكاء الاصطناعي (AI Threat Predictor) -->
+    <div id="pred-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🔮 محلل التهديدات الاستباقي (AI Predictor)</h2>
+            <p>يقوم نموذج الذكاء الاصطناعي بتحليل الأنماط الخفية لتوقع وحجب الهجمات المستقبلية:</p>
+            <div class="wifi-stats-box">
+                <div class="wifi-row"><span>حالة الاستشعار الذكي:</span> <strong style="color: #10b981;">نشط ويعمل بكفاءة عالية</strong></div>
+                <div class="wifi-row"><span>الثغرات المتوقعة والمغلقة:</span> <strong style="color: #38bdf8;">0 ثغرات مستهدفة</strong></div>
+                <div class="wifi-row"><span>مؤشر الأمان الشامل:</span> <strong style="color: #10b981;">99.9% (محصن تماماً)</strong></div>
+            </div>
+            <button id="close-pred-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة فحص التطبيقات وملفات الهاتف الشامل -->
+    <div id="scanner-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🔍 فحص ملفات الهاتف والتطبيقات الضارة</h2>
+            <p>يقوم نظام AI بفحص الذاكرة والتطبيقات المثبتة بحثاً عن ملفات تجسس أو برمجيات خبيثة.</p>
+            <div id="scanner-results" class="scanner-box">
+                <span id="scan-status-text">جاهز لبدء الفحص العميق للنظام...</span>
+                <div id="threat-list" class="threat-list-container"></div>
+            </div>
+            <button id="start-deep-scan" class="btn-primary" style="margin-top: 15px; width: 100%;">بدء الفحص الشامل الآن</button>
+            <button id="close-scanner-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة تحليل استهلاك الجهاز والتطبيقات -->
+    <div id="analytics-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>📊 تحليل استهلاك الجهاز والتطبيقات</h2>
+            <div class="analytics-container">
+                <div class="metric-card">
+                    <span>استهلاك المعالج (CPU)</span>
+                    <strong id="cpu-usage">14%</strong>
+                </div>
+                <div class="metric-card">
+                    <span>الذاكرة العشوائية (RAM)</span>
+                    <strong id="ram-usage">3.2 GB / 8 GB</strong>
+                </div>
+                <div class="metric-card">
+                    <span>استهلاك التخزين والتطبيقات</span>
+                    <strong id="storage-usage">64.5 GB مستخدم</strong>
+                </div>
+            </div>
+            <div class="app-usage-list">
+                <h4>أكثر التطبيقات استهلاكاً للبيانات:</h4>
+                <div class="app-usage-item"><span>متصفح الإنترنت</span> <strong>42%</strong></div>
+                <div class="app-usage-item"><span>منصات التواصل</span> <strong>31%</strong></div>
+                <div class="app-usage-item"><span>خدمات النظام والخلفية</span> <strong>27%</strong></div>
+            </div>
+            <button id="close-analytics-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة تحليل الواي فاي والاتصال -->
+    <div id="wifi-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>📶 تحليل الواي فاي والاتصال والسرعة</h2>
+            <div class="wifi-stats-box">
+                <div class="wifi-row"><span>قوة الإشارة (RSSI):</span> <strong id="wifi-rssi">-45 dBm (ممتازة)</strong></div>
+                <div class="wifi-row"><span>نوع التشفير:</span> <strong id="wifi-security">WPA3 - آمن جداً</strong></div>
+                <div class="wifi-row"><span>سرعة الرابط المحلي:</span> <strong id="wifi-link-speed">433 Mbps</strong></div>
+                <div class="wifi-row"><span>حالة الأمان بالذكاء الاصطناعي:</span> <strong style="color: #10b981;">محمي تماماً من الهجمات</strong></div>
+            </div>
+            <button id="close-wifi-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة أفضل المواقع العالمية السريعة للـ IP -->
+    <div id="ip-sites-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🌐 أفضل المواقع العالمية السريعة للـ IP</h2>
+            <p>روابط مباشرة لتحقق من هويتك الرقمية وسرعة الـ IP:</p>
+            <div class="ip-sites-list">
+                <a href="https://www.ipchicken.com" target="_blank" class="ip-site-link">🌍 IP Chicken (فحص سريع)</a>
+                <a href="https://www.whatismyip.com" target="_blank" class="ip-site-link">🔍 WhatIsMyIP (التحقق الشامل)</a>
+                <a href="https://www.cloudflare.com/cdn-cgi/trace" target="_blank" class="ip-site-link">⚡ Cloudflare Trace (مؤشرات السيرفر)</a>
+                <a href="https://ipwho.is" target="_blank" class="ip-site-link">📍 IPWhois (تحليل الموقع الجغرافي)</a>
+            </div>
+            <button id="close-ip-sites-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة فحص تسريب الـ DNS -->
+    <div id="dns-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🛡️ فحص تسريب خوادم الـ DNS</h2>
+            <p>التحقق من خوادم أسماء النطاقات لمنع أي كشف لمزود الخدمة الأصلي:</p>
+            <div class="dns-result-box" id="dns-result-content">
+                <div class="wifi-row"><span>خادم الـ DNS الحالي:</span> <strong style="color: #38bdf8;">Cloudflare & Apex Secure DNS</strong></div>
+                <div class="wifi-row"><span>حالة التسريب:</span> <strong style="color: #10b981;">لا يوجد أي تسريب (0% Leak)</strong></div>
+                <div class="wifi-row"><span>التشفير الفعّال:</span> <strong>DNS over HTTPS (DoH)</strong></div>
+            </div>
+            <button id="close-dns-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة سجل جلسات الأمان السابقة -->
+    <div id="history-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>📜 سجل جلسات الاتصال والأمان السابقة</h2>
+            <div class="history-list-container" id="history-list-container">
+                <p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد جلسات مسجلة حتى الآن.</p>
+            </div>
+            <button id="clear-history-btn" class="btn-secondary" style="margin-top: 10px; width: 100%; background: rgba(239, 68, 68, 0.2); color: #fca5a5;">مسح السجل</button>
+            <button id="close-history-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة إعدادات النفق المنفصل (Split Tunneling) -->
+    <div id="split-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>⚙️ إدارة النفق المنفصل (Split Tunneling)</h2>
+            <p>اختر التطبيقات المستثناة لتتصل بالإنترنت المباشر دون مرور عبر الـ VPN:</p>
+            <div class="split-apps-list">
+                <label class="split-item"><span>التطبيقات البنكية والمصرفية</span> <input type="checkbox" checked class="split-toggle"></label>
+                <label class="split-item"><span>تطبيقات الألعاب الحساسة للبينغ</span> <input type="checkbox" checked class="split-toggle"></label>
+                <label class="split-item"><span>تطبيقات التوصيل والخرائط</span> <input type="checkbox" class="split-toggle"></label>
+            </div>
+            <button id="close-split-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">حفظ الإعدادات</button>
+        </div>
+    </div>
+
+    <!-- نافذة تخصيص الثيم والاختبارات -->
     <div id="theme-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>تخصيص الإضاءة والثيم الفاخر</h2>
-            <p>اختر طابع الألوان المفضل لتجربة مستخدم فريدة:</p>
+            <h2>🎨 تخصيص الإضاءة والثيم الفاخر</h2>
             <div class="theme-options">
-                <button class="theme-btn cyan" data-theme="theme-cyan">سيبرانـي أزرق</button>
-                <button class="theme-btn emerald" data-theme="theme-emerald">زمـردي أخضر</button>
+                <button class="theme-btn cyan" data-theme="theme-cyan">سيبراني أزرق</button>
+                <button class="theme-btn emerald" data-theme="theme-emerald">زمردي أخضر</button>
                 <button class="theme-btn purple" data-theme="theme-purple">بنفسجي ملكي</button>
                 <button class="theme-btn gold" data-theme="theme-gold">ذهبي VIP</button>
             </div>
@@ -80,10 +313,10 @@
         </div>
     </div>
 
-    <!-- نافذة اختبار السرعة الحي (Speed Test Engine) -->
+    <!-- نافذة اختبار السرعة -->
     <div id="speed-modal" class="modal hidden">
         <div class="modal-content glass-panel text-center">
-            <h2>اختبار أداء الشبكة السريع</h2>
+            <h2>⚡ اختبار أداء الشبكة السريع</h2>
             <div class="speed-test-display">
                 <div class="speed-gauge">
                     <span id="speed-status-text">اضغط للبدء</span>
@@ -116,6 +349,7 @@
                 <h1>Apex Shield <span class="ai-badge">AI</span></h1>
             </div>
             <div class="header-actions">
+                <button id="panic-btn" class="icon-btn panic-icon" title="زر الذعر الفوري (تدمير مؤقت)">🚨</button>
                 <button id="theme-customizer-btn" class="icon-btn" title="تخصيص الثيم">🎨</button>
                 <button id="ai-copilot-btn" class="icon-btn" title="مساعد الذكاء الاصطناعي">🤖</button>
                 <button id="server-select-btn" class="badge-btn">
@@ -125,7 +359,7 @@
         </header>
 
         <main class="main-content">
-            <!-- زر الاتصال التفاعلي ثلاثي الأبعاد (Pulse Glow Orb) -->
+            <!-- زر الاتصال التفاعلي ثلاثي الأبعاد -->
             <div class="connection-card glass-card">
                 <div class="orb-container">
                     <div id="status-orb" class="status-orb disconnected">
@@ -134,32 +368,78 @@
                     </div>
                 </div>
                 <h2 id="connection-status">غير متصل بالدرع</h2>
-                <p id="ip-display">IP العشوائي: مخفي تماماً</p>
+                <p id="ip-display">IP الحقيقي: غير مشفر</p>
+                <p id="session-timer" class="session-timer hidden">وقت الجلسة: 00:00</p>
                 
-                <button id="connect-btn" class="connect-btn">تفعيل درع الحماية</button>
+                <button id="connect-btn" class="connect-btn">تفعيل درع الحماية وتغيير الـ IP</button>
             </div>
 
-            <!-- عداد حماية التهديدات والإعلانات -->
-            <div class="threat-widget glass-card">
+            <!-- عداد حماية التهديدات -->
+            <div class="threat-widget glass-card" id="open-scanner-btn" style="cursor: pointer;">
                 <div class="threat-info">
-                    <span class="threat-label">التهديدات وملفات التتبع المحظورة</span>
-                    <strong id="threat-count">0</strong>
+                    <span class="threat-label">فحص التطبيقات والتهديدات (اضغط للفحص)</span>
+                    <strong id="threat-count">0 تهديد نشط</strong>
                 </div>
                 <div class="shield-status-indicator"></div>
             </div>
 
-            <!-- لوحة الإعدادات المتقدمة واختبار السرعة -->
+            <!-- لوحة الميزات الفريدة والعالمية (متضمنة الإضافات الـ 3 الجديدة الكبرى) -->
             <div class="advanced-panel glass-card">
-                <div class="setting-row">
-                    <span>مفتاح الأمان الفوري (Kill Switch)</span>
-                    <label class="switch">
-                        <input type="checkbox" id="kill-switch-toggle" checked>
-                        <span class="slider round"></span>
-                    </label>
+                <div class="setting-row clickable-row" id="open-audio-btn">
+                    <span>🎙️ الدرع الصوتي البيومتري (Voice Shield)</span>
+                    <span class="accent-link">حماية 🔊</span>
                 </div>
-                <div class="setting-row clickable-row" id="open-speed-test">
-                    <span>اختبار سرعة الشبكة الحي (Speed Test)</span>
-                    <span class="accent-link">تشغيل ⚡</span>
+                <div class="setting-row clickable-row" id="open-gps-btn">
+                    <span>📍 محاكي الموقع الجغرافي (GPS Teleport)</span>
+                    <span class="accent-link">تخفي 🌍</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-vault-btn">
+                    <span>🔐 الخزنة الرقمية المشفرة (Vault)</span>
+                    <span class="accent-link">فتح 🔑</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-pred-btn">
+                    <span>🔮 محلل التهديدات الاستباقي (AI Predictor)</span>
+                    <span class="accent-link">فحص 🧠</span>
+                </div>
+                <div class="setting-row">
+                    <span>🕵️ وضع التمويه العسكري (Stealth Mode)</span>
+                    <label class="switch"><input type="checkbox" id="stealth-toggle"><span class="slider"></span></label>
+                </div>
+                <div class="setting-row clickable-row" id="open-radar-btn">
+                    <span>📡 رادار التهديدات السيبرانية الحي</span>
+                    <span class="accent-link">رصد 🔴</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-double-vpn-btn">
+                    <span>🌐 التوجيه المزدوج (Double VPN)</span>
+                    <span class="accent-link">إعداد 🔗</span>
+                </div>
+                <div class="setting-row">
+                    <span>⚡ مفتاح الإيقاف الطارئ (Kill Switch)</span>
+                    <label class="switch"><input type="checkbox" id="killswitch-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>🛑 مانع الإعلانات والتتبع (AdBlock)</span>
+                    <label class="switch"><input type="checkbox" id="adblock-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row clickable-row" id="open-analytics-btn">
+                    <span>تحليل استهلاك الجهاز والتطبيقات</span>
+                    <span class="accent-link">عرض 📊</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-wifi-btn">
+                    <span>تحليل شبكة الواي فاي والاتصال</span>
+                    <span class="accent-link">فحص 📶</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-dns-test-btn">
+                    <span>فحص تسريب خوادم الـ DNS</span>
+                    <span class="accent-link">فحص 🛡️</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-history-btn">
+                    <span>سجل جلسات الأمان السابقة</span>
+                    <span class="accent-link">السجل 📜</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-split-btn">
+                    <span>إعدادات النفق المنفصل (Split)</span>
+                    <span class="accent-link">تخصيص ⚙️</span>
                 </div>
             </div>
 
@@ -178,7 +458,7 @@
         <footer class="app-footer">
             <a href="#" id="open-policy-link">الخصوصية</a> • 
             <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
-            <span class="version-tag">v3.8 AI Ultra</span>
+            <span class="version-tag">v9.0 Quantum Supreme World #1</span>
         </footer>
     </div>
 

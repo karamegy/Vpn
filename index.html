@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Shield AI - VPN & Smart Security</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="theme-cyan">
+    <!-- نافذة الإفصاح البارز وموافقة المستخدم (متطلب صارم لقبول تطبيقات الـ VPN في جوجل بلاي) -->
+    <div id="disclosure-modal" class="modal">
+        <div class="modal-content glass-panel">
+            <div class="modal-icon">🛡️</div>
+            <h2>إفصاح الخدمة وصلاحية الـ VPN</h2>
+            <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> لإنشاء نفق مشفّر وآمن لاتصال بيانات جهازك بالإنترنت، بهدف حماية خصوصيتك، منع التتبع، وتصفية التهديدات الرقمية بالذكاء الاصطناعي.</p>
+            <p>نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل خدمة الاتصال الآمن.</p>
+            <div class="modal-buttons">
+                <button id="accept-btn" class="btn-primary">موافقة وتفعيل الحماية</button>
+                <button id="deny-btn" class="btn-secondary">رفض وخروج</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة مساعد الذكاء الاصطناعي الأمني (AI Copilot) -->
+    <div id="ai-modal" class="modal hidden">
+        <div class="modal-content glass-panel ai-panel">
+            <div class="ai-header">
+                <span>🤖 مساعد الذكاء الاصطناعي الأمني</span>
+                <button id="close-ai-btn" class="close-icon">&times;</button>
+            </div>
+            <div class="ai-chat-box" id="ai-chat-box">
+                <div class="ai-message bot">مرحباً! أنا مساعد Apex الذكي. كيف يمكنني مساعدتك في تأمين شبكتك اليوم؟</div>
+            </div>
+            <div class="ai-input-area">
+                <input type="text" id="ai-input" placeholder="اسأل المساعد الذكي (مثلاً: هل شبكتي محمية؟)">
+                <button id="ai-send-btn" class="btn-primary">إرسال</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة اختيار العقد الذكية (Smart Nodes) -->
+    <div id="servers-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>اختيار العقدة الذكية (Smart Nodes)</h2>
+            <div class="server-list" id="server-list">
+                <div class="server-item active" data-name="تلقائي (الذكاء الاصطناعي)" data-ping="12 ms">
+                    <span>⚡ تلقائي (الأسرع بواسطة AI)</span>
+                    <span class="ping good">12 ms</span>
+                </div>
+                <div class="server-item" data-name="ألمانيا (Frankfurt Enterprise)" data-ping="28 ms">
+                    <span>🇩🇪 ألمانيا - فرانكفورت</span>
+                    <span class="ping good">28 ms</span>
+                </div>
+                <div class="server-item" data-name="الولايات المتحدة (New York Ultra)" data-ping="54 ms">
+                    <span>🇺🇸 أمريكا - نيويورك</span>
+                    <span class="ping medium">54 ms</span>
+                </div>
+                <div class="server-item" data-name="سنغافورة (Asia Secure)" data-ping="78 ms">
+                    <span>🇸🇬 سنغافورة - العقدة الآمنة</span>
+                    <span class="ping medium">78 ms</span>
+                </div>
+            </div>
+            <button id="close-servers-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق القائمة</button>
+        </div>
+    </div>
+
+    <!-- نافذة تخصيص ثيم الألوان (Theme Customizer) -->
+    <div id="theme-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>تخصيص الإضاءة والثيم الفاخر</h2>
+            <p>اختر طابع الألوان المفضل لتجربة مستخدم فريدة:</p>
+            <div class="theme-options">
+                <button class="theme-btn cyan" data-theme="theme-cyan">سيبرانـي أزرق</button>
+                <button class="theme-btn emerald" data-theme="theme-emerald">زمـردي أخضر</button>
+                <button class="theme-btn purple" data-theme="theme-purple">بنفسجي ملكي</button>
+                <button class="theme-btn gold" data-theme="theme-gold">ذهبي VIP</button>
+            </div>
+            <button id="close-theme-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة اختبار السرعة الحي (Speed Test Engine) -->
+    <div id="speed-modal" class="modal hidden">
+        <div class="modal-content glass-panel text-center">
+            <h2>اختبار أداء الشبكة السريع</h2>
+            <div class="speed-test-display">
+                <div class="speed-gauge">
+                    <span id="speed-status-text">اضغط للبدء</span>
+                    <strong id="live-ping-val">-- ms</strong>
+                </div>
+                <div class="speed-results-grid">
+                    <div><span>التحميل:</span> <strong id="test-dl">0.0 Mb/s</strong></div>
+                    <div><span>الرفع:</span> <strong id="test-ul">0.0 Mb/s</strong></div>
+                </div>
+            </div>
+            <button id="start-speed-test" class="btn-primary" style="margin-top: 15px; width: 100%;">بدء التشخيص الآن</button>
+            <button id="close-speed-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة سياسة الخصوصية -->
+    <div id="policy-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>سياسة الخصوصية والشفافية</h2>
+            <p>نحن نؤمن بأن الخصوصية حق أساسي. لا نقوم بجمع أو بيع بيانات التصفح، ويتم تشفير كافة البيانات عبر بروتوكولات عسكرية متقدمة.</p>
+            <button id="close-policy-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">فهمت</button>
+        </div>
+    </div>
+
+    <!-- واجهة التطبيق الرئيسية الفاخرة -->
+    <div class="app-container glass-panel">
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="ai-dot"></div>
+                <h1>Apex Shield <span class="ai-badge">AI</span></h1>
+            </div>
+            <div class="header-actions">
+                <button id="theme-customizer-btn" class="icon-btn" title="تخصيص الثيم">🎨</button>
+                <button id="ai-copilot-btn" class="icon-btn" title="مساعد الذكاء الاصطناعي">🤖</button>
+                <button id="server-select-btn" class="badge-btn">
+                    <span id="server-location" class="badge">🌐 تلقائي (AI)</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- زر الاتصال التفاعلي ثلاثي الأبعاد (Pulse Glow Orb) -->
+            <div class="connection-card glass-card">
+                <div class="orb-container">
+                    <div id="status-orb" class="status-orb disconnected">
+                        <div class="orb-ring"></div>
+                        <div class="orb-core">🛡️</div>
+                    </div>
+                </div>
+                <h2 id="connection-status">غير متصل بالدرع</h2>
+                <p id="ip-display">IP العشوائي: مخفي تماماً</p>
+                
+                <button id="connect-btn" class="connect-btn">تفعيل درع الحماية</button>
+            </div>
+
+            <!-- عداد حماية التهديدات والإعلانات -->
+            <div class="threat-widget glass-card">
+                <div class="threat-info">
+                    <span class="threat-label">التهديدات وملفات التتبع المحظورة</span>
+                    <strong id="threat-count">0</strong>
+                </div>
+                <div class="shield-status-indicator"></div>
+            </div>
+
+            <!-- لوحة الإعدادات المتقدمة واختبار السرعة -->
+            <div class="advanced-panel glass-card">
+                <div class="setting-row">
+                    <span>مفتاح الأمان الفوري (Kill Switch)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="kill-switch-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-row clickable-row" id="open-speed-test">
+                    <span>اختبار سرعة الشبكة الحي (Speed Test)</span>
+                    <span class="accent-link">تشغيل ⚡</span>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box glass-card">
+                    <span>التحميل المشفر</span>
+                    <strong id="download-speed">0.0 MB/s</strong>
+                </div>
+                <div class="stat-box glass-card">
+                    <span>الرفع الآمن</span>
+                    <strong id="upload-speed">0.0 MB/s</strong>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <a href="#" id="open-policy-link">الخصوصية</a> • 
+            <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
+            <span class="version-tag">v3.8 AI Ultra</span>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

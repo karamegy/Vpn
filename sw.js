@@ -1,11 +1,10 @@
-const CACHE_NAME = 'apex-shield-quantum-v12';
+const CACHE_NAME = 'apex-shield-quantum-v13';
 const assetsToCache = [
   './index.html',
   './style.css',
   './app.js',
-  './manifest.json'
-    './icon-512.png',
-  // يمكنك إضافة أيقونات أو صور أخرى هنا إن وجدت
+  './manifest.json',
+  './icon-512.png'
 ];
 
 // تثبيت ملفات التخزين المؤقت عند التحميل الأول
@@ -47,7 +46,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// إدارية إشعارات الهاتف ودعم التنبيهات في الخلفية
+// إدارة إشعارات الهاتف ودعم التنبيهات في الخلفية
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(

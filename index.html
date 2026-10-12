@@ -39,6 +39,34 @@
     <!-- حاوية التنبيهات الفورية العائمة (Toast Notifications) -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- نافذة التمويه الوهمي تحت الإكراه (Decoy Calculator Mode - الاختراع الأول) -->
+    <div id="decoy-modal" class="modal hidden" style="background: #0f172a; z-index: 99999;">
+        <div class="modal-content glass-panel text-center">
+            <h2>🧮 الآلة الحاسبة الذكية (النظام الآمن)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 15px;">أدخل الأرقام لإجراء العمليات الحسابية القياسية:</p>
+            <div style="background: #1e293b; padding: 15px; border-radius: 12px; font-size: 1.5rem; margin-bottom: 15px; color: #38bdf8;" id="decoy-screen">0</div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                <button class="btn-secondary decoy-key" data-val="7">7</button>
+                <button class="btn-secondary decoy-key" data-val="8">8</button>
+                <button class="btn-secondary decoy-key" data-val="9">9</button>
+                <button class="btn-primary decoy-key" data-val="+">+</button>
+                <button class="btn-secondary decoy-key" data-val="4">4</button>
+                <button class="btn-secondary decoy-key" data-val="5">5</button>
+                <button class="btn-secondary decoy-key" data-val="6">6</button>
+                <button class="btn-primary decoy-key" data-val="-">-</button>
+                <button class="btn-secondary decoy-key" data-val="1">1</button>
+                <button class="btn-secondary decoy-key" data-val="2">2</button>
+                <button class="btn-secondary decoy-key" data-val="3">3</button>
+                <button class="btn-primary decoy-key" data-val="*">×</button>
+                <button class="btn-secondary decoy-key" data-val="C">C</button>
+                <button class="btn-secondary decoy-key" data-val="0">0</button>
+                <button class="btn-secondary decoy-key" data-val="=">=</button>
+                <button class="btn-primary decoy-key" data-val="/">÷</button>
+            </div>
+            <button id="exit-decoy-btn" class="btn-secondary" style="margin-top: 15px; width: 100%; font-size: 0.7rem;">إغلاق الآلة الحاسبة</button>
+        </div>
+    </div>
+
     <!-- نافذة الإفصاح البارز وموافقة المستخدم (متطلب صارم لجوجل بلاي) -->
     <div id="disclosure-modal" class="modal">
         <div class="modal-content glass-panel">
@@ -70,7 +98,7 @@
         </div>
     </div>
 
-    <!-- نافذة مفاعل الدفاع العصبي الجماعي الموزع (Swarm Neural Defense - ابتكار عالمي جديد) -->
+    <!-- نافذة مفاعل الدفاع العصبي الجماعي الموزع (Swarm Neural Defense) -->
     <div id="swarm-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>🌐 مفاعل المناعة السيبرانية الجماعية (Swarm AI)</h2>
@@ -428,8 +456,20 @@
                 <div class="shield-status-indicator"></div>
             </div>
 
-            <!-- لوحة الميزات الفريدة والعالمية -->
+            <!-- لوحة الميزات الفريدة والاختراعات الاستخباراتية الجديدة -->
             <div class="advanced-panel glass-card">
+                <div class="setting-row">
+                    <span>🛡️ درع التوتر تحت الإكراه (Duress Reflex)</span>
+                    <label class="switch"><input type="checkbox" id="duress-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>🔊 مانع التتبع فوق الصوتي (Ultrasonic Jammer)</span>
+                    <label class="switch"><input type="checkbox" id="ultrasonic-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>⚡ بروتوكول الانفصال الحركي للمصادرة (G-Force)</span>
+                    <label class="switch"><input type="checkbox" id="gforce-toggle" checked><span class="slider"></span></label>
+                </div>
                 <div class="setting-row clickable-row" id="open-swarm-btn">
                     <span>🌐 مفاعل المناعة الجماعية (Swarm AI)</span>
                     <span class="accent-link" style="color: #38bdf8; font-weight: bold;">ابتكار 🧬</span>
@@ -511,7 +551,7 @@
         <footer class="app-footer">
             <a href="#" id="open-policy-link">الخصوصية</a> • 
             <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
-            <span class="version-tag">v12.0 Global Swarm Cloud-Sync Edition</span>
+            <span class="version-tag">v15.0 Ultimate Intelligence & Swarm Edition</span>
         </footer>
     </div>
 

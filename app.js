@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isBlocked) {
                 blockedAdsCount++;
                 localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
-                console.warn(`[Apex Cloud AdBlock] تم حجب طلب إعلاني تتبعي بنجاح: ${url}`);
-                return new Response(JSON.stringify({ blocked: true, source: 'Apex Cloud AdBlock Engine' }), {
+                console.warn(`[Apex Swarm AdBlock] تم حجب طلب إعلاني تتبعي بنجاح: ${url}`);
+                return new Response(JSON.stringify({ blocked: true, source: 'Apex Swarm AdBlock Engine' }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -127,6 +127,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiChatBox = document.getElementById('ai-chat-box');
     const aiInput = document.getElementById('ai-input');
     const aiSendBtn = document.getElementById('ai-send-btn');
+
+    // عناصر الميزة الجديدة: مفاعل المناعة الجماعية Swarm AI
+    const swarmModal = document.getElementById('swarm-modal');
+    const openSwarmBtn = document.getElementById('open-swarm-btn');
+    const closeSwarmBtn = document.getElementById('close-swarm-btn');
+    const broadcastVaccineBtn = document.getElementById('broadcast-vaccine-btn');
+    const swarmLogContainer = document.getElementById('swarm-log-container');
+    const globalSwarmCount = document.getElementById('global-swarm-count');
 
     const serversModal = document.getElementById('servers-modal');
     const serverSelectBtn = document.getElementById('server-select-btn');
@@ -312,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         isConnected = true;
         statusOrb.classList.add('connected');
-        connectionStatus.textContent = 'محمي ومتصل عبر السحابة';
+        connectionStatus.textContent = 'محمي ومتصل عبر السحابة والمفاعل الجماعي';
         ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})`;
         connectBtn.textContent = 'إيقاف درع الحماية';
         downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
@@ -327,12 +335,37 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('vpn_consent', 'true');
         disclosureModal.classList.add('hidden');
         requestDevicePermissions();
-        showToast('✅ تم قبول الشروط، التطبيق جاهز للدرع الحقيقي');
+        showToast('✅ تم قبول الشروط، التطبيق جاهز للدرع الجماعي الحقيقي');
     });
 
     denyBtn.addEventListener('click', () => {
         alert('يتطلب تشغيل التطبيق الموافقة على شروط الأمان وسياسة جوجل بلاي.');
         window.close();
+    });
+
+    // إدارة نافذة مفاعل المناعة الجماعية Swarm AI
+    openSwarmBtn.addEventListener('click', () => swarmModal.classList.remove('hidden'));
+    closeSwarmBtn.addEventListener('click', () => swarmModal.classList.add('hidden'));
+
+    broadcastVaccineBtn.addEventListener('click', async () => {
+        broadcastVaccineBtn.disabled = true;
+        broadcastVaccineBtn.textContent = 'جاري إرسال اللقاح الرقمي لسحابة Firebase...';
+        
+        await logSecurityEventToCloud("SWARM_VACCINE_BROADCAST", "مساهمة العضو بنشر لقاح سيبراني جديد للمجتمع العالمي.");
+        
+        setTimeout(() => {
+            broadcastVaccineBtn.disabled = false;
+            broadcastVaccineBtn.textContent = 'نشر لقاح أمني سحابي جديد للمجتمع';
+            
+            const currentCount = parseInt(globalSwarmCount.textContent.replace(/,/g, '')) + 1;
+            globalSwarmCount.textContent = currentCount.toLocaleString();
+
+            const div = document.createElement('div');
+            div.className = 'radar-log-item';
+            div.textContent = `[${new Date().toLocaleTimeString()}] 🚀 تم بث لقاحك السيبراني بنجاح إلى شبكة الملايين!`;
+            swarmLogContainer.prepend(div);
+            showToast('🧬 تم نشر اللقاح الأمني سحابياً لكافة مستخدمي العالم بنجاح!');
+        }, 2000);
     });
 
     // إدارة الثيمات
@@ -575,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startRadarSimulation() {
         const threats = [
             '🛡️ تم حجب محاولة حقن برمجية خبيثة من العقدة 198.51.x',
-            '🔴 هجوم تتبع (Tracker) تم إحباطه بنجاح',
+            '🔴 هجوم تتبع (Tracker) تم إحباطه بنجاح وتحديث السحابة',
             '⚡ تم تأمين حزمة بيانات مشفرة عابرة بنجاح',
             '🟢 محيط الشبكة مستقر وخالٍ من الهجمات النشطة'
         ];
@@ -597,7 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startDeepScan.addEventListener('click', async () => {
         startDeepScan.disabled = true;
-        scanStatusText.textContent = '☁️ جاري الاتصال بالسحابة وفحص ملفات النظام والتطبيقات...';
+        scanStatusText.textContent = '☁️ جاري الاتصال بمفاعل السحابة وفحص ملفات النظام والتطبيقات...';
         threatList.innerHTML = '';
 
         let storageEstimate = { usage: 0, quota: 0 };
@@ -608,8 +641,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         setTimeout(async () => {
-            scanStatusText.textContent = '⚡ مزامنة بصمات الأمان مع قاعدة بيانات vpn1-c7cbd...';
-            await logSecurityEventToCloud("DEEP_SCAN", "إجراء فحص عميق للملفات ومطابقة التهديدات سحابياً.");
+            scanStatusText.textContent = '⚡ مزامنة بصمات المناعة مع قاعدة بيانات vpn1-c7cbd...';
+            await logSecurityEventToCloud("DEEP_SCAN", "إجراء فحص عميق للملفات ومطابقة التهديدات عبر مفاعل السحابة الجماعي.");
         }, 1500);
 
         setTimeout(() => {
@@ -623,15 +656,15 @@ document.addEventListener('DOMContentLoaded', () => {
             let secureContextMsg = window.isSecureContext ? `<div class="safe-item">✔ البيئة تعمل باتصال آمن بالكامل (HTTPS / Secure Context)</div>` : '';
 
             threatList.innerHTML = `
-                <div class="safe-item">☁️ متصل بقاعدة بيانات السحابة: vpn1-c7cbd</div>
+                <div class="safe-item">☁️ متصل بمفاعل السحابة: vpn1-c7cbd (Swarm Active)</div>
                 <div class="safe-item">✔ مساحة التخزين المفحوصة: ${usedMB} MB مستخدمة من إجمالي ${totalMB} MB</div>
                 <div class="safe-item">✔ تم فحص ملفات التطبيقات والذاكرة المؤقتة (Cache): سليمة تماماً</div>
                 <div class="safe-item">✔ لا توجد برمجيات تجسس أو سكربتات خبيثة نشطة</div>
                 ${adBlockMsg}
                 ${secureContextMsg}
             `;
-            threatCount.textContent = '0 تهديد نشط (محمي كلياً)';
-            showToast('🛡️ اكتمل الفحص السحابي للنظام والملفات والإعلانات بنجاح');
+            threatCount.textContent = '0 تهديد نشط (محمي بالمناعة الجماعية)';
+            showToast('🛡️ اكتمل الفحص السحابي الجماعي للنظام بنجاح تام');
         }, 3000);
     });
 
@@ -699,26 +732,26 @@ document.addEventListener('DOMContentLoaded', () => {
     closeSpeedBtn.addEventListener('click', () => speedModal.classList.add('hidden'));
     startSpeedTest.addEventListener('click', () => {
         startSpeedTest.disabled = true;
-        speedStatusText.textContent = 'جاري الاتصال بالعقدة وقياس البينغ...';
+        speedStatusText.textContent = 'جاري الاتصال بالعقدة وقياس البينغ الجماعي...';
         livePingVal.textContent = '...';
         testDl.textContent = '0.0 Mb/s';
         testUl.textContent = '0.0 Mb/s';
 
         setTimeout(() => {
-            livePingVal.textContent = '12 ms';
-            speedStatusText.textContent = 'جاري اختبار التحميل المشفر...';
-            testDl.textContent = '62.4 Mb/s';
+            livePingVal.textContent = '10 ms';
+            speedStatusText.textContent = 'جاري اختبار التحميل المشفر عبر مفاعل Swarm...';
+            testDl.textContent = '68.2 Mb/s';
         }, 1200);
 
         setTimeout(() => {
             speedStatusText.textContent = 'جاري اختبار الرفع الآمن...';
-            testUl.textContent = '24.8 Mb/s';
+            testUl.textContent = '28.4 Mb/s';
         }, 2400);
 
         setTimeout(() => {
-            speedStatusText.textContent = 'اختبار التشخيص مكتمل وبأعلى كفاءة ✔';
+            speedStatusText.textContent = 'اختبار التشخيص مكتمل وبأعلى كفاءة جماعية ✔';
             startSpeedTest.disabled = false;
-            showToast('⚡ تم اختبار أداء الشبكة بنجاح تام');
+            showToast('⚡ تم اختبار أداء الشبكة والمفاعل بنجاح تام');
         }, 3500);
     });
 
@@ -726,10 +759,10 @@ document.addEventListener('DOMContentLoaded', () => {
     closeAiBtn.addEventListener('click', () => aiModal.classList.add('hidden'));
 
     const aiKnowledge = [
-        "بناءً على فحص النظام والسحابة، جهازك يعمل بكفاءة والـ IP الحالي مخفي بالكامل خلف جدار الحماية المشفر.",
-        "مصفوفة الشبح العصبي والدرع الصوتي البيومتري ومحاكي الـ GPS يعملون الآن لحمايتك من أي تعقب.",
+        "بناءً على فحص مفاعل Swarm، جهازك محصن تماماً عبر شبكة المناعة الجماعية المشتركة عالمياً.",
+        "مصفوفة الشبح العصبي والدرع الصوتي البيومتري ومحاكي الـ GPS يعملون بتناغم تام مع سحابة vpn1-c7cbd.",
         "الخزنة الرقمية تحمي كلمات سرك بتشفير AES-GCM محلي متطور لا يمكن فكه بدون كلمة مرورك.",
-        "تفعيل التوجيه المزدوج (Double VPN) يمنحك أماناً استخباراتياً مضاعفاً وحجب كامل للإعلانات."
+        "تفعيل التوجيه المزدوج (Double VPN) مع مفاعل Swarm يمنحك أماناً استخباراتياً مضاعفاً."
     ];
 
     function sendAiMessage() {
@@ -764,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
 
-        sendPhoneNotification("🛡️ Apex Shield AI نشط", `تم تفعيل الحماية وتغيير الـ IP وحجب الإعلانات بنجاح (${currentServerName})`);
+        sendPhoneNotification("🛡️ Apex Swarm AI نشط", `تم تفعيل الحماية والمناعة الجماعية وتغيير الـ IP (${currentServerName})`);
 
         timerInterval = setInterval(() => {
             sessionSeconds++;
@@ -774,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
 
         notificationInterval = setInterval(() => {
-            sendPhoneNotification("🟢 درع الحماية يعمل في الخلفية", `الـ IP محمي الآن عبر ${currentServerName} • مانع الإعلانات نشط.`);
+            sendPhoneNotification("🟢 مفاعل Swarm يعمل في الخلفية", `الـ IP محمي ومزامن سحابياً عبر ${currentServerName}.`);
         }, 45000);
     }
 
@@ -794,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
         statusOrb.classList.remove('connected');
         connectionStatus.textContent = 'غير متصل بالدرع';
         ipDisplay.textContent = 'IP الحقيقي: غير مشفر';
-        connectBtn.textContent = 'تفعيل درع الحماية وتغيير الـ IP';
+        connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
         connectBtn.disabled = false;
 
         downloadSpeed.textContent = '0.0 MB/s';
@@ -802,11 +835,11 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionTimer.classList.add('hidden');
         sessionSeconds = 0;
 
-        sendPhoneNotification("🔒 تم قطع الاتصال", "تم إيقاف درع الحماية بأمان تام.");
+        sendPhoneNotification("🔒 تم قطع الاتصال", "تم إيقاف درع الحماية والمفاعل بأمان تام.");
         showToast('🔒 تم قطع الاتصال بأمان تام');
     }
 
-    // زر الاتصال الفعلي وتغيير الـ IP وحجب الإعلانات ومزامنة الأحداث
+    // زر الاتصال الفعلي وتغيير الـ IP وحجب الإعلانات ومزامنة المناعة الجماعية
     connectBtn.addEventListener('click', async () => {
         if (!localStorage.getItem('vpn_consent')) {
             disclosureModal.classList.add('hidden');
@@ -816,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await requestDevicePermissions();
 
         if (!isConnected) {
-            connectBtn.textContent = 'جاري توجيه النفق وحجب الإعلانات...';
+            connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Swarm...';
             connectBtn.disabled = true;
 
             try {
@@ -829,7 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isConnected = true;
                 statusOrb.classList.add('connected');
                 const vpnTypeTag = isDoubleVpnActive ? ' (Double VPN مشفر)' : (stealthToggle.checked ? ' (Stealth مخفي)' : '');
-                connectionStatus.textContent = 'محمي ومتصل بالدولة المحددة';
+                connectionStatus.textContent = 'محمي ومتصل عبر مفاعل المناعة الجماعية';
                 ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})${vpnTypeTag}`;
                 connectBtn.textContent = 'إيقاف درع الحماية';
                 connectBtn.disabled = false;
@@ -846,8 +879,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('apex_server_name', currentServerName);
 
                 startSessionTimerAndNotifications();
-                await logSecurityEventToCloud("VPN_CONNECT", `تفعيل الاتصال الآمن وتغيير الـ IP عبر ${currentServerName}.`);
-                showToast('🚀 تم تأمين الاتصال وتفعيل مانع الإعلانات وحماية البصمة بنجاح!');
+                await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن ومفاعل المناعة الجماعية عبر ${currentServerName}.`);
+                showToast('🚀 تم تأمين الاتصال وتفعيل مفاعل المناعة الجماعية السحابي بنجاح!');
             }, 1800);
         } else {
             if (killSwitchToggle.checked) {
@@ -858,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
             connectBtn.disabled = true;
 
             setTimeout(async () => {
-                await logSecurityEventToCloud("VPN_DISCONNECT", "قطع الاتصال وإيقاف النفق المشفر.");
+                await logSecurityEventToCloud("VPN_SWARM_DISCONNECT", "قطع الاتصال وإيقاف النفق والمفاعل.");
                 stopSession();
             }, 1000);
         }

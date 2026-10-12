@@ -352,7 +352,7 @@ input:checked + .slider:before { transform: translateX(16px); }
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 190px; /* تم تعديل الارتفاع ليناسب الخيار الجديد بشكل مثالي */
+    max-height: 210px; /* تم زيادة الارتفاع قليلاً لتناسب جميع الخيارات والاختراعات الجديدة */
     overflow-y: auto;
 }
 .setting-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #cbd5e1; }
@@ -392,6 +392,13 @@ input:checked + .slider:before { transform: translateX(16px); }
 }
 .search-input:focus { outline: none; border-color: var(--accent-color); }
 
+.vault-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
 .server-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
 .server-item {
     background: rgba(3, 7, 18, 0.4); padding: 8px 10px; border-radius: 8px;
@@ -427,10 +434,6 @@ input:checked + .slider:before { transform: translateX(16px); }
 .wifi-stats-box { background: rgba(3, 7, 18, 0.4); padding: 10px; border-radius: 10px; font-size: 0.75rem; display: flex; flex-direction: column; gap: 6px; }
 .wifi-row { display: flex; justify-content: space-between; }
 .wifi-row strong { color: var(--accent-color); }
-
-.ip-sites-list { display: flex; flex-direction: column; gap: 6px; }
-.ip-site-link { display: block; background: rgba(3, 7, 18, 0.5); padding: 8px 10px; border-radius: 8px; color: var(--accent-color); text-decoration: none; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; }
-.ip-site-link:hover { background: rgba(255,255,255,0.1); }
 
 /* Theme Buttons & AI Chat */
 .theme-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }

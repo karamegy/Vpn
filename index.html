@@ -157,15 +157,16 @@
         </div>
     </div>
 
-    <!-- نافذة الخزنة الرقمية المشفرة (Apex Secure Vault) -->
+    <!-- نافذة الخزنة الرقمية المشفرة (Apex Secure Vault - AES-GCM) -->
     <div id="vault-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>🔐 الخزنة الرقمية المشفرة (Apex Vault)</h2>
-            <p>احفظ كلمات المرور والملاحظات السرية بتشفير عسكري محلي:</p>
+            <p>احفظ كلمات المرور والملاحظات السرية بتشفير عسكري محلي (AES-GCM):</p>
             <div class="vault-input-group">
+                <input type="password" id="vault-master-pass" placeholder="كلمة المرور الرئيسية (للتشفير وفك التشفير)" class="search-input">
                 <input type="text" id="vault-title" placeholder="عنوان السر (مثال: كلمة مرور البنك)" class="search-input">
                 <textarea id="vault-content" placeholder="اكتب التفاصيل السرية هنا..." class="search-input" style="height: 60px; resize: none;"></textarea>
-                <button id="save-vault-item" class="btn-primary" style="width: 100%; margin-bottom: 10px;">حفظ في الخزنة المشفرة</button>
+                <button id="save-vault-item" class="btn-primary" style="width: 100%; margin-bottom: 10px;">تشفير وحفظ في الخزنة</button>
             </div>
             <div class="history-list-container" id="vault-list-container">
                 <p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد عناصر محفوظة في الخزنة.</p>
@@ -458,7 +459,7 @@
         <footer class="app-footer">
             <a href="#" id="open-policy-link">الخصوصية</a> • 
             <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
-            <span class="version-tag">v9.2 Quantum Supreme Notification & Persistent Mode</span>
+            <span class="version-tag">v9.3 Quantum Supreme AES-GCM Vault Edition</span>
         </footer>
     </div>
 

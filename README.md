@@ -15,6 +15,12 @@
 
 ---
 
+## 🚀 Live Demo & Access
+
+* **🌐 Live Web Application (PWA):** [Try Apex Shield AI Now](https://karamegy.github.io/Vpn/index.html)
+
+---
+
 ## 🧬 Revolutionary Core Innovations
 
 Unlike conventional security apps, Apex Shield introduces groundbreaking features:
@@ -38,8 +44,9 @@ Unlike conventional security apps, Apex Shield introduces groundbreaking feature
 
 ---
 
-## 🚀 Getting Started & Deployment
+## 📦 Installation & Deployment
 
-1. Clone the repository:
-   ```bash
-   git clone [https://github.com/karamegy/vpn.git](https://github.com/karamegy/vpn.git)
+To clone and run this project locally:
+
+```bash
+git clone [https://github.com/karamegy/vpn.git](https://github.com/karamegy/vpn.git)

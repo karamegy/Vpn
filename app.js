@@ -590,7 +590,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.className = savedTheme;
 
     if (stealthToggle) {
-        stealthToggle.checked = localStorage.getItem('apex_stealth'] === 'true';
+        // تم تصحيح القوس المربع إلى قوس دائري هنا:
+        stealthToggle.checked = localStorage.getItem('apex_stealth') === 'true';
         stealthToggle.addEventListener('change', () => {
             localStorage.setItem('apex_stealth', stealthToggle.checked);
             showToast(stealthToggle.checked ? '🕵️ تم تفعيل وضع التمويه العسكري' : '🕵️ تم إيقاف وضع التمويه العسكري');

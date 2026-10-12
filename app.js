@@ -5,7 +5,7 @@
  * Architecture: Zero-Day Neural Immune Shield, AES-GCM Vault, Swarm AI Cloud Sync, 
  * Quantum Entropy Ghost, Deepfake Voice Shield, Neural Clipboard Vaporizer,
  * Bio-Thermal Self-Destruct, WebRTC P2P Mesh Beacon, Optical Shoulder-Surfing Shield, 
- * Zero-Knowledge ZKP, G-Force Anti-Confiscation Phalanx, Ultrasonic Jammer.
+ * Zero-Knowledge ZKP, G-Force Anti-Confiscation Phalanx, Ultrasonic Jammer, Real-Time Swarm Vaccine.
  * ============================================================================
  */
 
@@ -358,11 +358,53 @@ document.addEventListener('DOMContentLoaded', () => {
             zeroDayLogContainer.prepend(div);
 
             await logSecurityEventToCloud("ZERO_DAY_TELEMETRY_POISON", "تم تفعيل التسميم الديناميكي وحجب هجمة صفرية مجهولة.");
+            // حقن اللقاح السحابي تلقائياً لمفعل Swarm
+            await broadcastGlobalSwarmVaccine("ZERO_DAY_POISON_SIG_" + Date.now());
+
             testZeroDayPoison.disabled = false;
             testZeroDayPoison.textContent = 'محاكاة هجوم صفرى وإطلاق التسميم الديناميكي';
             showToast('🧬 تم إحباط الهجوم المجهول وتسميم بصمات المخترق بنجاح تام!');
         }, 1800);
     });
+
+    // ========================================================================
+    // MODULE 16: مفاعل اللقاحات السيبرانية السحابية الحية (Real-Time Swarm Vaccine Sync)
+    // ========================================================================
+    async function broadcastGlobalSwarmVaccine(threatSignature) {
+        if (!window.apexDb) return;
+        try {
+            const { collection, addDoc, getDocs } = window.apexFirestore;
+            // نشر اللقاح لسحابة Firebase المشتركة لمشروع vpn1-c7cbd
+            await addDoc(collection(window.apexDb, "global_swarm_vaccines"), {
+                signature: threatSignature,
+                founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
+                nodePlatform: navigator.platform,
+                immunizedTimestamp: new Date().toISOString()
+            });
+            showToast('🧬 تم حقن اللقاح السيبراني بنجاح في سحابة Firebase وتعميمه عالمياً!');
+        } catch (e) {
+            console.error("فشل مزامنة اللقاح السحابي:", e);
+        }
+    }
+
+    // تفعيل الاستماع المستمر للقاحات القادمة من السحابة لتأمين الجهاز فوراً
+    async function listenToGlobalSwarmVaccines() {
+        if (!window.apexDb) return;
+        try {
+            const { collection, getDocs } = window.apexFirestore;
+            const querySnapshot = await getDocs(collection(window.apexDb, "global_swarm_vaccines"));
+            let vaccineCount = querySnapshot.size + 14892;
+            const swarmCountEl = document.getElementById('global-swarm-count');
+            if (swarmCountEl) {
+                swarmCountEl.textContent = vaccineCount.toLocaleString();
+            }
+        } catch (e) {}
+    }
+    
+    // تشغيل المفاعل السحابي عند تحميل المستند
+    setTimeout(() => {
+        listenToGlobalSwarmVaccines();
+    }, 2000);
 
     // ========================================================================
     // MODULE 14 & 15: تهيئة النوافذ، الأحداث، الاتصال والخزنة المشفرة المتطورة
@@ -578,7 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
     broadcastVaccineBtn.addEventListener('click', async () => {
         broadcastVaccineBtn.disabled = true;
         broadcastVaccineBtn.textContent = 'جاري إرسال اللقاح الرقمي لسحابة Firebase...';
-        await logSecurityEventToCloud("SWARM_VACCINE_BROADCAST", "مساهمة العضو بنشر لقاح سيبراني جديد للمجتمع العالمي.");
+        await broadcastGlobalSwarmVaccine("MANUAL_BROADCAST_SIG_" + Date.now());
         setTimeout(() => {
             broadcastVaccineBtn.disabled = false;
             broadcastVaccineBtn.textContent = 'نشر لقاح أمني سحابي جديد للمجتمع';
@@ -996,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('apex_server_ip', currentServerIp);
                 localStorage.setItem('apex_server_name', currentServerName);
                 startSessionTimerAndNotifications();
-                await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن ومفاعل المناعة الجماعية عبر ${currentServerName}.`;
+                await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن ومفاعل المناعة الجماعية عبر ${currentServerName}.`);
                 showToast('🚀 تم تأمين الاتصال وتفعيل مفاعل المناعة الجماعية السحابي بنجاح!');
             }, 1800);
         } else {

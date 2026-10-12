@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if ("Notification" in window && Notification.permission !== "granted") {
             await Notification.requestPermission();
         }
-        // تفعيل Wake Lock لمنع السكون أثناء الجلسة الآمنة
         if ('wakeLock' in navigator) {
             try {
                 await navigator.wakeLock.request('screen');
@@ -127,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const vaultModal = document.getElementById('vault-modal');
     const openVaultBtn = document.getElementById('open-vault-btn');
     const closeVaultBtn = document.getElementById('close-vault-btn');
+    const vaultMasterPass = document.getElementById('vault-master-pass');
     const vaultTitle = document.getElementById('vault-title');
     const vaultContent = document.getElementById('vault-content');
     const saveVaultItem = document.getElementById('save-vault-item');
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => showToast('🛡️ يرجى قراءة إفصاح الخدمة لتفعيل الحماية الأمنية'), 1000);
     }
 
-    // استمرار الجلسة عند الخروج والعودة (Persistent Session Recovery)
+    // استمرار الجلسة عند الخروج والعودة
     const savedSessionActive = localStorage.getItem('apex_session_active') === 'true';
     if (savedSessionActive) {
         const savedStartTime = parseInt(localStorage.getItem('apex_session_start_time') || Date.now());
@@ -314,27 +314,100 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // الخزنة الرقمية المشفرة (Vault)
+    // ==========================================
+    // دوال التشفير العسكري AES-GCM للخزنة الرقمية
+    // ==========================================
+    async function getCryptoKey(masterPassword, salt) {
+        const enc = new TextEncoder();
+        const keyMaterial = await window.crypto.subtle.importKey(
+            "raw", 
+            enc.encode(masterPassword), 
+            { name: "PBKDF2" }, 
+            false, 
+            ["deriveKey"]
+        );
+        return await window.crypto.subtle.deriveKey(
+            { 
+                name: "PBKDF2", 
+                salt: salt, 
+                iterations: 100000, 
+                hash: "SHA-256" 
+            },
+            keyMaterial,
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["encrypt", "decrypt"]
+        );
+    }
+
+    async function encryptVaultItem(textData, masterPassword) {
+        const salt = window.crypto.getRandomValues(new Uint8Array(16));
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const key = await getCryptoKey(masterPassword, salt);
+        
+        const encoded = new TextEncoder().encode(textData);
+        const encryptedContent = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv }, 
+            key, 
+            encoded
+        );
+        
+        return {
+            data: Array.from(new Uint8Array(encryptedContent)),
+            salt: Array.from(salt),
+            iv: Array.from(iv)
+        };
+    }
+
+    async function decryptVaultItem(encryptedObj, masterPassword) {
+        try {
+            const salt = new Uint8Array(encryptedObj.salt);
+            const iv = new Uint8Array(encryptedObj.iv);
+            const data = new Uint8Array(encryptedObj.data);
+            
+            const key = await getCryptoKey(masterPassword, salt);
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: iv }, 
+                key, 
+                data
+            );
+            return new TextDecoder().decode(decrypted);
+        } catch (e) {
+            return null; // كلمة المرور خطأ أو بيانات تالفة
+        }
+    }
+
+    // إدارة الخزنة الرقمية المشفرة
     openVaultBtn.addEventListener('click', () => {
         renderVaultItems();
         vaultModal.classList.remove('hidden');
     });
     closeVaultBtn.addEventListener('click', () => vaultModal.classList.add('hidden'));
 
-    saveVaultItem.addEventListener('click', () => {
+    saveVaultItem.addEventListener('click', async () => {
+        const masterPass = vaultMasterPass.value.trim();
         const title = vaultTitle.value.trim();
         const content = vaultContent.value.trim();
-        if (!title || !content) {
-            showToast('⚠️ يرجى إدخال العنوان والمحتوى الحساس');
+        
+        if (!masterPass || !title || !content) {
+            showToast('⚠️ يرجى إدخال كلمة المرور الرئيسية، العنوان، والمحتوى');
             return;
         }
-        let vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
-        vault.unshift({ title, content, date: new Date().toLocaleDateString() });
-        localStorage.setItem('apex_vault_items', JSON.stringify(vault));
-        vaultTitle.value = '';
-        vaultContent.value = '';
-        renderVaultItems();
-        showToast('🔐 تم حفظ العنصر بنجاح في الخزنة المشفرة');
+
+        try {
+            const encryptedObj = await encryptVaultItem(content, masterPass);
+            let vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
+            vault.unshift({ title, encryptedObj, date: new Date().toLocaleDateString() });
+            localStorage.setItem('apex_vault_items', JSON.stringify(vault));
+            
+            vaultTitle.value = '';
+            vaultContent.value = '';
+            vaultMasterPass.value = '';
+            renderVaultItems();
+            showToast('🔐 تم تشفير وحفظ العنصر عسكرياً في الخزنة بنجاح');
+        } catch (err) {
+            showToast('❌ فشل تشفير العنصر');
+        }
     });
 
     function renderVaultItems() {
@@ -344,19 +417,36 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         vaultListContainer.innerHTML = '';
-        vault.forEach(item => {
+        vault.forEach((item, index) => {
             const div = document.createElement('div');
             div.className = 'history-item';
             div.innerHTML = `
                 <div>
                     <strong>🔒 ${item.title}</strong><br>
-                    <span style="color: #94a3b8; font-size: 0.65rem;">محتوى مشفر • ${item.date}</span>
+                    <span style="color: #94a3b8; font-size: 0.65rem;" id="vault-desc-${index}">محتوى مشفر (AES-GCM) • ${item.date}</span>
                 </div>
-                <span style="color: #38bdf8; font-weight: bold;">محمي</span>
+                <button class="btn-primary" style="padding: 4px 10px; font-size: 0.65rem;" onclick="window.decryptVaultEntry(${index})">فك التشفير</button>
             `;
             vaultListContainer.appendChild(div);
         });
     }
+
+    // دالة عامة لفك تشفير عنصر معين عند إدخال كلمة المرور الصحيحة
+    window.decryptVaultEntry = async function(index) {
+        const masterPass = prompt('أدخل كلمة المرور الرئيسية لفك تشفير هذا العنصر:');
+        if (!masterPass) return;
+
+        const vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
+        const item = vault[index];
+        if (!item) return;
+
+        const decryptedText = await decryptVaultItem(item.encryptedObj, masterPass);
+        if (decryptedText === null) {
+            alert('❌ كلمة المرور غير صحيحة أو فشل فك التشفير!');
+        } else {
+            alert(`🔓 المحتوى المفكوك (${item.title}):\n\n${decryptedText}`);
+        }
+    };
 
     openPredBtn.addEventListener('click', () => predModal.classList.remove('hidden'));
     closePredBtn.addEventListener('click', () => predModal.classList.add('hidden'));
@@ -506,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiKnowledge = [
         "بناءً على فحص النظام، جهازك يعمل بكفاءة والـ IP الحالي مخفي بالكامل خلف جدار الحماية المشفر.",
         "الدرع الصوتي البيومتري و محاكي الـ GPS يعملان الآن لحمايتك من أي تعقب جغرافي أو صوتي.",
-        "الخزنة الرقمية تحمي كلمات سرك بتشفير محلي متطور لا يمكن لأحد الوصول إليه.",
+        "الخزنة الرقمية تحمي كلمات سرك بتشفير AES-GCM محلي متطور لا يمكن فكه بدون كلمة مرورك.",
         "تفعيل التوجيه المزدوج (Double VPN) يمنحك أماناً استخباراتياً مضاعفاً."
     ];
 
@@ -542,7 +632,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
 
-        // إرسال إشعار فوري عند بدء الجلسة
         sendPhoneNotification("🛡️ Apex Shield AI نشط", `تم تفعيل الحماية وتغيير الـ IP بنجاح (${currentServerName})`);
 
         timerInterval = setInterval(() => {
@@ -552,7 +641,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
         }, 1000);
 
-        // إرسال إشعار دوري في شريط إشعارات الهاتف كل 45 ثانية لتأكيد استمرار الحماية
         notificationInterval = setInterval(() => {
             sendPhoneNotification("🟢 درع الحماية يعمل في الخلفية", `الـ IP محمي الآن عبر ${currentServerName} • الجلسة مستقرة.`);
         }, 45000);
@@ -620,7 +708,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionSeconds = 0;
                 sessionTimer.classList.remove('hidden');
 
-                // حفظ بيانات الجلسة للاستمرار عند الخروج
                 localStorage.setItem('apex_session_active', 'true');
                 localStorage.setItem('apex_session_start_time', Date.now());
                 localStorage.setItem('apex_server_ip', currentServerIp);

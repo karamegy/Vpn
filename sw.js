@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apex-shield-quantum-v10';
+const CACHE_NAME = 'apex-shield-quantum-v11';
 const assetsToCache = [
   './index.html',
   './style.css',

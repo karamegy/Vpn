@@ -1,0 +1,10 @@
+Keep this file and signing.keystore in a safe place. You'll need these files if you want to upload future versions of your PWA to the Google Play Store.
+
+Key store file: signing.keystore
+Key store password: 4lJYxW0AWqNn
+Key alias: my-key-alias
+Key password: 4lJYxW0AWqNn
+Signer's full name: Apex Shield Admin
+Signer's organization: Apex Shield AI - Ultimate Security & VPN
+Signer's organizational unit: Engineering
+Signer's country code: US

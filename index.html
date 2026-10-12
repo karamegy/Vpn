@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Shield AI - Ultimate Cloud-Sync Edition</title>
+    <title>Apex Shield AI - Global Swarm Cloud Edition</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#030712">
@@ -31,7 +31,7 @@
         // إتاحة قاعدة البيانات عالمياً لملف app.js
         window.apexDb = db;
         window.apexFirestore = { collection, addDoc, getDocs };
-        console.log("[Apex Cloud AI] متصل بنجاح بالسحابة المركزية للمشروع vpn1-c7cbd!");
+        console.log("[Apex Swarm AI] متصل بنجاح بالسحابة المركزية للمشروع vpn1-c7cbd!");
     </script>
 </head>
 <body class="theme-cyan">
@@ -43,9 +43,9 @@
     <div id="disclosure-modal" class="modal">
         <div class="modal-content glass-panel">
             <div class="modal-icon">🛡️</div>
-            <h2>إفصاح الخدمة وصلاحية الـ VPN</h2>
-            <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> لإنشاء نفق مشفّر وآمن لاتصال بيانات جهازك بالإنترنت، بهدف حماية خصوصيتك، منع التتبع، وتصفية التهديدات الرقمية بالذكاء الاصطناعي والمزامنة السحابية.</p>
-            <p>نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل خدمة الاتصال الآمن وتحليل أمان الجهاز.</p>
+            <h2>إفصاح الخدمة وصلاحية الـ VPN والمناعة الجماعية</h2>
+            <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> ومفاعل <strong>Swarm Neural Defense</strong> لإنشاء نفق مشفّر ومشاركة بصمات التهديدات أماناً عبر السحابة لحماية شبكتك العالمية.</p>
+            <p>نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل الاتصال الآمن والمناعة السيبرانية المشتركة.</p>
             <div class="modal-buttons">
                 <button id="accept-btn" class="btn-primary">موافقة وتفعيل الحماية</button>
                 <button id="deny-btn" class="btn-secondary">رفض وخروج</button>
@@ -61,12 +61,30 @@
                 <button id="close-ai-btn" class="close-icon">&times;</button>
             </div>
             <div class="ai-chat-box" id="ai-chat-box">
-                <div class="ai-message bot">مرحباً كرم! أنا نظام الـ AI المدمج ومراقب أمان جهازك. كيف أساعدك اليوم؟</div>
+                <div class="ai-message bot">مرحباً بك يا شريكنا كرم! أنا مساعد مفاعل Swarm الأمني. كيف أساعدك اليوم؟</div>
             </div>
             <div class="ai-input-area">
-                <input type="text" id="ai-input" placeholder="اسأل المساعد عن أمان الجهاز أو الـ IP...">
+                <input type="text" id="ai-input" placeholder="اسأل المساعد عن حالة المفاعل أو أمان الشبكة...">
                 <button id="ai-send-btn" class="btn-primary">إرسال</button>
             </div>
+        </div>
+    </div>
+
+    <!-- نافذة مفاعل الدفاع العصبي الجماعي الموزع (Swarm Neural Defense - ابتكار عالمي جديد) -->
+    <div id="swarm-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🌐 مفاعل المناعة السيبرانية الجماعية (Swarm AI)</h2>
+            <p>شبكة عصبية عالمية تربط ملايين الأجهزة عبر سحابة Firebase لتحصين هاتفك ضد أي هجمة تجسس يتم رصدها في أي مكان بالعالم:</p>
+            <div class="wifi-stats-box">
+                <div class="wifi-row"><span>حالة العقدة السحابية:</span> <strong style="color: #10b981;">متصل ومحمّل باللقاحات النشطة</strong></div>
+                <div class="wifi-row"><span>عدد التهديدات المُحبطة عالمياً:</span> <strong id="global-swarm-count" style="color: #38bdf8;">14,892 هجمة</strong></div>
+                <div class="wifi-row"><span>مزامنة البصمات مع السحابة:</span> <strong style="color: #10b981;">فورية (Real-Time Sync)</strong></div>
+            </div>
+            <div id="swarm-log-container" class="history-list-container" style="max-height: 120px; margin-top: 10px;">
+                <div class="radar-log-item">🧬 تم تحديث بصمة التمويه العصبية بناءً على بلاغ سحابي آمن.</div>
+            </div>
+            <button id="broadcast-vaccine-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">نشر لقاح أمني سحابي جديد للمجتمع</button>
+            <button id="close-swarm-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق المفاعل</button>
         </div>
     </div>
 
@@ -176,7 +194,7 @@
                 <div class="radar-blip blip-2"></div>
             </div>
             <div class="radar-log-box" id="radar-log-box">
-                <div class="radar-log-item">🟢 جاري مسح محيط الشبكة والسحابة... النظام آمن</div>
+                <div class="radar-log-item">🟢 جاري مسح محيط الشبكة والسحابة والمفاعل... النظام آمن</div>
                 <div class="radar-log-item">🛡️ تم رصد وحجب محاولة تتبع قادمة من IP خارجي مشبوه</div>
             </div>
             <button id="close-radar-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق الرادار</button>
@@ -373,7 +391,7 @@
         <header class="app-header">
             <div class="logo-area">
                 <div class="ai-dot"></div>
-                <h1>Apex Shield <span class="ai-badge">AI Cloud</span></h1>
+                <h1>Apex Shield <span class="ai-badge">Swarm Cloud</span></h1>
             </div>
             <div class="header-actions">
                 <button id="panic-btn" class="icon-btn panic-icon" title="زر الذعر الفوري (تدمير مؤقت)">🚨</button>
@@ -398,13 +416,13 @@
                 <p id="ip-display">IP الحقيقي: غير مشفر</p>
                 <p id="session-timer" class="session-timer hidden">وقت الجلسة: 00:00</p>
                 
-                <button id="connect-btn" class="connect-btn">تفعيل درع الحماية السحابي</button>
+                <button id="connect-btn" class="connect-btn">تفعيل درع الحماية والمناعة الجماعية</button>
             </div>
 
             <!-- عداد حماية التهديدات -->
             <div class="threat-widget glass-card" id="open-scanner-btn" style="cursor: pointer;">
                 <div class="threat-info">
-                    <span class="threat-label">الفحص السحابي الشامل (اضغط للفحص)</span>
+                    <span class="threat-label">الفحص السحابي الشامل والمناعة (اضغط للفحص)</span>
                     <strong id="threat-count">0 تهديد نشط</strong>
                 </div>
                 <div class="shield-status-indicator"></div>
@@ -412,6 +430,10 @@
 
             <!-- لوحة الميزات الفريدة والعالمية -->
             <div class="advanced-panel glass-card">
+                <div class="setting-row clickable-row" id="open-swarm-btn">
+                    <span>🌐 مفاعل المناعة الجماعية (Swarm AI)</span>
+                    <span class="accent-link" style="color: #38bdf8; font-weight: bold;">ابتكار 🧬</span>
+                </div>
                 <div class="setting-row clickable-row" id="open-audio-btn">
                     <span>🎙️ الدرع الصوتي البيومتري (Voice Shield)</span>
                     <span class="accent-link">حماية 🔊</span>
@@ -489,7 +511,7 @@
         <footer class="app-footer">
             <a href="#" id="open-policy-link">الخصوصية</a> • 
             <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
-            <span class="version-tag">v11.5 Autonomous Cloud-Sync Edition</span>
+            <span class="version-tag">v12.0 Global Swarm Cloud-Sync Edition</span>
         </footer>
     </div>
 

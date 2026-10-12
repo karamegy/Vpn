@@ -67,6 +67,24 @@
         </div>
     </div>
 
+    <!-- نافذة الاختراع العالمي الجديد: مصفوفة الحماية الذاتية للثغرات المجهولة (Zero-Day Neural Immune Shield) -->
+    <div id="zeroday-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🧬 مصفوفة الحماية الذاتية (Zero-Day Shield)</h2>
+            <p>درع استباقي يحلل الإنتروبيا المحلية ويسمم بيانات التتبع لمحاولات الاختراق المجهولة (Zero-Day) فوراً:</p>
+            <div class="wifi-stats-box">
+                <div class="wifi-row"><span>حالة الاستشعار الجيني:</span> <strong style="color: #10b981;">نشط ومحصن ضد الهجمات الصفرية</strong></div>
+                <div class="wifi-row"><span>عدد التهديدات المُسممة والمضللة:</span> <strong id="zeroday-counter" style="color: #38bdf8;">3 هجمة</strong></div>
+                <div class="wifi-row"><span>معدل الإنتروبيا العشوائية:</span> <strong style="color: #10b981;">متزن (99.8%)</strong></div>
+            </div>
+            <div id="zeroday-log-container" class="history-list-container" style="max-height: 120px; margin-top: 10px;">
+                <div class="radar-log-item">🧬 جاري مراقبة تدفق الحزم الحي وتسميم أي تتبع مجهول...</div>
+            </div>
+            <button id="test-zeroday-poison" class="btn-primary" style="margin-top: 15px; width: 100%;">محاكاة هجوم صفرى وإطلاق التسميم الديناميكي</button>
+            <button id="close-zeroday-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق المظلة</button>
+        </div>
+    </div>
+
     <!-- نافذة الإفصاح البارز وموافقة المستخدم (متطلب صارم لجوجل بلاي) -->
     <div id="disclosure-modal" class="modal">
         <div class="modal-content glass-panel">
@@ -458,6 +476,10 @@
 
             <!-- لوحة الميزات الفريدة والاختراعات الاستخباراتية الجديدة -->
             <div class="advanced-panel glass-card">
+                <div class="setting-row clickable-row" id="open-zeroday-btn">
+                    <span>🧬 مصفوفة الحماية الذاتية (Zero-Day Shield)</span>
+                    <span class="accent-link" style="color: #10b981; font-weight: bold;">اختراع عالمي 🛡️</span>
+                </div>
                 <div class="setting-row">
                     <span>🛡️ درع التوتر تحت الإكراه (Duress Reflex)</span>
                     <label class="switch"><input type="checkbox" id="duress-toggle" checked><span class="slider"></span></label>

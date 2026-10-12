@@ -1,17 +1,17 @@
 {
-  "name": "Apex Shield AI - VPN Security",
-  "short_name": "ApexShield",
-  "start_url": "index.html",
+  "name": "Apex Shield AI - Ultimate Security & VPN",
+  "short_name": "Apex Shield",
+  "description": "تطبيق الحماية الشاملة والـ VPN المدعوم بالذكاء الاصطناعي",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#030712",
-  "theme_color": "#38bdf8",
+  "theme_color": "#030712",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
     }
   ]
 }

@@ -17,6 +17,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3500);
     }
 
+    // إرسال إشعار لشريط إشعارات الهاتف
+    function sendPhoneNotification(title, body) {
+        if (!("Notification" in window)) return;
+        if (Notification.permission === "granted") {
+            try {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, {
+                        body: body,
+                        icon: 'favicon.ico',
+                        badge: 'favicon.ico',
+                        tag: 'apex-shield-active',
+                        renotify: true
+                    });
+                });
+            } catch (e) {
+                new Notification(title, { body: body });
+            }
+        }
+    }
+
+    // طلب إذن الإشعارات وصلاحيات الهاتف
+    async function requestDevicePermissions() {
+        if ("Notification" in window && Notification.permission !== "granted") {
+            await Notification.requestPermission();
+        }
+        // تفعيل Wake Lock لمنع السكون أثناء الجلسة الآمنة
+        if ('wakeLock' in navigator) {
+            try {
+                await navigator.wakeLock.request('screen');
+            } catch (err) {}
+        }
+    }
+
     const disclosureModal = document.getElementById('disclosure-modal');
     const acceptBtn = document.getElementById('accept-btn');
     const denyBtn = document.getElementById('deny-btn');
@@ -79,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openSplitBtn = document.getElementById('open-split-btn');
     const closeSplitBtn = document.getElementById('close-split-btn');
 
-    // عناصر الميزات الفريدة الجديدة الكبرى (الـ 3)
+    // الميزات الكبرى
     const radarModal = document.getElementById('radar-modal');
     const openRadarBtn = document.getElementById('open-radar-btn');
     const closeRadarBtn = document.getElementById('close-radar-btn');
@@ -116,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const gpsCurrentLoc = document.getElementById('gps-current-loc');
 
     const panicBtn = document.getElementById('panic-btn');
-
     const killSwitchToggle = document.getElementById('killswitch-toggle');
     const adBlockToggle = document.getElementById('adblock-toggle');
     const stealthToggle = document.getElementById('stealth-toggle');
@@ -143,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentServerName = 'تلقائي (الذكاء الاصطناعي)';
     let sessionSeconds = 0;
     let timerInterval = null;
+    let notificationInterval = null;
     let radarInterval = null;
 
     // استعادة الثيم المحفوظ
@@ -155,9 +188,33 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => showToast('🛡️ يرجى قراءة إفصاح الخدمة لتفعيل الحماية الأمنية'), 1000);
     }
 
+    // استمرار الجلسة عند الخروج والعودة (Persistent Session Recovery)
+    const savedSessionActive = localStorage.getItem('apex_session_active') === 'true';
+    if (savedSessionActive) {
+        const savedStartTime = parseInt(localStorage.getItem('apex_session_start_time') || Date.now());
+        const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
+        
+        currentServerName = localStorage.getItem('apex_server_name') || currentServerName;
+        currentServerIp = localStorage.getItem('apex_server_ip') || currentServerIp;
+        isDoubleVpnActive = localStorage.getItem('apex_double_vpn') === 'true';
+
+        isConnected = true;
+        statusOrb.classList.add('connected');
+        connectionStatus.textContent = 'محمي ومتصل بالدولة المحددة';
+        ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})`;
+        connectBtn.textContent = 'إيقاف درع الحماية';
+        downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
+        uploadSpeed.textContent = '9.2 MB/s';
+        sessionSeconds = elapsedSeconds;
+        sessionTimer.classList.remove('hidden');
+
+        startSessionTimerAndNotifications();
+    }
+
     acceptBtn.addEventListener('click', () => {
         localStorage.setItem('vpn_consent', 'true');
         disclosureModal.classList.add('hidden');
+        requestDevicePermissions();
         showToast('✅ تم قبول الشروط، التطبيق جاهز للدرع الحقيقي');
     });
 
@@ -179,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // إدارة اختيار الدول والـ IP
+    // اختيار الدول والـ IP
     serverSelectBtn.addEventListener('click', () => serversModal.classList.remove('hidden'));
     closeServersBtn.addEventListener('click', () => serversModal.classList.add('hidden'));
 
@@ -203,27 +260,20 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(`🌐 تم اختيار الخادم: ${currentServerName}`);
             if (isConnected) {
                 ipDisplay.textContent = `IP الحقيقي الجديد: ${currentServerIp} (محمي)`;
+                localStorage.setItem('apex_server_ip', currentServerIp);
+                localStorage.setItem('apex_server_name', currentServerName);
             }
         });
     });
 
-    // 1. زر الذعر الفوري (Panic Button)
+    // زر الذعر الفوري (Panic Button)
     panicBtn.addEventListener('click', () => {
-        isConnected = false;
-        statusOrb.classList.remove('connected');
-        connectionStatus.textContent = 'تم التفعيل الفوري للطوارئ!';
-        ipDisplay.textContent = 'تم مسح ذاكرة التخزين المؤقت وحجب النفق';
-        connectBtn.textContent = 'تفعيل درع الحماية وتغيير الـ IP';
-        connectBtn.disabled = false;
-        downloadSpeed.textContent = '0.0 MB/s';
-        uploadSpeed.textContent = '0.0 MB/s';
-        clearInterval(timerInterval);
-        sessionTimer.classList.add('hidden');
+        stopSession();
         localStorage.removeItem('apex_vault_items');
         showToast('🚨 تم تفعيل وضع الذعر: تم تدمير السجلات ومسح الخزنة مؤقتاً!');
     });
 
-    // 2. الدرع الصوتي البيومتري (Voice Shield)
+    // الدرع الصوتي البيومتري (Voice Shield)
     openAudioBtn.addEventListener('click', () => audioModal.classList.remove('hidden'));
     closeAudioBtn.addEventListener('click', () => audioModal.classList.add('hidden'));
     toggleAudioShield.addEventListener('click', () => {
@@ -233,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(isAudioShieldActive ? '🎙️ تم تشغيل الدرع الصوتي بنجاح' : '⚠️ تم إيقاف الدرع الصوتي');
     });
 
-    // 3. محاكي الموقع الجغرافي العسكري (GPS Teleport)
+    // محاكي الموقع الجغرافي العسكري (GPS Teleport)
     openGpsBtn.addEventListener('click', () => gpsModal.classList.remove('hidden'));
     closeGpsBtn.addEventListener('click', () => gpsModal.classList.add('hidden'));
     toggleGpsMock.addEventListener('click', () => {
@@ -248,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     toggleDoubleVpnBtn.addEventListener('click', () => {
         isDoubleVpnActive = !isDoubleVpnActive;
+        localStorage.setItem('apex_double_vpn', isDoubleVpnActive);
         if (isDoubleVpnActive) {
             doubleVpnStatus.textContent = 'مفعل بنجاح (ألمانيا ➔ سويسرا)';
             doubleVpnStatus.style.color = '#10b981';
@@ -274,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = vaultTitle.value.trim();
         const content = vaultContent.value.trim();
         if (!title || !content) {
-            showToast('⚠️ يرجى إدخال العنوان والمحتوى الحساس للفظ');
+            showToast('⚠️ يرجى إدخال العنوان والمحتوى الحساس');
             return;
         }
         let vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
@@ -307,11 +358,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // محلل التهديدات الاستباقي (AI Predictor)
     openPredBtn.addEventListener('click', () => predModal.classList.remove('hidden'));
     closePredBtn.addEventListener('click', () => predModal.classList.add('hidden'));
 
-    // رادار التهديدات السيبرانية الحي
     openRadarBtn.addEventListener('click', () => {
         radarModal.classList.remove('hidden');
         startRadarSimulation();
@@ -338,7 +387,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2500);
     }
 
-    // فحص ملفات الجهاز والتطبيقات
     openScannerBtn.addEventListener('click', () => scannerModal.classList.remove('hidden'));
     closeScannerBtn.addEventListener('click', () => scannerModal.classList.add('hidden'));
 
@@ -365,7 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     });
 
-    // النوافذ الأخرى
     openDnsTestBtn.addEventListener('click', () => dnsModal.classList.remove('hidden'));
     closeDnsBtn.addEventListener('click', () => dnsModal.classList.add('hidden'));
 
@@ -427,7 +474,6 @@ document.addEventListener('DOMContentLoaded', () => {
     openWifiBtn.addEventListener('click', () => wifiModal.classList.remove('hidden'));
     closeWifiBtn.addEventListener('click', () => wifiModal.classList.add('hidden'));
 
-    // اختبار السرعة الحي
     closeSpeedBtn.addEventListener('click', () => speedModal.classList.add('hidden'));
     startSpeedTest.addEventListener('click', () => {
         startSpeedTest.disabled = true;
@@ -454,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3500);
     });
 
-    // المساعد الذكي AI Copilot
     aiCopilotBtn.addEventListener('click', () => aiModal.classList.remove('hidden'));
     closeAiBtn.addEventListener('click', () => aiModal.classList.add('hidden'));
 
@@ -488,17 +533,67 @@ document.addEventListener('DOMContentLoaded', () => {
     aiSendBtn.addEventListener('click', sendAiMessage);
     aiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendAiMessage(); });
 
-    // السياسات والإفصاح
     openPolicyLink.addEventListener('click', (e) => { e.preventDefault(); policyModal.classList.remove('hidden'); });
     closePolicyBtn.addEventListener('click', () => policyModal.classList.add('hidden'));
     reopenDisclosureLink.addEventListener('click', (e) => { e.preventDefault(); disclosureModal.classList.remove('hidden'); });
 
-    // الاتصال الفعلي وتغيير الـ IP
+    // تشغيل عداد الوقت وإرسال إشعارات الهاتف الدورية
+    function startSessionTimerAndNotifications() {
+        if (timerInterval) clearInterval(timerInterval);
+        if (notificationInterval) clearInterval(notificationInterval);
+
+        // إرسال إشعار فوري عند بدء الجلسة
+        sendPhoneNotification("🛡️ Apex Shield AI نشط", `تم تفعيل الحماية وتغيير الـ IP بنجاح (${currentServerName})`);
+
+        timerInterval = setInterval(() => {
+            sessionSeconds++;
+            const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
+            const secs = String(sessionSeconds % 60).padStart(2, '0');
+            sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
+        }, 1000);
+
+        // إرسال إشعار دوري في شريط إشعارات الهاتف كل 45 ثانية لتأكيد استمرار الحماية
+        notificationInterval = setInterval(() => {
+            sendPhoneNotification("🟢 درع الحماية يعمل في الخلفية", `الـ IP محمي الآن عبر ${currentServerName} • الجلسة مستقرة.`);
+        }, 45000);
+    }
+
+    function stopSession() {
+        clearInterval(timerInterval);
+        clearInterval(notificationInterval);
+        localStorage.removeItem('apex_session_active');
+        localStorage.removeItem('apex_session_start_time');
+
+        const mins = Math.floor(sessionSeconds / 60);
+        const secs = sessionSeconds % 60;
+        const durationStr = `${mins} دقيقة و ${secs} ثانية`;
+        
+        saveSessionToHistory(durationStr, currentServerName, currentServerIp);
+
+        isConnected = false;
+        statusOrb.classList.remove('connected');
+        connectionStatus.textContent = 'غير متصل بالدرع';
+        ipDisplay.textContent = 'IP الحقيقي: غير مشفر';
+        connectBtn.textContent = 'تفعيل درع الحماية وتغيير الـ IP';
+        connectBtn.disabled = false;
+
+        downloadSpeed.textContent = '0.0 MB/s';
+        uploadSpeed.textContent = '0.0 MB/s';
+        sessionTimer.classList.add('hidden');
+        sessionSeconds = 0;
+
+        sendPhoneNotification("🔒 تم قطع الاتصال", "تم إيقاف درع الحماية بأمان تام.");
+        showToast('🔒 تم قطع الاتصال بأمان تام');
+    }
+
+    // زر الاتصال الفعلي وتغيير الـ IP
     connectBtn.addEventListener('click', async () => {
         if (!localStorage.getItem('vpn_consent')) {
             disclosureModal.classList.remove('hidden');
             return;
         }
+
+        await requestDevicePermissions();
 
         if (!isConnected) {
             connectBtn.textContent = 'جاري توجيه النفق وتغيير الـ IP...';
@@ -524,11 +619,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 sessionSeconds = 0;
                 sessionTimer.classList.remove('hidden');
-                timerInterval = setInterval(() => {
-                    sessionSeconds++;
-                }, 1000);
 
-                showToast(isGpsMockActive ? '📍 تم تفعيل محاكي الـ GPS والدرع الأمني بنجاح!' : '🚀 تم تأمين الاتصال وتغيير الـ IP بنجاح!');
+                // حفظ بيانات الجلسة للاستمرار عند الخروج
+                localStorage.setItem('apex_session_active', 'true');
+                localStorage.setItem('apex_session_start_time', Date.now());
+                localStorage.setItem('apex_server_ip', currentServerIp);
+                localStorage.setItem('apex_server_name', currentServerName);
+
+                startSessionTimerAndNotifications();
+                showToast('🚀 تم تأمين الاتصال وإرسال إشعار الحماية لهاتفك بنجاح!');
             }, 1800);
         } else {
             if (killSwitchToggle.checked) {
@@ -539,25 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
             connectBtn.disabled = true;
 
             setTimeout(() => {
-                const mins = Math.floor(sessionSeconds / 60);
-                const secs = sessionSeconds % 60;
-                const durationStr = `${mins} دقيقة و ${secs} ثانية`;
-                
-                saveSessionToHistory(durationStr, currentServerName, currentServerIp);
-
-                isConnected = false;
-                statusOrb.classList.remove('connected');
-                connectionStatus.textContent = 'غير متصل بالدرع';
-                ipDisplay.textContent = 'IP الحقيقي: غير مشفر';
-                connectBtn.textContent = 'تفعيل درع الحماية وتغيير الـ IP';
-                connectBtn.disabled = false;
-
-                downloadSpeed.textContent = '0.0 MB/s';
-                uploadSpeed.textContent = '0.0 MB/s';
-                clearInterval(timerInterval);
-                sessionTimer.classList.add('hidden');
-
-                showToast('🔒 تم قطع الاتصال بأمان تام عبر Kill Switch');
+                stopSession();
             }, 1000);
         }
     });

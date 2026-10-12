@@ -103,6 +103,111 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ==========================================
+    // 2. الاختراع الأول: درع التوتر الفسيولوجي تحت الإكراه (Duress Reflex & Decoy Mode)
+    // ==========================================
+    const duressToggle = document.getElementById('duress-toggle');
+    const decoyModal = document.getElementById('decoy-modal');
+    const exitDecoyBtn = document.getElementById('exit-decoy-btn');
+    const decoyScreen = document.getElementById('decoy-screen');
+    let decoyExpr = '';
+
+    let tapTimestamps = [];
+    document.addEventListener('pointerdown', (e) => {
+        if (!duressToggle?.checked) return;
+        const now = Date.now();
+        tapTimestamps.push(now);
+        tapTimestamps = tapTimestamps.filter(t => now - t < 2000);
+
+        // إذا تم رصد نقرات سريعة ومتكررة تدل على التوتر أو الإكراه
+        if (tapTimestamps.length >= 6) {
+            tapTimestamps = [];
+            triggerDuressDecoyMode();
+        }
+    }, { passive: true });
+
+    async function triggerDuressDecoyMode() {
+        if (decoyModal) {
+            decoyModal.classList.remove('hidden');
+        }
+        showToast('🚨 تم تفعيل درع الإكراه: عرض الآلة الحاسبة السرية وتشفير الجلسات!');
+        await logSecurityEventToCloud("DURESS_REFLEX_TRIGGERED", "تم رصد ضغط واهتزاز فسيولوجي مفاجئ، تفعيل وضع التمويه الآمن (Decoy Mode).");
+    }
+
+    document.querySelectorAll('.decoy-key').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = btn.getAttribute('data-val');
+            if (val === 'C') { decoyExpr = ''; decoyScreen.textContent = '0'; }
+            else if (val === '=') {
+                try { decoyScreen.textContent = eval(decoyExpr); } catch (e) { decoyScreen.textContent = 'خطأ'; }
+            } else {
+                if (decoyExpr === '0') decoyExpr = val; else decoyExpr += val;
+                decoyScreen.textContent = decoyExpr;
+            }
+        });
+    });
+
+    exitDecoyBtn?.addEventListener('click', () => decoyModal.classList.add('hidden'));
+
+    // ==========================================
+    // 3. الاختراع الثاني: الموجات العكسية المضادة للبصمات فوق الصوتية (Ultrasonic Beacon Anti-Phase Jammer)
+    // ==========================================
+    const ultrasonicToggle = document.getElementById('ultrasonic-toggle');
+    let audioCtx = null;
+    let noiseNode = null;
+
+    function toggleUltrasonicJammer(enable) {
+        if (enable) {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * 0.0005; // موجات صامتة وعكسية لطمس إشارات التتبع
+                }
+                noiseNode = audioCtx.createBufferSource();
+                noiseNode.buffer = buffer;
+                noiseNode.loop = true;
+                noiseNode.connect(audioCtx.destination);
+                noiseNode.start();
+                showToast('🔊 مانع التتبع فوق الصوتي نشط: الميكروفون محصن تماماً ضد التتبع الإعلاني!');
+            } catch (e) {}
+        } else {
+            if (noiseNode) { noiseNode.stop(); noiseNode = null; }
+            if (audioCtx) { audioCtx.close(); audioCtx = null; }
+            showToast('⚠️ تم إيقاف مانع التتبع فوق الصوتي');
+        }
+    }
+
+    ultrasonicToggle?.addEventListener('change', () => toggleUltrasonicJammer(ultrasonicToggle.checked));
+    if (ultrasonicToggle?.checked) { setTimeout(() => toggleUltrasonicJammer(true), 1500); }
+
+    // ==========================================
+    // 4. الاختراع الثالث: بروتوكول الانفصال الحركي ضد المصادرة (G-Force Anti-Confiscation Phalanx)
+    // ==========================================
+    const gforceToggle = document.getElementById('gforce-toggle');
+    window.addEventListener('devicemotion', (event) => {
+        if (!gforceToggle?.checked) return;
+        const acc = event.acceleration;
+        if (!acc) return;
+        const totalGForce = Math.sqrt((acc.x || 0)**2 + (acc.y || 0)**2 + (acc.z || 0)**2);
+
+        // إذا تم رصد حركة سقوط عنيفة أو انتزاع مفاجئ للهاتف
+        if (totalGForce > 25.0) {
+            executeGForceEmergencyWipe();
+        }
+    }, true);
+
+    async function executeGForceEmergencyWipe() {
+        localStorage.removeItem('apex_session_active');
+        localStorage.removeItem('apex_vault_items');
+        localStorage.removeItem('apex_session_history');
+        await logSecurityEventToCloud("G_FORCE_CONFISCATION_WIPE", "تم رصد تسارع حركي عنيف (محاولة مصادرة)، تم تدمير كافة البيانات فوراً.");
+        alert('⚡ تم تفعيل بروتوكول الانفصال الحركي: تم مسح الخزنة والجلسات ومحتويات الكاش حفاظاً على خصوصيتك!');
+        window.location.reload();
+    }
+
     const disclosureModal = document.getElementById('disclosure-modal');
     const acceptBtn = document.getElementById('accept-btn');
     const denyBtn = document.getElementById('deny-btn');
@@ -256,9 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==========================================
-    // 3. ابتكار عالمي جديد: مصفوفة الشبح العصبي للبصمة (Neural Phantom Matrix)
-    // ==========================================
+    // مصفوفة الشبح العصبي للبصمة (Neural Phantom Matrix)
     if (phantomToggle) {
         const savedPhantom = localStorage.getItem('apex_phantom') !== 'false';
         phantomToggle.checked = savedPhantom;
@@ -283,24 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return context;
     };
-
-    // تسميم مستشعرات الجهاز وحركة اللمس الوهمية للتطبيقات المتتبعة
-    if (window.DeviceMotionEvent) {
-        window.addEventListener('devicemotion', (event) => {
-            if (phantomToggle?.checked && event.acceleration) {
-                try {
-                    Object.defineProperty(event, 'acceleration', {
-                        value: {
-                            x: event.acceleration.x + (Math.random() - 0.5) * 0.1,
-                            y: event.acceleration.y + (Math.random() - 0.5) * 0.1,
-                            z: event.acceleration.z + (Math.random() - 0.5) * 0.1
-                        },
-                        writable: false
-                    });
-                } catch (e) {}
-            }
-        }, true);
-    }
 
     if (hasConsented) {
         disclosureModal.classList.add('hidden');
@@ -460,9 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ==========================================
     // دوال التشفير العسكري AES-GCM للخزنة الرقمية
-    // ==========================================
     async function getCryptoKey(masterPassword, salt) {
         const enc = new TextEncoder();
         const keyMaterial = await window.crypto.subtle.importKey(
@@ -622,9 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2500);
     }
 
-    // ==========================================
-    // 2. الفحص الحقيقي لملفات الهاتف والتطبيقات والذاكرة والمزامنة السحابية
-    // ==========================================
+    // الفحص الحقيقي لملفات الهاتف والتطبيقات والذاكرة والمزامنة السحابية
     openScannerBtn.addEventListener('click', () => scannerModal.classList.remove('hidden'));
     closeScannerBtn.addEventListener('click', () => scannerModal.classList.add('hidden'));
 

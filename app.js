@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * APEX SHIELD AI - GLOBAL SWARM CLOUD EDITION (ULTIMATE CORE ENGINE v15.6)
+ * APEX SHIELD AI - GLOBAL SWARM CLOUD EDITION (ULTIMATE CORE ENGINE v15.7)
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
  * Architecture: Zero-Day Neural Immune Shield, AES-GCM Vault, Swarm AI Cloud Sync, 
  * Quantum Entropy Ghost, Deepfake Voice Shield, Neural Clipboard Vaporizer,
@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 14 & 15: تهيئة النوافذ، الأحداث، الاتصال والخزنة المشفرة
+    // MODULE 14 & 15: تهيئة النوافذ، الأحداث، الاتصال والخزنة المشفرة المتطورة
     // ========================================================================
     const disclosureModal = document.getElementById('disclosure-modal');
     const acceptBtn = document.getElementById('accept-btn');
@@ -745,25 +745,45 @@ document.addEventListener('DOMContentLoaded', () => {
         vault.forEach((item, index) => {
             const div = document.createElement('div');
             div.className = 'history-item';
+            div.style.cssText = 'display: flex; flex-direction: column; gap: 8px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 12px; margin-bottom: 8px;';
             div.innerHTML = `
-                <div><strong>🔒 ${item.title}</strong><br><span style="color: #94a3b8; font-size: 0.65rem;">محتوى مشفر (AES-GCM) • ${item.date}</span></div>
-                <button class="btn-primary" style="padding: 4px 10px; font-size: 0.65rem;" onclick="window.decryptVaultEntry(${index})">فك التشفير</button>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><strong>🔒 ${item.title}</strong><br><span style="color: #94a3b8; font-size: 0.65rem;">محتوى مشفر (AES-GCM) • ${item.date}</span></div>
+                    <button class="btn-primary" style="padding: 6px 12px; font-size: 0.7rem; cursor: pointer;" onclick="window.decryptVaultEntry(${index})">فك التشفير 🔓</button>
+                </div>
+                <div id="decrypted-view-${index}" style="display: none; margin-top: 6px; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 6px; color: #34d399; font-size: 0.75rem; word-break: break-all;"></div>
             `;
             vaultListContainer.appendChild(div);
         });
     }
 
+    // نظام العرض الداخلي المتطور (بدون رسائل المتصفح المزعجة)
     window.decryptVaultEntry = async function(index) {
-        const masterPass = prompt('أدخل كلمة المرور الرئيسية لفك تشفير هذا العنصر:');
+        const masterPass = prompt('أدخل كلمة المرور الرئيسية لفك تشفير هذا العنصر الآمن:');
         if (!masterPass) return;
+        
         const vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
         const item = vault[index];
         if (!item) return;
+
         const decryptedText = await decryptVaultItem(item.encryptedObj, masterPass);
+        const viewContainer = document.getElementById(`decrypted-view-${index}`);
+        
+        if (!viewContainer) return;
+
         if (decryptedText === null) {
-            alert('❌ كلمة المرور غير صحيحة أو فشل فك التشفير!');
+            showToast('❌ كلمة المرور غير صحيحة أو فشل فك التشفير!');
+            viewContainer.style.display = 'none';
         } else {
-            alert(`🔓 المحتوى المفكوك (${item.title}):\n\n${decryptedText}`);
+            viewContainer.style.display = 'block';
+            viewContainer.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-weight: bold; color: #6ee7b7;">✨ المحتوى المفكوك (${item.title}):</span>
+                    <button style="background: #10b981; color: #fff; border: none; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;" onclick="navigator.clipboard.writeText('${decryptedText.replace(/'/g, "\\'")}'); alert('تم نسخ المحتوى الحساس بنجاح!');">📋 نسخ</button>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; font-family: monospace;">${decryptedText}</div>
+            `;
+            showToast('🔓 تم فك تشفير المحتوى وعرضه داخل التطبيق بأمان تام!');
         }
     };
 
@@ -976,7 +996,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('apex_server_ip', currentServerIp);
                 localStorage.setItem('apex_server_name', currentServerName);
                 startSessionTimerAndNotifications();
-                await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن ومفاعل المناعة الجماعية عبر ${currentServerName}.`);
+                await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن ومفاعل المناعة الجماعية عبر ${currentServerName}.`;
                 showToast('🚀 تم تأمين الاتصال وتفعيل مفاعل المناعة الجماعية السحابي بنجاح!');
             }, 1800);
         } else {

@@ -1,10 +1,11 @@
-const CACHE_NAME = 'apex-shield-quantum-v14';
+const CACHE_NAME = 'apex-shield-quantum-v15';
 const assetsToCache = [
-  './index.html',
-  './style.css',
-  './app.js',
-  './manifest.json',
-  './icon-512.png'
+  '/Vpn/',
+  '/Vpn/index.html',
+  '/Vpn/style.css',
+  '/Vpn/app.js',
+  '/Vpn/manifest.json',
+  '/Vpn/icon-512.png'
 ];
 
 // تثبيت ملفات التخزين المؤقت عند التحميل الأول
@@ -39,7 +40,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request).catch(() => {
         if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
+          return caches.match('/Vpn/index.html');
         }
       });
     })
@@ -50,6 +51,6 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('./index.html')
+    clients.openWindow('/Vpn/index.html')
   );
 });

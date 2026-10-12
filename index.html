@@ -107,7 +107,7 @@
                 <button id="close-ai-btn" class="close-icon">&times;</button>
             </div>
             <div class="ai-chat-box" id="ai-chat-box">
-                <div class="ai-message bot">مرحباً بك يا شريكنا كرم! أنا مساعد مفاعل Swarm الأمني. كيف أساعدك اليوم؟</div>
+                <div class="ai-message bot">مرحباً بك يا مؤسسنا العبقري كرم حمدي! أنا مساعد مفاعل Swarm الأمني. كيف أساعدك اليوم؟</div>
             </div>
             <div class="ai-input-area">
                 <input type="text" id="ai-input" placeholder="اسأل المساعد عن حالة المفاعل أو أمان الشبكة...">
@@ -335,21 +335,6 @@
         </div>
     </div>
 
-    <!-- نافذة أفضل المواقع العالمية السريعة للـ IP -->
-    <div id="ip-sites-modal" class="modal hidden">
-        <div class="modal-content glass-panel">
-            <h2>🌐 أفضل المواقع العالمية السريعة للـ IP</h2>
-            <p>روابط مباشرة لتحقق من هويتك الرقمية وسرعة الـ IP:</p>
-            <div class="ip-sites-list">
-                <a href="https://www.ipchicken.com" target="_blank" class="ip-site-link">🌍 IP Chicken (فحص سريع)</a>
-                <a href="https://www.whatismyip.com" target="_blank" class="ip-site-link">🔍 WhatIsMyIP (التحقق الشامل)</a>
-                <a href="https://www.cloudflare.com/cdn-cgi/trace" target="_blank" class="ip-site-link">⚡ Cloudflare Trace (مؤشرات السيرفر)</a>
-                <a href="https://ipwho.is" target="_blank" class="ip-site-link">📍 IPWhois (تحليل الموقع الجغرافي)</a>
-            </div>
-            <button id="close-ip-sites-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
-        </div>
-    </div>
-
     <!-- نافذة فحص تسريب الـ DNS -->
     <div id="dns-modal" class="modal hidden">
         <div class="modal-content glass-panel">
@@ -476,7 +461,25 @@
 
             <!-- لوحة الميزات الفريدة والاختراعات الاستخباراتية -->
             <div class="advanced-panel glass-card">
-                <!-- أزرار الاختراعات الثلاثة الجديدة كلياً -->
+                <!-- الاختراعات الأربعة الجديدة كلياً -->
+                <div class="setting-row">
+                    <span>🔥 درع الانصهار الحراري والتدمير الحيوي (Bio-Thermal)</span>
+                    <label class="switch"><input type="checkbox" id="bio-thermal-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>🌐 شبكة التخفي اللامركزية بلا إنترنت (Mesh P2P)</span>
+                    <label class="switch"><input type="checkbox" id="mesh-beacon-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>👁️ درع التجسس البصري الجانبي (Shoulder-Surfing)</span>
+                    <label class="switch"><input type="checkbox" id="shoulder-surfing-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>⚛️ إثبات المعرفة المعدومة للعتاد والسحابة (ZKP)</span>
+                    <label class="switch"><input type="checkbox" id="zkp-proof-toggle" checked><span class="slider"></span></label>
+                </div>
+
+                <!-- الاختراعات السابقة والأساسية -->
                 <div class="setting-row">
                     <span>👻 درع الإنتروبيا الكمومية (Quantum Ghost)</span>
                     <label class="switch"><input type="checkbox" id="quantum-ghost-toggle" checked><span class="slider"></span></label>
@@ -489,8 +492,6 @@
                     <span>🧬 مبخر الذاكرة العصبية للحافظة (Clipboard Vaporizer)</span>
                     <label class="switch"><input type="checkbox" id="clipboard-vaporizer-toggle" checked><span class="slider"></span></label>
                 </div>
-
-                <!-- الاختراعات السابقة -->
                 <div class="setting-row clickable-row" id="open-zeroday-btn">
                     <span>🧬 مصفوفة الحماية الذاتية (Zero-Day Shield)</span>
                     <span class="accent-link" style="color: #10b981; font-weight: bold;">اختراع عالمي 🛡️</span>
@@ -588,7 +589,7 @@
         <footer class="app-footer">
             <a href="#" id="open-policy-link">الخصوصية</a> • 
             <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
-            <span class="version-tag">v15.5 Quantum & Deepfake Armor Edition</span>
+            <span class="version-tag">v15.6 Ultimate Global Security Edition</span>
         </footer>
     </div>
 

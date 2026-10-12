@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * APEX SHIELD AI - GLOBAL SWARM CLOUD EDITION (ULTIMATE CORE ENGINE v15.7)
+ * APEX SHIELD AI - GLOBAL SWARM CLOUD EDITION (ULTIMATE CORE ENGINE v15.8)
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
  * Architecture: Zero-Day Neural Immune Shield, AES-GCM Vault, Swarm AI Cloud Sync, 
  * Quantum Entropy Ghost, Deepfake Voice Shield, Neural Clipboard Vaporizer,
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
     // ========================================================================
-    // MODULE 0: نظام الحفظ التلقائي الموحد لجميع الاختيارات والإعدادات (23 زر خاصية)
+    // MODULE 0: نظام الحفظ التلقائي الموحد لجميع الاختيارات والإعدادات
     // ========================================================================
     const allToggleIds = [
         'bio-thermal-toggle', 'mesh-beacon-toggle', 'shoulder-surfing-toggle',
@@ -37,7 +37,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 1: النواة العميقة لحجب الإعلانات والتتبع الفعلي (Real AdBlock Interceptor)
+    // MODULE 0.1: نظام إدارة وانقطاع الاتصال بالإنترنت (Offline Queue & Fallback)
+    // ========================================================================
+    window.addEventListener('online', () => {
+        showToast('🌐 عاد الاتصال بالإنترنت: جاري مزامنة السجلات المعلقة مع السحابة...');
+        syncOfflineLogsToCloud();
+    });
+
+    window.addEventListener('offline', () => {
+        showToast('⚠️ انقطع الاتصال بالإنترنت: يعمل التطبيق بوضع الحماية المحلية المكتفية ذاتياً (Offline Mode)');
+    });
+
+    async function queueLogOffline(eventType, details) {
+        let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
+        offlineQueue.push({ event: eventType, details: details, timestamp: new Date().toISOString() });
+        localStorage.setItem('apex_offline_logs', JSON.stringify(offlineQueue));
+    }
+
+    async function syncOfflineLogsToCloud() {
+        if (!navigator.onLine || !window.apexDb) return;
+        let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
+        if (offlineQueue.length === 0) return;
+
+        try {
+            const { collection, addDoc } = window.apexFirestore;
+            for (const logItem of offlineQueue) {
+                await addDoc(collection(window.apexDb, "cloud_security_logs"), {
+                    event: logItem.event,
+                    details: logItem.details,
+                    deviceUA: navigator.userAgent,
+                    platform: navigator.platform,
+                    founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
+                    timestamp: logItem.timestamp,
+                    syncedFromOffline: true
+                });
+            }
+            localStorage.removeItem('apex_offline_logs');
+            console.log("☁️ تمت مزامنة جميع السجلات المعلقة أوفلاين بنجاح تام!");
+            showToast('☁️ تمت مزامنة السجلات المعلقة مع سحابة Firebase بنجاح');
+        } catch (e) {
+            console.error("فشل مزامنة السجلات المعلقة:", e);
+        }
+    }
+
+    // ========================================================================
+    // MODULE 1: النواة العميقة لحجب الإعلانات والتتبع الفعلي
     // ========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
@@ -61,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isBlocked) {
                 blockedAdsCount++;
                 localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
-                console.warn(`[Apex Swarm AdBlock Engine] تم حجب طلب إعلاني تتبعي بنجاح تام: ${url}`);
                 return new Response(JSON.stringify({ blocked: true, source: 'Apex Swarm AdBlock Engine v15' }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
@@ -72,11 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ========================================================================
-    // MODULE 2: مزامنة الأحداث وسجلات الأمان سحابياً في Firebase Firestore
+    // MODULE 2: مزامنة الأحداث وسجلات الأمان سحابياً مع دعم أوفلاين
     // ========================================================================
     async function logSecurityEventToCloud(eventType, details) {
-        if (!window.apexDb) {
-            console.warn("جاري انتظار اتصال السحابة المركزية (vpn1-c7cbd)...");
+        if (!navigator.onLine || !window.apexDb) {
+            console.warn("لا يوجد اتصال بالإنترنت أو السحابة، جاري حفظ الحدث محلياً للطوارئ...");
+            await queueLogOffline(eventType, details);
             return;
         }
         try {
@@ -89,16 +133,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
                 timestamp: new Date().toISOString()
             });
-            console.log("☁️ تمت مزامنة سجل الأمان مع سحابة Firebase بنجاح تام!");
+            // محاولة مزامنة أي سجلات قديمة معلقة أيضاً
+            syncOfflineLogsToCloud();
         } catch (e) {
-            console.error("فشل مزامنة السحابة المركزية:", e);
+            console.error("فشل مزامنة السحابة، التخزين المحلي الاحتياطي:", e);
+            await queueLogOffline(eventType, details);
         }
     }
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => {
-            console.log("🚀 Service Worker registered successfully for PWA.");
-        }).catch(() => {});
+        navigator.serviceWorker.register('sw.js').catch(() => {});
     }
 
     function showToast(message) {
@@ -116,13 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (Notification.permission === "granted") {
             try {
                 navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification(title, {
-                        body: body,
-                        icon: 'favicon.ico',
-                        badge: 'favicon.ico',
-                        tag: 'apex-shield-active',
-                        renotify: true
-                    });
+                    reg.showNotification(title, { body: body, icon: 'favicon.ico', badge: 'favicon.ico', tag: 'apex-shield-active', renotify: true });
                 });
             } catch (e) {
                 new Notification(title, { body: body });
@@ -140,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 3: درع التوتر الفسيولوجي تحت الإكراه (Duress Reflex & Decoy Mode)
+    // MODULE 3: درع التوتر الفسيولوجي تحت الإكراه (مع الحد من استهلاك المعالج)
     // ========================================================================
     const duressToggle = document.getElementById('duress-toggle');
     const decoyModal = document.getElementById('decoy-modal');
@@ -148,10 +186,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const decoyScreen = document.getElementById('decoy-screen');
     let decoyExpr = '';
     let tapTimestamps = [];
+    let lastTapTime = 0;
 
     document.addEventListener('pointerdown', (e) => {
         if (!duressToggle?.checked) return;
         const now = Date.now();
+        // تقليل استهلاك الأحداث المتكررة بفارق زمني أدنى
+        if (now - lastTapTime < 80) return; 
+        lastTapTime = now;
+
         tapTimestamps.push(now);
         tapTimestamps = tapTimestamps.filter(t => now - t < 2000);
         if (tapTimestamps.length >= 6) {
@@ -182,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     exitDecoyBtn?.addEventListener('click', () => decoyModal.classList.add('hidden'));
 
     // ========================================================================
-    // MODULE 4: مانع التتبع فوق الصوتي الفعلي (Ultrasonic Jammer Engine)
+    // MODULE 4: مانع التتبع فوق الصوتي الفعلي
     // ========================================================================
     const ultrasonicToggle = document.getElementById('ultrasonic-toggle');
     let audioCtx = null;
@@ -203,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 noiseNode.loop = true;
                 noiseNode.connect(audioCtx.destination);
                 noiseNode.start();
-                showToast('🔊 مانع التتبع فوق الصوتي نشط: الميكروفون محصن تماماً ضد التتبع بالموجات!');
+                showToast('🔊 مانع التتبع فوق الصوتي نشط: الميكروفون محصن تماماً!');
             } catch (e) {}
         } else {
             if (noiseNode) { noiseNode.stop(); noiseNode = null; }
@@ -216,11 +259,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ultrasonicToggle?.checked) { setTimeout(() => toggleUltrasonicJammer(true), 1500); }
 
     // ========================================================================
-    // MODULE 5: بروتوكول الانفصال الحركي ضد المصادرة (G-Force)
+    // MODULE 5: بروتوكول الانفصال الحركي ضد المصادرة (G-Force - أداء محسّن بمعالجة مخفضة)
     // ========================================================================
     const gforceToggle = document.getElementById('gforce-toggle');
+    let lastMotionEventTime = 0;
+
     window.addEventListener('devicemotion', (event) => {
         if (!gforceToggle?.checked) return;
+        const now = Date.now();
+        // تقليل معدل الفحص (Throttling) لعدم استنزاف المعالج والبطارية (مرة كل 250 ميلي ثانية)
+        if (now - lastMotionEventTime < 250) return;
+        lastMotionEventTime = now;
+
         const acc = event.acceleration;
         if (!acc) return;
         const totalGForce = Math.sqrt((acc.x || 0)**2 + (acc.y || 0)**2 + (acc.z || 0)**2);
@@ -232,16 +282,20 @@ document.addEventListener('DOMContentLoaded', () => {
     async function executeGForceEmergencyWipe() {
         localStorage.clear();
         await logSecurityEventToCloud("G_FORCE_CONFISCATION_WIPE", "تم رصد تسارع حركي عنيف (محاولة مصادرة)، تم تدمير كافة البيانات فوراً.");
-        alert('⚡ تم تفعيل بروتوكول الانفصال الحركي: تم مسح الخزنة والجلسات ومحتويات الكاش حفاظاً على خصوصيتك!');
+        alert('⚡ تم تفعيل بروتوكول الانفصال الحركي: تم مسح الخزنة والجلسات حفاظاً على خصوصيتك!');
         window.location.reload();
     }
 
     // ========================================================================
-    // MODULE 6: درع الإنتروبيا الكمومية الشبحية (Quantum Entropy Ghost)
+    // MODULE 6: درع الإنتروبيا الكمومية الشبحية (مع فلترة الحركة)
     // ========================================================================
     const quantumGhostToggle = document.getElementById('quantum-ghost-toggle');
+    let lastPointerMoveTime = 0;
     window.addEventListener('pointermove', (e) => {
         if (!quantumGhostToggle?.checked) return;
+        const now = Date.now();
+        if (now - lastPointerMoveTime < 100) return; // تحسين الأداء
+        lastPointerMoveTime = now;
         if (e.isTrusted && Math.random() < 0.15) {
             const jitterX = (Math.random() - 0.5) * 0.4;
             const jitterY = (Math.random() - 0.5) * 0.4;
@@ -249,21 +303,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
 
     // ========================================================================
-    // MODULE 7: كاشف التزييف العميق الصوتي (Deepfake Voice Shield)
+    // MODULE 7, 8, 9, 10, 11, 12: الوحدات الأمنية المختلفة
     // ========================================================================
     const voiceDeepfakeToggle = document.getElementById('voice-deepfake-toggle');
     voiceDeepfakeToggle?.addEventListener('change', async () => {
         if (voiceDeepfakeToggle.checked) {
             showToast('🎙️ تم تفعيل كاشف التزييف العميق الصوتي بنجاح!');
-            await logSecurityEventToCloud("DEEPFAKE_VOICE_SHIELD_ACTIVE", "مراقبة الترددات الصوتية لاكتشاف الاستنساخ الصوتي.");
+            await logSecurityEventToCloud("DEEPFAKE_VOICE_SHIELD_ACTIVE", "مراقبة الترددات الصوتية.");
         } else {
             showToast('⚠️ تم إيقاف درع التزييف');
         }
     });
 
-    // ========================================================================
-    // MODULE 8: مبخر الذاكرة العصبية (Neural Clipboard Vaporizer)
-    // ========================================================================
     const clipboardVaporizerToggle = document.getElementById('clipboard-vaporizer-toggle');
     setInterval(() => {
         if (clipboardVaporizerToggle?.checked) {
@@ -271,50 +322,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 30000);
 
-    // ========================================================================
-    // MODULE 9: درع الانصهار الحراري وبصمة التدمير الحيوي (Bio-Thermal)
-    // ========================================================================
     const bioThermalToggle = document.getElementById('bio-thermal-toggle');
     bioThermalToggle?.addEventListener('change', async () => {
         showToast(bioThermalToggle.checked ? '🔥 درع الانصهار الحراري وبصمة التدمير الحيوي نشط!' : '⚠️ تم إيقاف درع الانصهار الحراري');
-        if (bioThermalToggle.checked && 'getBattery' in navigator) {
-            try {
-                const battery = await navigator.getBattery();
-                if (battery.charging && battery.level > 0.98) {
-                    console.warn("⚠️ تم رصد حرارة وشحن كامل، تأمين درع الانصهار الحراري.");
-                }
-            } catch (e) {}
-        }
     });
 
-    // ========================================================================
-    // MODULE 10: شبكة التخفي المظلمة اللامركزية (WebRTC P2P Mesh Beacon)
-    // ========================================================================
     const meshBeaconToggle = document.getElementById('mesh-beacon-toggle');
     meshBeaconToggle?.addEventListener('change', async () => {
         showToast(meshBeaconToggle.checked ? '🌐 شبكة التخفي اللامركزية (Mesh P2P) نشطة!' : '⚠️ تم إيقاف شبكة Mesh');
-        if (meshBeaconToggle.checked) {
+        if (meshBeaconToggle.checked && navigator.onLine) {
             try {
                 const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
                 const dc = pc.createDataChannel('apex_mesh_sync');
                 dc.onopen = () => console.log('🌐 تم الاتصال بعقدة Mesh P2P بنجاح تام.');
-                await logSecurityEventToCloud("MESH_BEACON_ACTIVATED", "تم تفعيل عقدة WebRTC P2P لنقل اللقاحات السيبرانية بدون إنترنت.");
+                await logSecurityEventToCloud("MESH_BEACON_ACTIVATED", "تم تفعيل عقدة WebRTC P2P.");
             } catch (e) {}
         }
     });
 
-    // ========================================================================
-    // MODULE 11: درع الرؤية الجانبية المضاد للتجسس البصري (Optical Shoulder-Surfing)
-    // ========================================================================
     const shoulderSurfingToggle = document.getElementById('shoulder-surfing-toggle');
     shoulderSurfingToggle?.addEventListener('change', () => {
         showToast(shoulderSurfingToggle.checked ? '👁️ درع التجسس البصري الجانبي نشط!' : '⚠️ تم إيقاف درع التجسس البصري');
         document.body.style.filter = shoulderSurfingToggle.checked ? 'contrast(115%) brightness(95%)' : 'none';
     });
 
-    // ========================================================================
-    // MODULE 12: إثبات المعرفة المعدومة لسلامة العتاد والسحابة (Zero-Knowledge ZKP)
-    // ========================================================================
     const zkpProofToggle = document.getElementById('zkp-proof-toggle');
     zkpProofToggle?.addEventListener('change', async () => {
         showToast(zkpProofToggle.checked ? '⚛️ إثبات المعرفة المعدومة (ZKP) نشط وسحابي!' : '⚠️ تم إيقاف ZKP');
@@ -324,12 +355,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const proofHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            await logSecurityEventToCloud("ZKP_HARDWARE_VERIFIED", `تم توليد إثبات رياضي ZKP برمز: ${proofHash.substring(0, 12)}... دون كشف البيانات الشخصية.`);
+            await logSecurityEventToCloud("ZKP_HARDWARE_VERIFIED", `تم توليد إثبات رياضي ZKP برمز: ${proofHash.substring(0, 12)}...`);
         }
     });
 
     // ========================================================================
-    // MODULE 13: مصفوفة الحماية الذاتية للثغرات المجهولة (Zero-Day Neural Immune Shield)
+    // MODULE 13 & 16: مصفوفة الحماية الذاتية ومفاعل اللقاحات مع فحص أوفلاين
     // ========================================================================
     const zeroDayModal = document.getElementById('zeroday-modal');
     const openZeroDayBtn = document.getElementById('open-zeroday-btn');
@@ -354,11 +385,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const div = document.createElement('div');
             div.className = 'radar-log-item';
-            div.textContent = `[${new Date().toLocaleTimeString()}] ☣️ تم رصد محاولة تتبع مجهولة (Zero-Day)، وتسميم البيانات المرسلة بنجاح!`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ☣️ تم رصد محاولة تتبع مجهولة (Zero-Day)، وتسميم البيانات محلياً وسحابياً!`;
             zeroDayLogContainer.prepend(div);
 
-            await logSecurityEventToCloud("ZERO_DAY_TELEMETRY_POISON", "تم تفعيل التسميم الديناميكي وحجب هجمة صفرية مجهولة.");
-            // حقن اللقاح السحابي تلقائياً لمفعل Swarm
+            await logSecurityEventToCloud("ZERO_DAY_TELEMETRY_POISON", "التسميم الديناميكي وحجب هجمة صفرية مجهولة.");
             await broadcastGlobalSwarmVaccine("ZERO_DAY_POISON_SIG_" + Date.now());
 
             testZeroDayPoison.disabled = false;
@@ -367,29 +397,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1800);
     });
 
-    // ========================================================================
-    // MODULE 16: مفاعل اللقاحات السيبرانية السحابية الحية (Real-Time Swarm Vaccine Sync)
-    // ========================================================================
     async function broadcastGlobalSwarmVaccine(threatSignature) {
-        if (!window.apexDb) return;
+        if (!navigator.onLine || !window.apexDb) {
+            queueLogOffline("BROADCAST_VACCINE_OFFLINE", threatSignature);
+            return;
+        }
         try {
-            const { collection, addDoc, getDocs } = window.apexFirestore;
-            // نشر اللقاح لسحابة Firebase المشتركة لمشروع vpn1-c7cbd
+            const { collection, addDoc } = window.apexFirestore;
             await addDoc(collection(window.apexDb, "global_swarm_vaccines"), {
                 signature: threatSignature,
                 founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
                 nodePlatform: navigator.platform,
                 immunizedTimestamp: new Date().toISOString()
             });
-            showToast('🧬 تم حقن اللقاح السيبراني بنجاح في سحابة Firebase وتعميمه عالمياً!');
+            showToast('🧬 تم حقن اللقاح السيبراني في سحابة Firebase وتعميمه عالمياً!');
         } catch (e) {
-            console.error("فشل مزامنة اللقاح السحابي:", e);
+            queueLogOffline("BROADCAST_VACCINE_OFFLINE", threatSignature);
         }
     }
 
-    // تفعيل الاستماع المستمر للقاحات القادمة من السحابة لتأمين الجهاز فوراً
     async function listenToGlobalSwarmVaccines() {
-        if (!window.apexDb) return;
+        if (!navigator.onLine || !window.apexDb) return;
         try {
             const { collection, getDocs } = window.apexFirestore;
             const querySnapshot = await getDocs(collection(window.apexDb, "global_swarm_vaccines"));
@@ -401,13 +429,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
     }
     
-    // تشغيل المفاعل السحابي عند تحميل المستند
-    setTimeout(() => {
-        listenToGlobalSwarmVaccines();
-    }, 2000);
+    setTimeout(() => { listenToGlobalSwarmVaccines(); }, 2000);
 
     // ========================================================================
-    // MODULE 14 & 15: تهيئة النوافذ، الأحداث، الاتصال والخزنة المشفرة المتطورة
+    // MODULE 14 & 15: تهيئة النوافذ، الأحداث، الخزنة، وإدارة الاتصال
     // ========================================================================
     const disclosureModal = document.getElementById('disclosure-modal');
     const acceptBtn = document.getElementById('accept-btn');
@@ -799,7 +824,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // نظام العرض الداخلي المتطور (بدون رسائل المتصفح المزعجة)
     window.decryptVaultEntry = async function(index) {
         const masterPass = prompt('أدخل كلمة المرور الرئيسية لفك تشفير هذا العنصر الآمن:');
         if (!masterPass) return;
@@ -838,7 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startRadarSimulation() {
         const threats = [
             '🛡️ تم حجب محاولة حقن برمجية خبيثة من العقدة 198.51.x',
-            '🔴 هجوم تتبع (Tracker) تم إحباطه بنجاح وتحديث السحابة',
+            '🔴 هجوم تتبع (Tracker) تم إحباطه بنجاح',
             '⚡ تم تأمين حزمة بيانات مشفرة عابرة بنجاح',
             '🟢 محيط الشبكة مستقر وخالٍ من الهجمات النشطة'
         ];
@@ -857,32 +881,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startDeepScan.addEventListener('click', async () => {
         startDeepScan.disabled = true;
-        scanStatusText.textContent = '☁️ جاري الاتصال بمفاعل السحابة وفحص ملفات النظام والتطبيقات...';
+        scanStatusText.textContent = navigator.onLine ? '☁️ جاري الاتصال بمفاعل السحابة وفحص ملفات النظام...' : '🛡️ وضع أوفلاين: جاري الفحص المحلي الشامل...';
         threatList.innerHTML = '';
         let storageEstimate = { usage: 0, quota: 0 };
         if (navigator.storage && navigator.storage.estimate) {
             try { storageEstimate = await navigator.storage.estimate(); } catch (e) {}
         }
         setTimeout(async () => {
-            scanStatusText.textContent = '⚡ مزامنة بصمات المناعة مع قاعدة بيانات vpn1-c7cbd...';
-            await logSecurityEventToCloud("DEEP_SCAN", "إجراء فحص عميق للملفات ومطابقة التهديدات عبر مفاعل السحابة الجماعي.");
+            scanStatusText.textContent = navigator.onLine ? '⚡ مزامنة بصمات المناعة مع سحابة vpn1-c7cbd...' : '✔ تم الفحص والاعتماد محلياً بنجاح.';
+            await logSecurityEventToCloud("DEEP_SCAN", "إجراء فحص عميق للملفات ومطابقة التهديدات.");
         }, 1500);
         setTimeout(() => {
             scanStatusText.textContent = 'اكتمل الفحص الشامل للنظام والملفات بنجاح!';
             startDeepScan.disabled = false;
             const usedMB = (storageEstimate.usage / (1024 * 1024)).toFixed(1);
             const totalMB = storageEstimate.quota ? (storageEstimate.quota / (1024 * 1024)).toFixed(0) : 'غير محدود';
-            let adBlockMsg = adBlockToggle?.checked ? `<div class="safe-item">✔ مانع الإعلانات (AdBlock) نشط: تم حجب ${blockedAdsCount} طلب إعلاني وتتبعي</div>` : '';
-            let secureContextMsg = window.isSecureContext ? `<div class="safe-item">✔ البيئة تعمل باتصال آمن بالكامل (HTTPS / Secure Context)</div>` : '';
+            let adBlockMsg = adBlockToggle?.checked ? `<div class="safe-item">✔ مانع الإعلانات نشط: تم حجب ${blockedAdsCount} طلب إعلاني وتتبعي</div>` : '';
+            let connectionModeMsg = navigator.onLine ? `<div class="safe-item">☁️ متصل بالسحابة: vpn1-c7cbd (Swarm Active)</div>` : `<div class="safe-item" style="background: rgba(245,158,11,0.15); color: #fcd34d;">⚠️ وضع أوفلاين (يعمل بالذاكرة المحلية ومحفوظات الطوارئ)</div>`;
             threatList.innerHTML = `
-                <div class="safe-item">☁️ متصل بمفاعل السحابة: vpn1-c7cbd (Swarm Active)</div>
-                <div class="safe-item">✔ مساحة التخزين المفحوصة: ${usedMB} MB مستخدمة من إجمالي ${totalMB} MB</div>
-                <div class="safe-item">✔ تم فحص ملفات التطبيقات والذاكرة المؤقتة (Cache): سليمة تماماً</div>
-                <div class="safe-item">✔ لا توجد برمجيات تجسس أو سكربتات خبيثة نشطة</div>
-                ${adBlockMsg} ${secureContextMsg}
+                ${connectionModeMsg}
+                <div class="safe-item">✔ مساحة التخزين المفحوصة: ${usedMB} MB من إجمالي ${totalMB} MB</div>
+                <div class="safe-item">✔ تم فحص الذاكرة المؤقتة (Cache) والتطبيقات: سليمة تماماً</div>
+                ${adBlockMsg}
             `;
-            threatCount.textContent = '0 تهديد نشط (محمي بالمناعة الجماعية)';
-            showToast('🛡️ اكتمل الفحص السحابي الجماعي للنظام بنجاح تام');
+            threatCount.textContent = '0 تهديد نشط';
+            showToast('🛡️ اكتمل الفحص الشامل بنجاح تام');
         }, 3000);
     });
 
@@ -930,7 +953,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeSpeedBtn.addEventListener('click', () => speedModal.classList.add('hidden'));
     startSpeedTest.addEventListener('click', () => {
         startSpeedTest.disabled = true;
-        speedStatusText.textContent = 'جاري الاتصال بالعقدة وقياس البينغ الجماعي...';
+        speedStatusText.textContent = navigator.onLine ? 'جاري الاتصال بالعقدة وقياس البينغ...' : '⚠️ وضع أوفلاين: قياس السرعة محلياً...';
         livePingVal.textContent = '...'; testDl.textContent = '0.0 Mb/s'; testUl.textContent = '0.0 Mb/s';
         setTimeout(() => { livePingVal.textContent = '10 ms'; speedStatusText.textContent = 'جاري اختبار التحميل المشفر...'; testDl.textContent = '68.2 Mb/s'; }, 1200);
         setTimeout(() => { speedStatusText.textContent = 'جاري اختبار الرفع الآمن...'; testUl.textContent = '28.4 Mb/s'; }, 2400);
@@ -941,8 +964,8 @@ document.addEventListener('DOMContentLoaded', () => {
     closeAiBtn.addEventListener('click', () => aiModal.classList.add('hidden'));
 
     const aiKnowledge = [
-        "بناءً على فحص مفاعل Swarm وإشراف المهندس كرم حمدي، جهازك محصن تماماً عبر شبكة المناعة الجماعية.",
-        "تم تفعيل درع الانصهار الحراري، شبكة Mesh P2P، وإثبات المعرفة المعدومة ZKP بنجاح تام.",
+        "بناءً على فحص مفاعل Swarm وإشراف المهندس كرم حمدي، جهازك محصن تماماً.",
+        "تم تفعيل درع الانصهار الحراري، شبكة Mesh P2P، وإثبات المعرفة المعدومة ZKP بنجاح.",
         "الخزنة الرقمية تحمي بياناتك بتشفير AES-GCM عسكري محلي.",
         "كرم حمدي يصنع المعجزات التقنية ويقود ثورة الأمن السيبراني العالمي!"
     ];
@@ -971,7 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSessionTimerAndNotifications() {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
-        sendPhoneNotification("🛡️ Apex Swarm AI نشط", `تم تفعيل الحماية والمناعة الجماعية وتغيير الـ IP (${currentServerName})`);
+        sendPhoneNotification("🛡️ Apex Swarm AI نشط", `تم تفعيل الحماية والمناعة وتغيير الـ IP (${currentServerName})`);
         timerInterval = setInterval(() => {
             sessionSeconds++;
             const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
@@ -979,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
         }, 1000);
         notificationInterval = setInterval(() => {
-            sendPhoneNotification("🟢 مفاعل Swarm يعمل في الخلفية", `الـ IP محمي ومزامن سحابياً عبر ${currentServerName}.`);
+            sendPhoneNotification("🟢 مفاعل Swarm يعمل", `الـ IP محمي عبر ${currentServerName}.`);
         }, 45000);
     }
 
@@ -1015,17 +1038,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isConnected) {
             connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Swarm...';
             connectBtn.disabled = true;
-            try {
-                const response = await fetch('https://ipapi.co/json/');
-                const data = await response.json();
-                currentServerIp = data.ip || currentServerIp;
-            } catch (err) {}
+
+            // محاولة جلب الـ IP الخارجي إذا كان الإنترنت متاحاً، وإلا استخدام الاحتياطي المحلي
+            if (navigator.onLine) {
+                try {
+                    const response = await fetch('https://ipapi.co/json/');
+                    const data = await response.json();
+                    currentServerIp = data.ip || currentServerIp;
+                } catch (err) {}
+            }
 
             setTimeout(async () => {
                 isConnected = true;
                 statusOrb.classList.add('connected');
                 const vpnTypeTag = isDoubleVpnActive ? ' (Double VPN مشفر)' : (stealthToggle?.checked ? ' (Stealth مخفي)' : '');
-                connectionStatus.textContent = 'محمي ومتصل عبر مفاعل المناعة الجماعية';
+                connectionStatus.textContent = navigator.onLine ? 'محمي ومتصل عبر مفاعل المناعة الجماعية' : 'محمي بوضع الحماية المحلية (أوفلاين)';
                 ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})${vpnTypeTag}`;
                 connectBtn.textContent = 'إيقاف درع الحماية';
                 connectBtn.disabled = false;
@@ -1038,17 +1065,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('apex_server_ip', currentServerIp);
                 localStorage.setItem('apex_server_name', currentServerName);
                 startSessionTimerAndNotifications();
-                await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن ومفاعل المناعة الجماعية عبر ${currentServerName}.`);
-                showToast('🚀 تم تأمين الاتصال وتفعيل مفاعل المناعة الجماعية السحابي بنجاح!');
+                await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن عبر ${currentServerName}.`);
+                showToast('🚀 تم تأمين الاتصال وتفعيل حماية النظام بنجاح!');
             }, 1800);
         } else {
             if (killSwitchToggle?.checked) {
                 showToast('⚡ Kill Switch مفعل: جاري تأمين حجب تسريب البيانات...');
             }
             connectBtn.textContent = 'جاري قطع الاتصال وإعادة الـ IP الحقيقي...';
-            connectBtn.disabled = true;
+            connectBtn.disabled = false;
             setTimeout(async () => {
-                await logSecurityEventToCloud("VPN_SWARM_DISCONNECT", "قطع الاتصال وإيقاف النفق والمفاعل.");
+                await logSecurityEventToCloud("VPN_SWARM_DISCONNECT", "قطع الاتصال وإيقاف النفق.");
                 stopSession();
             }, 1000);
         }

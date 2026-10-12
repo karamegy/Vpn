@@ -3,10 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Shield AI - Ultimate Security & VPN</title>
+    <title>Apex Shield AI - Ultimate Cloud-Sync Edition</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#030712">
+
+    <!-- تهيئة وربط Firebase SDK الرسمي لمشروعك vpn1-c7cbd -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCER1zLyxzZnjd9W-fuivb_7T4VyVttiE4",
+            authDomain: "vpn1-c7cbd.firebaseapp.com",
+            projectId: "vpn1-c7cbd",
+            storageBucket: "vpn1-c7cbd.firebasestorage.app",
+            messagingSenderId: "739696721940",
+            appId: "1:739696721940:web:ac4799fbaf7d6e615b2701",
+            measurementId: "G-GJPEK1S1JX"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // إتاحة قاعدة البيانات عالمياً لملف app.js
+        window.apexDb = db;
+        window.apexFirestore = { collection, addDoc, getDocs };
+        console.log("[Apex Cloud AI] متصل بنجاح بالسحابة المركزية للمشروع vpn1-c7cbd!");
+    </script>
 </head>
 <body class="theme-cyan">
 
@@ -18,7 +44,7 @@
         <div class="modal-content glass-panel">
             <div class="modal-icon">🛡️</div>
             <h2>إفصاح الخدمة وصلاحية الـ VPN</h2>
-            <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> لإنشاء نفق مشفّر وآمن لاتصال بيانات جهازك بالإنترنت، بهدف حماية خصوصيتك، منع التتبع، وتصفية التهديدات الرقمية بالذكاء الاصطناعي.</p>
+            <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> لإنشاء نفق مشفّر وآمن لاتصال بيانات جهازك بالإنترنت، بهدف حماية خصوصيتك، منع التتبع، وتصفية التهديدات الرقمية بالذكاء الاصطناعي والمزامنة السحابية.</p>
             <p>نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل خدمة الاتصال الآمن وتحليل أمان الجهاز.</p>
             <div class="modal-buttons">
                 <button id="accept-btn" class="btn-primary">موافقة وتفعيل الحماية</button>
@@ -31,11 +57,11 @@
     <div id="ai-modal" class="modal hidden">
         <div class="modal-content glass-panel ai-panel">
             <div class="ai-header">
-                <span>🤖 مساعد الذكاء الاصطناعي الشامل</span>
+                <span>🤖 مساعد الذكاء الاصطناعي السحابي</span>
                 <button id="close-ai-btn" class="close-icon">&times;</button>
             </div>
             <div class="ai-chat-box" id="ai-chat-box">
-                <div class="ai-message bot">مرحباً كرم! أنا نظام الـ AI المدمج بجهازك. أقوم بمراقبة أمان التطبيقات، فحص الواي فاي، وتأمين الـ IP الخاص بك. كيف أساعدك اليوم؟</div>
+                <div class="ai-message bot">مرحباً كرم! أنا نظام الـ AI المدمج ومراقب أمان جهازك. كيف أساعدك اليوم؟</div>
             </div>
             <div class="ai-input-area">
                 <input type="text" id="ai-input" placeholder="اسأل المساعد عن أمان الجهاز أو الـ IP...">
@@ -150,7 +176,7 @@
                 <div class="radar-blip blip-2"></div>
             </div>
             <div class="radar-log-box" id="radar-log-box">
-                <div class="radar-log-item">🟢 جاري مسح محيط الشبكة... النظام آمن</div>
+                <div class="radar-log-item">🟢 جاري مسح محيط الشبكة والسحابة... النظام آمن</div>
                 <div class="radar-log-item">🛡️ تم رصد وحجب محاولة تتبع قادمة من IP خارجي مشبوه</div>
             </div>
             <button id="close-radar-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق الرادار</button>
@@ -189,16 +215,16 @@
         </div>
     </div>
 
-    <!-- نافذة فحص التطبيقات وملفات الهاتف الشامل الحقيقي -->
+    <!-- نافذة فحص التطبيقات وملفات الهاتف الشامل الحقيقي والسحابي -->
     <div id="scanner-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🔍 فحص ملفات الهاتف والتطبيقات الضارة (حقيقي)</h2>
-            <p>يقوم نظام AI بفحص الذاكرة والتطبيقات المثبتة وملفات التخزين والمجلدات بحثاً عن ملفات تجسس أو برمجيات خبيثة.</p>
+            <h2>🔍 فحص ملفات الهاتف والتطبيقات الضارة (سحابي)</h2>
+            <p>يقوم نظام AI بفحص الذاكرة والتطبيقات المثبتة ومزامنة السجلات مع سحابة Firebase.</p>
             <div id="scanner-results" class="scanner-box">
-                <span id="scan-status-text">جاهز لبدء الفحص العميق للنظام...</span>
+                <span id="scan-status-text">جاهز لبدء الفحص العميق المتصل بالسحابة...</span>
                 <div id="threat-list" class="threat-list-container"></div>
             </div>
-            <button id="start-deep-scan" class="btn-primary" style="margin-top: 15px; width: 100%;">بدء الفحص الشامل الآن</button>
+            <button id="start-deep-scan" class="btn-primary" style="margin-top: 15px; width: 100%;">بدء الفحص السحابي الآن</button>
             <button id="close-scanner-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">إغلاق</button>
         </div>
     </div>
@@ -347,7 +373,7 @@
         <header class="app-header">
             <div class="logo-area">
                 <div class="ai-dot"></div>
-                <h1>Apex Shield <span class="ai-badge">AI</span></h1>
+                <h1>Apex Shield <span class="ai-badge">AI Cloud</span></h1>
             </div>
             <div class="header-actions">
                 <button id="panic-btn" class="icon-btn panic-icon" title="زر الذعر الفوري (تدمير مؤقت)">🚨</button>
@@ -368,17 +394,17 @@
                         <div class="orb-core">🛡️</div>
                     </div>
                 </div>
-                <h2 id="connection-status">غير متصل بالدرع</h2>
+                <h2 id="connection-status">غير متصل بالدرع السحابي</h2>
                 <p id="ip-display">IP الحقيقي: غير مشفر</p>
                 <p id="session-timer" class="session-timer hidden">وقت الجلسة: 00:00</p>
                 
-                <button id="connect-btn" class="connect-btn">تفعيل درع الحماية وتغيير الـ IP</button>
+                <button id="connect-btn" class="connect-btn">تفعيل درع الحماية السحابي</button>
             </div>
 
             <!-- عداد حماية التهديدات -->
             <div class="threat-widget glass-card" id="open-scanner-btn" style="cursor: pointer;">
                 <div class="threat-info">
-                    <span class="threat-label">فحص التطبيقات والتهديدات (اضغط للفحص)</span>
+                    <span class="threat-label">الفحص السحابي الشامل (اضغط للفحص)</span>
                     <strong id="threat-count">0 تهديد نشط</strong>
                 </div>
                 <div class="shield-status-indicator"></div>
@@ -463,7 +489,7 @@
         <footer class="app-footer">
             <a href="#" id="open-policy-link">الخصوصية</a> • 
             <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
-            <span class="version-tag">v10.5 Autonomous Real-Sync Edition</span>
+            <span class="version-tag">v11.5 Autonomous Cloud-Sync Edition</span>
         </footer>
     </div>
 

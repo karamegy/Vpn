@@ -81,12 +81,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 1: النواة العميقة لحجب الإعلانات والتتبع الفعلي
+    // MODULE 1: النواة العميقة الحقيقية لحجب الإعلانات والتتبع (Fetch & XHR Interception)
     // ========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
         'adnxs.com', 'unityads.unity3d.com', 'applovin.com', 'ironsrc.com',
-        'ads.mopub.com', 'analytics.google.com', 'facebook.com/tr/',
+        'ads.mopub.com', 'analytics.google.com', 'facebook.com/tr',
         'adservice.google.com', 'pagead2.googlesyndication.com',
         'ad.doubleclick.net', 'ads.pubmatic.com', 'securepubads.g.doubleclick.net',
         'adcolony.com', 'vungle.com', 'tapjoy.com', 'chartboost.com',
@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '0');
 
+    // 1. الاعتراض الفعلي لطلبات fetch
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
         const url = args[0];
@@ -112,6 +113,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         return originalFetch.apply(this, args);
+    };
+
+    // 2. الاعتراض الفعلي لطلبات XMLHttpRequest التقليدية
+    const originalOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url) {
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked;
+        if (adBlockEnabled && typeof url === 'string') {
+            const isBlocked = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
+            if (isBlocked) {
+                blockedAdsCount++;
+                localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+                arguments[1] = 'data:text/plain;charset=utf-8,'; // تحويل الطلب لمسار فارغ لإيقافه
+            }
+        }
+        return originalOpen.apply(this, arguments);
     };
 
     // ========================================================================
@@ -133,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
                 timestamp: new Date().toISOString()
             });
-            // محاولة مزامنة أي سجلات قديمة معلقة أيضاً
             syncOfflineLogsToCloud();
         } catch (e) {
             console.error("فشل مزامنة السحابة، التخزين المحلي الاحتياطي:", e);
@@ -178,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 3: درع التوتر الفسيولوجي تحت الإكراه (مع الحد من استهلاك المعالج)
+    // MODULE 3: درع التوتر الفسيولوجي تحت الإكراه
     // ========================================================================
     const duressToggle = document.getElementById('duress-toggle');
     const decoyModal = document.getElementById('decoy-modal');
@@ -191,7 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('pointerdown', (e) => {
         if (!duressToggle?.checked) return;
         const now = Date.now();
-        // تقليل استهلاك الأحداث المتكررة بفارق زمني أدنى
         if (now - lastTapTime < 80) return; 
         lastTapTime = now;
 
@@ -259,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ultrasonicToggle?.checked) { setTimeout(() => toggleUltrasonicJammer(true), 1500); }
 
     // ========================================================================
-    // MODULE 5: بروتوكول الانفصال الحركي ضد المصادرة (G-Force - أداء محسّن بمعالجة مخفضة)
+    // MODULE 5: بروتوكول الانفصال الحركي ضد المصادرة (G-Force)
     // ========================================================================
     const gforceToggle = document.getElementById('gforce-toggle');
     let lastMotionEventTime = 0;
@@ -267,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('devicemotion', (event) => {
         if (!gforceToggle?.checked) return;
         const now = Date.now();
-        // تقليل معدل الفحص (Throttling) لعدم استنزاف المعالج والبطارية (مرة كل 250 ميلي ثانية)
         if (now - lastMotionEventTime < 250) return;
         lastMotionEventTime = now;
 
@@ -287,14 +300,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 6: درع الإنتروبيا الكمومية الشبحية (مع فلترة الحركة)
+    // MODULE 6: درع الإنتروبيا الكمومية الشبحية
     // ========================================================================
     const quantumGhostToggle = document.getElementById('quantum-ghost-toggle');
     let lastPointerMoveTime = 0;
     window.addEventListener('pointermove', (e) => {
         if (!quantumGhostToggle?.checked) return;
         const now = Date.now();
-        if (now - lastPointerMoveTime < 100) return; // تحسين الأداء
+        if (now - lastPointerMoveTime < 100) return;
         lastPointerMoveTime = now;
         if (e.isTrusted && Math.random() < 0.15) {
             const jitterX = (Math.random() - 0.5) * 0.4;
@@ -360,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 13 & 16: مصفوفة الحماية الذاتية ومفاعل اللقاحات مع فحص أوفلاين
+    // MODULE 13 & 16: مصفوفة الحماية الذاتية ومفاعل اللقاحات
     // ========================================================================
     const zeroDayModal = document.getElementById('zeroday-modal');
     const openZeroDayBtn = document.getElementById('open-zeroday-btn');
@@ -1039,7 +1052,6 @@ document.addEventListener('DOMContentLoaded', () => {
             connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Swarm...';
             connectBtn.disabled = true;
 
-            // محاولة جلب الـ IP الخارجي إذا كان الإنترنت متاحاً، وإلا استخدام الاحتياطي المحلي
             if (navigator.onLine) {
                 try {
                     const response = await fetch('https://ipapi.co/json/');

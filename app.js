@@ -182,6 +182,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('apex_theme') || 'theme-cyan';
     document.body.className = savedTheme;
 
+    // استعادة حالة وضع التمويه العسكري (Stealth Mode) المحفوظة مسبقاً
+    if (stealthToggle) {
+        const savedStealth = localStorage.getItem('apex_stealth') === 'true';
+        stealthToggle.checked = savedStealth;
+
+        stealthToggle.addEventListener('change', () => {
+            localStorage.setItem('apex_stealth', stealthToggle.checked);
+            showToast(stealthToggle.checked ? '🕵️ تم تفعيل وضع التمويه العسكري' : '🕵️ تم إيقاف وضع التمويه العسكري');
+        });
+    }
+
     if (hasConsented) {
         disclosureModal.classList.add('hidden');
     } else {
@@ -431,7 +442,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // دالة عامة لفك تشفير عنصر معين عند إدخال كلمة المرور الصحيحة
     window.decryptVaultEntry = async function(index) {
         const masterPass = prompt('أدخل كلمة المرور الرئيسية لفك تشفير هذا العنصر:');
         if (!masterPass) return;
@@ -625,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openPolicyLink.addEventListener('click', (e) => { e.preventDefault(); policyModal.classList.remove('hidden'); });
     closePolicyBtn.addEventListener('click', () => policyModal.classList.add('hidden'));
-    reopenDisclosureLink.addEventListener('click', (e) => { e.preventDefault(); disclosureModal.classList.remove('hidden'); });
+    reopenDisclosureLink.addEventListener('click', (e) => { e.preventDefault(); disclosureModal.classList.add('hidden'); });
 
     // تشغيل عداد الوقت وإرسال إشعارات الهاتف الدورية
     function startSessionTimerAndNotifications() {

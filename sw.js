@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apex-shield-quantum-v24';
+const CACHE_NAME = 'apex-shield-quantum-v25';
 const assetsToCache = [
   '/Vpn/',
   '/Vpn/index.html',

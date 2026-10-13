@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -65,55 +65,75 @@ jobs:
 
       - name: 4. Sanitize Java Files & Configure Manifest
         run: |
-          echo "=== 4. تنظيف الملفات وتحديث المانفيست بأسلوب أندرويد القياسي ==="
+          echo "=== 4. تنظيف ملفات الجافا وتحديث AndroidManifest.xml بأسلوب آمن ==="
           TARGET_DIR="android/app/src/main/java/com/apex/shield"
           mkdir -p "$TARGET_DIR"
           cp /tmp/java_source/*.java "$TARGET_DIR/" || true
 
-          # تنظيف ترميز BOM وتثبيت اسم الحزمة
-          for f in $TARGET_DIR/*.java; do
-            if [ -f "$f" ]; then
-              sed -i 's/^\xef\xbb\xbf//' "$f"
-              sed -i 's/^package .*/package com.apex.shield;/' "$f"
-            fi
-          done
-
-          # تعديل المانفيست بأذونات الـ VPN الرسمية القياسية بدون تعارضات FGS
-          cat << 'EOF' > update_manifest.js
+          cat << 'EOF' > sanitize_and_update.js
           const fs = require('fs');
-          const file = 'android/app/src/main/AndroidManifest.xml';
-          if (fs.existsSync(file)) {
-            let content = fs.readFileSync(file, 'utf8');
-            
-            // إضافة الأذونات الأساسية فقط
-            if (!content.includes('BIND_VPN_SERVICE')) {
-              const permissions = `
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-            </manifest>`;
-              content = content.replace('</manifest>', permissions);
+          const path = require('path');
+
+          // 1. تنظيف ملفات الجافا وحذف ترميز BOM وتثبيت اسم الحزمة
+          const targetDir = 'android/app/src/main/java/com/apex/shield';
+          if (fs.existsSync(targetDir)) {
+            const files = fs.readdirSync(targetDir);
+            files.forEach(file => {
+              if (file.endsWith('.java')) {
+                const filePath = path.join(targetDir, file);
+                let content = fs.readFileSync(filePath, 'utf8');
+                
+                // إزالة رمز الترميز الخفي BOM
+                content = content.replace(/^\uFEFF/, '');
+                
+                // توحيد اسم الحزمة
+                content = content.replace(/^package\s+[a-zA-Z0-9_\.]+;/m, 'package com.apex.shield;');
+                
+                fs.writeFileSync(filePath, content, 'utf8');
+                console.log(`Sanitized: ${file}`);
+              }
+            });
+          }
+
+          // 2. تحديث AndroidManifest.xml بوضع الأذونات القياسية وتثبيت خدمة الـ VPN
+          const manifestPath = 'android/app/src/main/AndroidManifest.xml';
+          if (fs.existsSync(manifestPath)) {
+            let manifest = fs.readFileSync(manifestPath, 'utf8');
+
+            const permissionsToAdd = [
+              '<uses-permission android:name="android.permission.INTERNET" />',
+              '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />',
+              '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+              '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />'
+            ];
+
+            permissionsToAdd.forEach(perm => {
+              const permName = perm.match(/name="([^"]+)"/)[1];
+              if (!manifest.includes(permName)) {
+                manifest = manifest.replace('<application', `    ${perm}\n    <application`);
+              }
+            });
+
+            const serviceTag = `
+        <service
+            android:name="com.apex.shield.ApexVpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>`;
+
+            if (!manifest.includes('ApexVpnService')) {
+              manifest = manifest.replace('</application>', `${serviceTag}\n    </application>`);
             }
 
-            // إضافة خدمة ApexVpnService بأسلوب قياسي نظيف
-            if (!content.includes('ApexVpnService')) {
-              const serviceTag = `
-              <service android:name="com.apex.shield.ApexVpnService"
-                       android:permission="android.permission.BIND_VPN_SERVICE"
-                       android:exported="false">
-                  <intent-filter>
-                      <action android:name="android.net.VpnService" />
-                  </intent-filter>
-              </service>
-              </application>`;
-              content = content.replace('</application>', serviceTag);
-            }
-            
-            fs.writeFileSync(file, content, 'utf8');
-            console.log('Done updating AndroidManifest.xml cleanly.');
+            fs.writeFileSync(manifestPath, manifest, 'utf8');
+            console.log('Updated AndroidManifest.xml safely.');
           }
           EOF
 
-          node update_manifest.js
+          node sanitize_and_update.js
           npx cap sync android
 
       - name: 5. Build APK Package

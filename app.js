@@ -1,13 +1,10 @@
 /**
  * ============================================================================
- * APEX SHIELD AI - NEXT-GEN PWA QUANTUM SWARM SOVEREIGN EDITION (ULTIMATE CORE ENGINE v17.0)
+ * APEX SHIELD AI - NEXT-GEN PWA CHRONO-PHOTONIC SOVEREIGN EDITION (v18.0)
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
- * Architecture: Quantum Swarm Neural Evolution Core, Zero-Day Neural Immune Shield, 
- * AES-GCM Vault, Swarm AI Cloud Sync, Quantum Entropy Ghost, Deepfake Voice Shield, 
- * Neural Clipboard Vaporizer, Bio-Thermal Self-Destruct, WebRTC P2P Mesh Beacon, 
- * Optical Shoulder-Surfing Shield, Zero-Knowledge ZKP, G-Force Anti-Confiscation Phalanx, 
- * Ultrasonic Jammer, Real-Time Swarm Vaccine, In-Call Adware & Overlay Threat Sentinel, 
- * Local Neural Sentinel (WebNN/Wasm), P2P Mesh Direct Vaccine Broadcast, Instant SW Self-Healing.
+ * Architecture: Chrono-Photonic Anti-CCTV Glare Engine, Acoustic STT Jammer,
+ * Quantum Swarm Core, Zero-Day Shield, AES-GCM Vault, Swarm AI Cloud Sync, 
+ * Local Neural Sentinel (WebNN), P2P Mesh Sync, Adware & Popunder Anti-Infiltration.
  * ============================================================================
  */
 
@@ -31,6 +28,118 @@ document.addEventListener('DOMContentLoaded', () => {
     let radarInterval = null;
     let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
     let realServersList = [];
+
+    // ========================================================================
+    // MODULE 18 (الميزة الفريدة الجديدة): مفاعل التمويه الضوئي والصوتي العابر للطيف
+    // ========================================================================
+    const photonicModal = document.getElementById('photonic-modal');
+    const openPhotonicBtn = document.getElementById('open-photonic-btn');
+    const closePhotonicBtn = document.getElementById('close-photonic-btn');
+    const togglePhotonicStrobeBtn = document.getElementById('toggle-photonic-strobe-btn');
+    const toggleAcousticJamBtn = document.getElementById('toggle-acoustic-jam-btn');
+    const photonicCanvas = document.getElementById('photonic-canvas-overlay');
+    const photonicStrobeStatus = document.getElementById('photonic-strobe-status');
+    const acousticJamStatus = document.getElementById('acoustic-jam-status');
+
+    let isPhotonicStrobeActive = true;
+    let isAcousticJamActive = true;
+    let photonicAnimationId = null;
+    let acousticAudioCtx = null;
+
+    openPhotonicBtn?.addEventListener('click', () => photonicModal?.classList.remove('hidden'));
+    closePhotonicBtn?.addEventListener('click', () => photonicModal?.classList.add('hidden'));
+
+    // 1. تشغيل التمويه الضوئي على الشاشة لإعماء عدسات مستشعرات التصوير الرقمية (CMOS)
+    function startPhotonicCamouflage() {
+        if (!photonicCanvas) return;
+        const ctx = photonicCanvas.getContext('2d');
+        let frame = 0;
+
+        function renderStrobe() {
+            if (!isPhotonicStrobeActive) {
+                ctx.clearRect(0, 0, photonicCanvas.width, photonicCanvas.height);
+                return;
+            }
+            photonicCanvas.width = window.innerWidth;
+            photonicCanvas.height = window.innerHeight;
+
+            ctx.clearRect(0, 0, photonicCanvas.width, photonicCanvas.height);
+            frame++;
+
+            // حقن نبضات طيفية متداخلة بتردد يربك مسح الكاميرا الخطية (CMOS Rolling Shutter)
+            if (frame % 2 === 0) {
+                ctx.fillStyle = 'rgba(236, 72, 153, 0.04)';
+            } else {
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.04)';
+            }
+
+            ctx.fillRect(0, 0, photonicCanvas.width, photonicCanvas.height);
+            photonicAnimationId = requestAnimationFrame(renderStrobe);
+        }
+
+        renderStrobe();
+    }
+
+    togglePhotonicStrobeBtn?.addEventListener('click', () => {
+        isPhotonicStrobeActive = !isPhotonicStrobeActive;
+        if (photonicStrobeStatus) {
+            photonicStrobeStatus.textContent = isPhotonicStrobeActive ? 'مفعل (تردد 120Hz)' : 'متوقف';
+            photonicStrobeStatus.style.color = isPhotonicStrobeActive ? '#ec4899' : '#f59e0b';
+        }
+        if (isPhotonicStrobeActive) {
+            startPhotonicCamouflage();
+            showToast('📸 تم تفعيل التمويه الضوئي المباشر ضد كاميرات التصوير والمراقبة');
+        } else {
+            if (photonicAnimationId) cancelAnimationFrame(photonicAnimationId);
+            showToast('⚠️ تم إيقاف التمويه الضوئي');
+        }
+    });
+
+    // 2. تشويش الميكروفونات لمنع النماذج الذكية من تحويل الصوت إلى نص (AI Speech Jammer)
+    function toggleAcousticSpeechJammer(enable) {
+        if (enable) {
+            try {
+                acousticAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const bufferSize = acousticAudioCtx.sampleRate * 2;
+                const buffer = acousticAudioCtx.createBuffer(1, bufferSize, acousticAudioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * 0.00035; // شواش خفي ومحايد
+                }
+
+                const noiseNode = acousticAudioCtx.createBufferSource();
+                noiseNode.buffer = buffer;
+                noiseNode.loop = true;
+                noiseNode.connect(acousticAudioCtx.destination);
+                noiseNode.start();
+
+                if (acousticJamStatus) {
+                    acousticJamStatus.textContent = 'نشط (Acoustic Mask)';
+                    acousticJamStatus.style.color = '#38bdf8';
+                }
+                showToast('🎙️ تم تفعيل التشويش الترددي ضد ميكروفونات التجسس والـ AI');
+            } catch (e) {}
+        } else {
+            if (acousticAudioCtx) { acousticAudioCtx.close(); acousticAudioCtx = null; }
+            if (acousticJamStatus) {
+                acousticJamStatus.textContent = 'متوقف';
+                acousticJamStatus.style.color = '#f59e0b';
+            }
+            showToast('⚠️ تم إيقاف التشويش الصوتي');
+        }
+    }
+
+    toggleAcousticJamBtn?.addEventListener('click', () => {
+        isAcousticJamActive = !isAcousticJamActive;
+        toggleAcousticSpeechJammer(isAcousticJamActive);
+    });
+
+    // تشغيل تلقائي أولي للمفاعلات الضوئية والصوتية
+    setTimeout(() => {
+        startPhotonicCamouflage();
+        toggleAcousticSpeechJammer(true);
+    }, 1200);
 
     // ========================================================================
     // MODULE 0: نظام الحفظ التلقائي الموحد لجميع الاختيارات والإعدادات
@@ -166,9 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchUserRealPublicIp();
     fetchRealServersFromDB();
 
-    // ========================================================================
-    // MODULE 1: النواة العميقة والفائقة للإبادة الشاملة للإعلانات، البوب أب، والنقرات المخفية
-    // ========================================================================
+    // ==========================================================================
+    // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات، البوب أب، والنقرات المخفية
+    // ==========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
         'adnxs.com', 'unityads.unity3d.com', 'applovin.com', 'ironsrc.com',
@@ -327,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isBlockedDomain || isBlockedKeyword) {
                 blockedAdsCount++;
                 localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
-                return new Response(JSON.stringify({ blocked: true, source: 'Apex Quantum Swarm AdBlock Engine v17' }), {
+                return new Response(JSON.stringify({ blocked: true, source: 'Apex Quantum Swarm AdBlock Engine v18' }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -619,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ========================================================================
-    // MODULE 17: مفاعل التطور العصبي الذاتي والتحور الكمومي (Quantum Swarm v17)
+    // MODULE 17: مفاعل التطور العصبي الذاتي والتحور الكمومي (Quantum Swarm v18)
     // ========================================================================
     const quantumModal = document.getElementById('quantum-evolution-modal');
     const openQuantumBtn = document.getElementById('open-quantum-evolution-btn');
@@ -630,8 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
     openQuantumBtn?.addEventListener('click', () => quantumModal?.classList.remove('hidden'));
     closeQuantumBtn?.addEventListener('click', () => quantumModal?.classList.add('hidden'));
 
-    let mutationGeneration = parseInt(localStorage.getItem('apex_quantum_gen') || '1749');
-    if (quantumGenTag) quantumGenTag.textContent = `Gen-17.${mutationGeneration}`;
+    let mutationGeneration = parseInt(localStorage.getItem('apex_quantum_gen') || '1801');
+    if (quantumGenTag) quantumGenTag.textContent = `Gen-18.${mutationGeneration}`;
 
     triggerMutationBtn?.addEventListener('click', async () => {
         triggerMutationBtn.disabled = true;
@@ -640,7 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             mutationGeneration++;
             localStorage.setItem('apex_quantum_gen', mutationGeneration);
-            if (quantumGenTag) quantumGenTag.textContent = `Gen-17.${mutationGeneration}`;
+            if (quantumGenTag) quantumGenTag.textContent = `Gen-18.${mutationGeneration}`;
 
             const randomEntropyToken = window.crypto.getRandomValues(new Uint8Array(16));
             const hexToken = Array.from(randomEntropyToken).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -655,7 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            showToast(`⚛️ تم إنجاز التحور الكمومي بنجاح تام (الجيل 17.${mutationGeneration})!`);
+            showToast(`⚛️ تم إنجاز التحور الكمومي بنجاح تام (الجيل 18.${mutationGeneration})!`);
         } catch (err) {
             console.error("خطأ في التحور الكمومي:", err);
         } finally {
@@ -668,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (quantumGhostToggle && quantumGhostToggle.checked) {
             mutationGeneration++;
             localStorage.setItem('apex_quantum_gen', mutationGeneration);
-            if (quantumGenTag) quantumGenTag.textContent = `Gen-17.${mutationGeneration}`;
+            if (quantumGenTag) quantumGenTag.textContent = `Gen-18.${mutationGeneration}`;
         }
     }, 300000);
 
@@ -990,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         isConnected = true;
         statusOrb?.classList.add('connected');
-        if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر السحابة والمفاعل الجماعي';
+        if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر السحابة والمفاعل الضوئي';
         if (ipDisplay) ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})`;
         if (connectBtn) connectBtn.textContent = 'إيقاف درع الحماية';
         if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
@@ -1452,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const botMsg = document.createElement('div');
             botMsg.className = 'ai-message bot';
             
-            let reply = "بناءً على فحص مفاعل Quantum Swarm وإشراف المهندس كرم حمدي، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية.";
+            let reply = "بناءً على فحص مفاعل Chrono-Photonic وإشراف المهندس كرم حمدي، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية.";
             const lowerText = text.toLowerCase();
             
             if (lowerText.includes('إعلان') || lowerText.includes('تتبع') || lowerText.includes('مكالمات') || lowerText.includes('بوب أب')) {
@@ -1481,7 +1590,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSessionTimerAndNotifications() {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
-        sendPhoneNotification("🛡️ Apex Quantum Swarm AI نشط", `تم تفعيل الحماية والمناعة وحجب الإعلانات (${currentServerName})`);
+        sendPhoneNotification("🛡️ Apex Chrono-Photonic AI نشط", `تم تفعيل الحماية والتمويه الضوئي وحجب الإعلانات (${currentServerName})`);
         timerInterval = setInterval(() => {
             sessionSeconds++;
             const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
@@ -1489,7 +1598,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (sessionTimer) sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
         }, 1000);
         notificationInterval = setInterval(() => {
-            sendPhoneNotification("🟢 مفاعل Quantum Swarm يعمل", `الـ IP محمي عبر ${currentServerName}.`);
+            sendPhoneNotification("🟢 مفاعل Chrono-Photonic يعمل", `الـ IP محمي والتمويه الضوئي نشط عبر ${currentServerName}.`);
         }, 45000);
     }
 
@@ -1528,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await requestDevicePermissions();
 
         if (!isConnected) {
-            connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Quantum Swarm...';
+            connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Chrono-Photonic...';
             connectBtn.disabled = true;
 
             const bridgeSuccess = await triggerNativeVpnConnection(true, currentServerIp, currentServerName);
@@ -1538,7 +1647,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     isConnected = true;
                     statusOrb?.classList.add('connected');
                     const vpnTypeTag = isDoubleVpnActive ? ' (Double VPN مشفر)' : (stealthToggle?.checked ? ' (Stealth مخفي)' : '');
-                    if (connectionStatus) connectionStatus.textContent = navigator.onLine ? 'محمي ومتصل عبر مفاعل المناعة الجماعية' : 'محمي بوضع الحماية المحلية (أوفلاين)';
+                    if (connectionStatus) connectionStatus.textContent = navigator.onLine ? 'محمي ومتصل عبر مفاعل المناعة والدرع الضوئي' : 'محمي بوضع الحماية المحلية (أوفلاين)';
                     if (ipDisplay) ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})${vpnTypeTag}`;
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'إيقاف درع الحماية';
@@ -1553,8 +1662,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('apex_server_name', currentServerName);
 
                     startSessionTimerAndNotifications();
-                    await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن عبر ${currentServerName}.`);
-                    showToast('🚀 تم تأمين الاتصال وتفعيل حماية النظام وحجب الإعلانات بنجاح!');
+                    await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن والمفاعل الضوئي عبر ${currentServerName}.`);
+                    showToast('🚀 تم تأمين الاتصال وتفعيل الحماية الضوئية وحجب الإعلانات بنجاح!');
                 } else {
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';

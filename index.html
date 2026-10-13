@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Shield AI - Global Swarm Cloud Edition</title>
+    <title>Apex Shield AI - Next-Gen PWA Swarm Cloud Edition</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#030712">
@@ -31,7 +31,7 @@
         // إتاحة قاعدة البيانات عالمياً لملف app.js
         window.apexDb = db;
         window.apexFirestore = { collection, addDoc, getDocs };
-        console.log("[Apex Swarm AI] متصل بنجاح بالسحابة المركزية للمشروع vpn1-c7cbd!");
+        console.log("[Apex Swarm AI v16] متصل بنجاح بالسحابة المركزية للمشروع vpn1-c7cbd!");
     </script>
 </head>
 <body class="theme-cyan">
@@ -39,7 +39,7 @@
     <!-- حاوية التنبيهات الفورية العائمة (Toast Notifications) -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- نافذة التمويه الوهمي تحت الإكراه (Decoy Calculator Mode - الاختراع الأول) -->
+    <!-- نافذة التمويه الوهمي تحت الإكراه (Decoy Calculator Mode) -->
     <div id="decoy-modal" class="modal hidden" style="background: #0f172a; z-index: 99999;">
         <div class="modal-content glass-panel text-center">
             <h2>🧮 الآلة الحاسبة الذكية (النظام الآمن)</h2>
@@ -103,7 +103,7 @@
     <div id="ai-modal" class="modal hidden">
         <div class="modal-content glass-panel ai-panel">
             <div class="ai-header">
-                <span>🤖 مساعد الذكاء الاصطناعي السحابي</span>
+                <span>🤖 مساعد الذكاء الاصطناعي السحابي والمحلي</span>
                 <button id="close-ai-btn" class="close-icon">&times;</button>
             </div>
             <div class="ai-chat-box" id="ai-chat-box">
@@ -120,7 +120,7 @@
     <div id="swarm-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>🌐 مفاعل المناعة السيبرانية الجماعية واللقاحات الحية (Swarm AI)</h2>
-            <p>شبكة عصبية عالمية مترابطة عبر سحابة Firebase (vpn1-c7cbd) لمشاركة اللقاحات السيبرانية الحية ولحظية لحماية جميع الأجهزة ضد هجمات Zero-Day:</p>
+            <p>شبكة عصبية عالمية مترابطة عبر سحابة Firebase (vpn1-c7cbd) وشبكة P2P Mesh لمشاركة اللقاحات الحية لحماية جميع الأجهزة:</p>
             <div class="wifi-stats-box">
                 <div class="wifi-row"><span>حالة العقدة السحابية:</span> <strong style="color: #10b981;">متصل ومحمّل باللقاحات النشطة</strong></div>
                 <div class="wifi-row"><span>حالة اللقاح السحابي الحي:</span> <strong id="live-vaccine-status" style="color: #38bdf8;">متزامن مع Firebase بنجاح</strong></div>
@@ -130,7 +130,7 @@
             <div id="swarm-log-container" class="history-list-container" style="max-height: 120px; margin-top: 10px;">
                 <div class="radar-log-item">🧬 تم تحديث بصمة التمويه العصبية وبث اللقاح الحي بنجاح.</div>
             </div>
-            <button id="broadcast-vaccine-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">نشر لقاح أمني سحابي جديد للمجتمع</button>
+            <button id="broadcast-vaccine-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">نشر لقاح أمني سحابي و P2P جديد للمجتمع</button>
             <button id="close-swarm-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق المفاعل</button>
         </div>
     </div>
@@ -232,8 +232,8 @@
     <!-- نافذة رادار التهديدات السيبرانية الحي -->
     <div id="radar-modal" class="modal hidden">
         <div class="modal-content glass-panel text-center">
-            <h2>📡 رادار التهديدات السيبرانية الحي</h2>
-            <p style="font-size: 0.7rem; color: #94a3b8;">رصد فوري لمحاولات التتبع والهجمات السيبرانية التي يصدها الدرع:</p>
+            <h2>📡 رادار التهديدات السيبرانية والشبكة اللامركزية الحي</h2>
+            <p style="font-size: 0.7rem; color: #94a3b8;">رصد فوري لمحاولات التتبع والهجمات السيبرانية وعقد P2P:</p>
             <div class="radar-screen">
                 <div class="radar-sweep"></div>
                 <div class="radar-center-dot"></div>
@@ -283,13 +283,13 @@
     <!-- نافذة فحص التطبيقات وملفات الهاتف الشامل الحقيقي والسحابي -->
     <div id="scanner-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🔍 فحص ملفات الهاتف والتطبيقات الضارة (سحابي)</h2>
-            <p>يقوم نظام AI بفحص الذاكرة والتطبيقات المثبتة ومزامنة السجلات مع سحابة Firebase.</p>
+            <h2>🔍 فحص ملفات الهاتف والتطبيقات الضارة (سحابي وعصبي)</h2>
+            <p>يقوم نظام AI بفحص الذاكرة والتطبيقات المثبتة محلياً وعبر سحابة Firebase.</p>
             <div id="scanner-results" class="scanner-box">
                 <span id="scan-status-text">جاهز لبدء الفحص العميق المتصل بالسحابة...</span>
                 <div id="threat-list" class="threat-list-container"></div>
             </div>
-            <button id="start-deep-scan" class="btn-primary" style="margin-top: 15px; width: 100%;">بدء الفحص السحابي الآن</button>
+            <button id="start-deep-scan" class="btn-primary" style="margin-top: 15px; width: 100%;">بدء الفحص الشامل الآن</button>
             <button id="close-scanner-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">إغلاق</button>
         </div>
     </div>
@@ -462,7 +462,17 @@
 
             <!-- لوحة الميزات الفريدة والاختراعات الاستخباراتية -->
             <div class="advanced-panel glass-card">
-                <!-- الاختراعات الأربعة الجديدة كلياً -->
+                <!-- الإضافات العصبية واللامركزية الجديدة (v16.0) -->
+                <div class="setting-row">
+                    <span>🧠 الاستشعار العصبي المحلي (Local Neural AI)</span>
+                    <label class="switch"><input type="checkbox" id="local-nn-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>🌐 المزامنة اللامركزية المباشرة (P2P Mesh Sync)</span>
+                    <label class="switch"><input type="checkbox" id="p2p-mesh-sync-toggle" checked><span class="slider"></span></label>
+                </div>
+
+                <!-- الاختراعات السابقة والأساسية -->
                 <div class="setting-row">
                     <span>🔥 درع الانصهار الحراري والتدمير الحيوي (Bio-Thermal)</span>
                     <label class="switch"><input type="checkbox" id="bio-thermal-toggle" checked><span class="slider"></span></label>
@@ -479,8 +489,6 @@
                     <span>⚛️ إثبات المعرفة المعدومة للعتاد والسحابة (ZKP)</span>
                     <label class="switch"><input type="checkbox" id="zkp-proof-toggle" checked><span class="slider"></span></label>
                 </div>
-
-                <!-- الاختراعات السابقة والأساسية -->
                 <div class="setting-row">
                     <span>👻 درع الإنتروبيا الكمومية (Quantum Ghost)</span>
                     <label class="switch"><input type="checkbox" id="quantum-ghost-toggle" checked><span class="slider"></span></label>
@@ -590,7 +598,7 @@
         <footer class="app-footer">
             <a href="#" id="open-policy-link">الخصوصية</a> • 
             <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
-            <span class="version-tag">v15.7 Ultimate Global Security Edition</span>
+            <span class="version-tag">v16.0 Next-Gen PWA Swarm AI Edition</span>
         </footer>
     </div>
 

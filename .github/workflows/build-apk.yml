@@ -70,70 +70,55 @@ jobs:
           mkdir -p "$TARGET_DIR"
           cp /tmp/java_source/*.java "$TARGET_DIR/" || true
 
-          cat << 'EOF' > sanitize_and_update.js
-          const fs = require('fs');
-          const path = require('path');
+          node -e '
+          const fs = require("fs");
+          const path = require("path");
 
-          // 1. تنظيف ملفات الجافا وحذف ترميز BOM وتثبيت اسم الحزمة
-          const targetDir = 'android/app/src/main/java/com/apex/shield';
+          // 1. تنظيف ملفات الجافا وحذف BOM وتثبيت الحزمة
+          const targetDir = "android/app/src/main/java/com/apex/shield";
           if (fs.existsSync(targetDir)) {
             const files = fs.readdirSync(targetDir);
             files.forEach(file => {
-              if (file.endsWith('.java')) {
+              if (file.endsWith(".java")) {
                 const filePath = path.join(targetDir, file);
-                let content = fs.readFileSync(filePath, 'utf8');
-                
-                // إزالة رمز الترميز الخفي BOM
-                content = content.replace(/^\uFEFF/, '');
-                
-                // توحيد اسم الحزمة
-                content = content.replace(/^package\s+[a-zA-Z0-9_\.]+;/m, 'package com.apex.shield;');
-                
-                fs.writeFileSync(filePath, content, 'utf8');
-                console.log(`Sanitized: ${file}`);
+                let content = fs.readFileSync(filePath, "utf8");
+                content = content.replace(/^\uFEFF/, "");
+                content = content.replace(/^package\s+[a-zA-Z0-9_\.]+;/m, "package com.apex.shield;");
+                fs.writeFileSync(filePath, content, "utf8");
+                console.log("Sanitized: " + file);
               }
             });
           }
 
-          // 2. تحديث AndroidManifest.xml بوضع الأذونات القياسية وتثبيت خدمة الـ VPN
-          const manifestPath = 'android/app/src/main/AndroidManifest.xml';
+          // 2. تحديث AndroidManifest.xml
+          const manifestPath = "android/app/src/main/AndroidManifest.xml";
           if (fs.existsSync(manifestPath)) {
-            let manifest = fs.readFileSync(manifestPath, 'utf8');
+            let manifest = fs.readFileSync(manifestPath, "utf8");
 
-            const permissionsToAdd = [
-              '<uses-permission android:name="android.permission.INTERNET" />',
-              '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />',
-              '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
-              '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />'
+            const permissions = [
+              "<uses-permission android:name=\"android.permission.INTERNET\" />",
+              "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />",
+              "<uses-permission android:name=\"android.permission.FOREGROUND_SERVICE\" />",
+              "<uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\" />"
             ];
 
-            permissionsToAdd.forEach(perm => {
-              const permName = perm.match(/name="([^"]+)"/)[1];
-              if (!manifest.includes(permName)) {
-                manifest = manifest.replace('<application', `    ${perm}\n    <application`);
+            permissions.forEach(perm => {
+              if (!manifest.includes(perm)) {
+                manifest = manifest.replace("<application", "    " + perm + "\n    <application");
               }
             });
 
-            const serviceTag = `
-        <service
-            android:name="com.apex.shield.ApexVpnService"
-            android:permission="android.permission.BIND_VPN_SERVICE"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.net.VpnService" />
-            </intent-filter>
-        </service>`;
+            const serviceTag = "<service android:name=\"com.apex.shield.ApexVpnService\" android:permission=\"android.permission.BIND_VPN_SERVICE\" android:exported=\"false\"><intent-filter><action android:name=\"android.net.VpnService\" /></intent-filter></service>";
 
-            if (!manifest.includes('ApexVpnService')) {
-              manifest = manifest.replace('</application>', `${serviceTag}\n    </application>`);
+            if (!manifest.includes("ApexVpnService")) {
+              manifest = manifest.replace("</application>", "    " + serviceTag + "\n    </application>");
             }
 
-            fs.writeFileSync(manifestPath, manifest, 'utf8');
-            console.log('Updated AndroidManifest.xml safely.');
+            fs.writeFileSync(manifestPath, manifest, "utf8");
+            console.log("Updated AndroidManifest.xml safely.");
           }
-          EOF
+          '
 
-          node sanitize_and_update.js
           npx cap sync android
 
       - name: 5. Build APK Package

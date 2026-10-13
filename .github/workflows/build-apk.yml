@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Setup Environment & Web Assets
+      - name: 1. Setup Web Assets & Dependencies
         run: |
           echo "=== 1. تجهيز مجلد www والإعدادات ==="
           mkdir -p www
@@ -50,16 +50,223 @@ jobs:
           }
           EOF
 
-      - name: 2. Generate Android Project & Sync
+      - name: 2. Generate Android Project & Inject Java Code
         run: |
-          echo "=== 2. إنشاء وتجهيز مشروع أندرويد نظيف ==="
+          echo "=== 2. إنشاء مشروع أندرويد وحقن ملفات الجافا والجسور ==="
           rm -rf android
           npx cap add android
+
+          # إنشاء مجلد الحزمة المستهدفة
+          JAVA_DIR="android/app/src/main/java/com/apex/shield"
+          mkdir -p "$JAVA_DIR"
+
+          # 1. كتابة MainActivity.java مع تسجيل الجسر
+          cat << 'EOF' > "$JAVA_DIR/MainActivity.java"
+          package com.apex.shield;
+
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  registerPlugin(AndroidVPNBridgePlugin.class);
+              }
+          }
+          EOF
+
+          # 2. كتابة AndroidVPNBridgePlugin.java
+          cat << 'EOF' > "$JAVA_DIR/AndroidVPNBridgePlugin.java"
+          package com.apex.shield;
+
+          import android.content.Intent;
+          import android.net.VpnService;
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          @CapacitorPlugin(name = "AndroidVPNBridge")
+          public class AndroidVPNBridgePlugin extends Plugin {
+              @PluginMethod
+              public void toggleVpn(PluginCall call) {
+                  Boolean enable = call.getBoolean("enable", false);
+                  String serverIp = call.getString("serverIp", "");
+                  String serverName = call.getString("serverName", "");
+
+                  Intent intent = new Intent(getContext(), ApexVpnService.class);
+
+                  if (enable) {
+                      Intent prepareIntent = VpnService.prepare(getContext());
+                      if (prepareIntent != null) {
+                          getActivity().startActivityForResult(prepareIntent, 0);
+                      } else {
+                          intent.setAction("START");
+                          intent.putExtra("serverIp", serverIp);
+                          intent.putExtra("serverName", serverName);
+                          getContext().startService(intent);
+                      }
+                  } else {
+                      intent.setAction("STOP");
+                      getContext().startService(intent);
+                  }
+
+                  JSObject ret = new JSObject();
+                  ret.put("success", true);
+                  call.resolve(ret);
+              }
+          }
+          EOF
+
+          # 3. كتابة ApexVpnService.java
+          cat << 'EOF' > "$JAVA_DIR/ApexVpnService.java"
+          package com.apex.shield;
+
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.content.Intent;
+          import android.net.VpnService;
+          import android.os.Build;
+          import android.os.ParcelFileDescriptor;
+          import android.util.Log;
+
+          public class ApexVpnService extends VpnService {
+              private static final String TAG = "ApexVpnService";
+              private static final String CHANNEL_ID = "ApexVpnChannel";
+              private ParcelFileDescriptor vpnInterface = null;
+
+              @Override
+              public int onStartCommand(Intent intent, int flags, int startId) {
+                  String action = intent != null ? intent.getAction() : "";
+                  if ("START".equals(action)) {
+                      createNotificationChannel();
+                      startForeground(101, buildNotification());
+                      startVpn();
+                  } else if ("STOP".equals(action)) {
+                      stopVpn();
+                  }
+                  return START_STICKY;
+              }
+
+              private void startVpn() {
+                  if (vpnInterface != null) return;
+                  try {
+                      Builder builder = new Builder();
+                      builder.addAddress("10.1.10.1", 24)
+                             .addRoute("0.0.0.0", 0)
+                             .addDnsServer("1.1.1.3")
+                             .addDnsServer("1.0.0.3")
+                             .setSession("ApexShieldVPN");
+                      vpnInterface = builder.establish();
+                      Log.d(TAG, "VPN Connected");
+                  } catch (Exception e) {
+                      Log.e(TAG, "VPN Error", e);
+                  }
+              }
+
+              private void stopVpn() {
+                  try {
+                      if (vpnInterface != null) {
+                          vpnInterface.close();
+                          vpnInterface = null;
+                      }
+                      stopForeground(true);
+                      stopSelf();
+                  } catch (Exception e) {
+                      Log.e(TAG, "Stop Error", e);
+                  }
+              }
+
+              private void createNotificationChannel() {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      NotificationChannel channel = new NotificationChannel(
+                          CHANNEL_ID, "Apex Shield VPN Protection", NotificationManager.IMPORTANCE_LOW
+                      );
+                      NotificationManager manager = getSystemService(NotificationManager.class);
+                      if (manager != null) manager.createNotificationChannel(channel);
+                  }
+              }
+
+              private Notification buildNotification() {
+                  Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ?
+                      new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
+                  return builder.setContentTitle("Apex Shield AI")
+                      .setContentText("درع الحماية وخدمة VPN المشفرة نشطة الآن")
+                      .setSmallIcon(android.R.drawable.ic_lock_lock)
+                      .setOngoing(true)
+                      .build();
+              }
+
+              @Override
+              public void onDestroy() {
+                  stopVpn();
+                  super.onDestroy();
+              }
+          }
+          EOF
+
+          # 4. تحديث AndroidManifest.xml بالأذونات والخدمة والرابط الصحيح
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          cat << 'EOF' > "$MANIFEST_PATH"
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.apex.shield">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/appName"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name="com.apex.shield.MainActivity"
+                      android:label="@string/launcherName"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:launchMode="singleTask"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="https" android:host="@string/hostName" android:pathPrefix="/Vpn/" />
+                      </intent-filter>
+                  </activity>
+
+                  <service
+                      android:name="com.apex.shield.ApexVpnService"
+                      android:permission="android.permission.BIND_VPN_SERVICE"
+                      android:exported="false">
+                      <intent-filter>
+                          <action android:name="android.net.VpnService" />
+                      </intent-filter>
+                  </service>
+
+              </application>
+          </manifest>
+          EOF
+
           npx cap sync android
 
       - name: 3. Build APK & AAB Packages
         run: |
-          echo "=== 3. بناء الحزم (APK & AAB) ==="
+          echo "=== 3. بناء الحزم نهائياً ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"

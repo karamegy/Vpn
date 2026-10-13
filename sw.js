@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apex-shield-quantum-v25';
+const CACHE_NAME = 'apex-shield-quantum-v17-sovereign';
 const assetsToCache = [
   '/Vpn/',
   '/Vpn/index.html',
@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// تفعيل الخدمة وتنظيف النسخ القديمة
+// تفعيل الخدمة وتنظيف النسخ القديمة فوراً
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {

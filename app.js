@@ -1140,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stealthToggle.checked = localStorage.getItem('apex_stealth') === 'true';
         stealthToggle.addEventListener('change', () => {
             localStorage.setItem('apex_stealth', stealthToggle.checked);
-            showToast(stealthToggle.checked ? '🕵️ تم تفعيل وضع التمويه العسكري' : '🕵️ تم إيقاف وضع التمويه العسكري');
+            showToast(stealthToggle.checked ? '🇪🇬 تم تفعيل وضع التمويه المصري' : '🇪🇬 تم إيقاف وضع التمويه المصري');
         });
     }
 
@@ -1640,7 +1640,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const botMsg = document.createElement('div');
             botMsg.className = 'ai-message bot';
             
-            let reply = "بناءً على فحص مفاعل Chrono-Photonic وإشراف المهندس كرم حمدي، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية.";
+            let reply = "بناءً على فحص مفاعل Chrono-Photonic وإشراف التطبيق  ، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية.";
             const lowerText = text.toLowerCase();
             
             if (lowerText.includes('إعلان') || lowerText.includes('تتبع') || lowerText.includes('مكالمات') || lowerText.includes('بوب أب')) {

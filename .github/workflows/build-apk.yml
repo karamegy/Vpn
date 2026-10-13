@@ -1,4 +1,4 @@
-name: Build Android Native APK (Apex Shield)
+name: Build Android Native APK & AAB (Apex Shield)
 
 on:
   push:
@@ -45,14 +45,20 @@ jobs:
             cp -r ../java_backup/* android/app/src/main/java/ || true
           fi
 
-      - name: Build Native Android APK
+      - name: Build Both APK and AAB Packages
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug bundleRelease --no-daemon --stacktrace
 
-      - name: Upload APK to GitHub Artifacts
+      - name: Upload APK (For Direct Phone Testing)
         uses: actions/upload-artifact@v4
         with:
-          name: ApexShield-Native-VPN-APK
+          name: ApexShield-APK-DirectInstall
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload AAB (For Google Play Console)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ApexShield-AAB-GooglePlay
+          path: android/app/build/outputs/bundle/release/app-release.aab

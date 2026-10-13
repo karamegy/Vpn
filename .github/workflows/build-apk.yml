@@ -25,27 +25,49 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Extract Java Files From Any Path
+      - name: 1. Extract Java Files & Clean Android Dir
         run: |
-          echo "=== 1. تجميع ملفات الجافا وحفظها مؤقتاً ==="
+          echo "=== 1. حفظ ملفات الجافا وتنظيف مجلد أندرويد القديم ==="
           mkdir -p /tmp/java_source
           find . -name "*.java" -exec cp {} /tmp/java_source/ \;
           ls -la /tmp/java_source/
           rm -rf android
 
-      - name: 2. Prepare Web Assets & Environment
+      - name: 2. Prepare Web Assets & Force Custom Capacitor Config
         run: |
-          echo "=== 2. تجهيز ملفات الويب وحزم Capacitor ==="
+          echo "=== 2. تجهيز مجلد www وتضمين إعداداتك المخصصة بالكامل ==="
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
+          
           if [ ! -f "package.json" ]; then
             npm init -y
           fi
+          
           npm install @capacitor/core @capacitor/cli @capacitor/android
+
+          # كتابة إعداداتك المخصصة مع تعديل webDir إلى www لمنع الأخطاء
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "com.apex.shield",
+            "appName": "Apex Shield AI - Quantum Swarm Edition",
+            "webDir": "www",
+            "bundledWebRuntime": false,
+            "android": {
+              "webContentsDebuggingEnabled": true,
+              "allowMixedContent": true
+            },
+            "plugins": {
+              "SplashScreen": {
+                "launchShowDuration": 2000,
+                "backgroundColor": "#030712"
+              }
+            }
+          }
+          EOF
 
       - name: 3. Generate Clean Android Project
         run: |
-          echo "=== 3. إنشاء مشروع أندرويد جديد ونظيف ==="
+          echo "=== 3. إنشاء مشروع أندرويد بمسار webDir موثوق ==="
           npx cap add android
 
       - name: 4. Inject Java Files & Configure Manifest

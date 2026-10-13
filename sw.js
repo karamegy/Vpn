@@ -1,10 +1,18 @@
+/* ============================================================================
+   APEX SHIELD AI - SERVICE WORKER (v22.0 Chrono-Photonic Sovereign)
+   ============================================================================ */
+
 const CACHE_NAME = 'apex-shield-v22-chrono-photonic-sovereign';
+
+// قائمة الملفات المحدثة للتخزين المؤقت لضمان العمل 100% بوضع أوفلاين
 const assetsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
+  './privacy-policy.html',
+  './icon-192.png',
   './icon-512.png'
 ];
 
@@ -53,7 +61,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = event.request.url.toLowerCase();
   
-  // التحقق الفوري مما إذا كان الطلب ينتمي للإعلانات أو نطاقات التوجيه الخبيثة
+  // 1. استثناء طلبات Firebase و SDK السحابية و API الخارجي لتعتمد على التخزين السحابي الخاص بها
+  if (url.includes('firestore.googleapis.com') || 
+      url.includes('gstatic.com') || 
+      url.includes('ipify.org') || 
+      url.includes('httpbin.org')) {
+      return;
+  }
+
+  // 2. التحقق الفوري مما إذا كان الطلب ينتمي للإعلانات أو نطاقات التوجيه الخبيثة
   const isBlocked = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
   if (isBlocked) {
       event.respondWith(
@@ -65,6 +81,7 @@ self.addEventListener('fetch', (event) => {
       return;
   }
 
+  // 3. تقديم الاستجابة من التخزين المؤقت أو جلبها من الشبكة
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request).catch(() => {
@@ -76,10 +93,15 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// إدارة إشعارات الهاتف ودعم التنبيهات في الخلفية
+// إدارة إشعارات الهاتف والتركيز على النافذة المفتوحة
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('./index.html')
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) {
+        return clientList[0].focus();
+      }
+      return clients.openWindow('./');
+    })
   );
 });

@@ -1,11 +1,11 @@
-const CACHE_NAME = 'apex-shield-quantum-v26-sovereign';
+const CACHE_NAME = 'apex-shield-v18-chrono-photonic-sovereign';
 const assetsToCache = [
-  '/Vpn/',
-  '/Vpn/index.html',
-  '/Vpn/style.css',
-  '/Vpn/app.js',
-  '/Vpn/manifest.json',
-  '/Vpn/icon-512.png'
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json',
+  './icon-512.png'
 ];
 
 // قائمة نطاقات الإعلانات والتتبع والبث الخبيثة المحظورة كلياً من الشبكة
@@ -49,7 +49,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// التعامل مع طلبات الشبكة وحجب الإعلانات على مستوى السيرفر ووكير (Network-Level Interception)
+// التعامل مع طلبات الشبكة وحجب الإعلانات على مستوى السيرفر ووركر (Network-Level Interception)
 self.addEventListener('fetch', (event) => {
   const url = event.request.url.toLowerCase();
   
@@ -57,7 +57,7 @@ self.addEventListener('fetch', (event) => {
   const isBlocked = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
   if (isBlocked) {
       event.respondWith(
-          new Response(JSON.stringify({ blocked: true, engine: 'Apex Quantum Network Firewall v17' }), {
+          new Response(JSON.stringify({ blocked: true, engine: 'Apex Quantum Network Firewall v18' }), {
               status: 200,
               headers: { 'Content-Type': 'application/json' }
           })
@@ -69,7 +69,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request).catch(() => {
         if (event.request.mode === 'navigate') {
-          return caches.match('/Vpn/index.html');
+          return caches.match('./index.html');
         }
       });
     })
@@ -80,6 +80,6 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('/Vpn/index.html')
+    clients.openWindow('./index.html')
   );
 });

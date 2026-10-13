@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Shield AI - Next-Gen PWA Quantum Swarm Sovereign Edition</title>
+    <title>Apex Shield AI - Next-Gen PWA Chrono-Photonic Edition</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#030712">
@@ -31,13 +31,32 @@
         // إتاحة قاعدة البيانات عالمياً لملف app.js
         window.apexDb = db;
         window.apexFirestore = { collection, addDoc, getDocs };
-        console.log("[Apex Quantum Swarm AI v17] متصل بنجاح بالسحابة المركزية للمشروع vpn1-c7cbd!");
+        console.log("[Apex Chrono-Photonic AI v18] متصل بنجاح بالسحابة المركزية للمشروع vpn1-c7cbd!");
     </script>
 </head>
 <body class="theme-cyan">
 
+    <!-- طبقة التمويه الضوئي الخفية المخصصة لإعماء الكاميرات ومستشعرات التصوير -->
+    <canvas id="photonic-canvas-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 999999; opacity: 0.035; mix-blend-mode: hard-light;"></canvas>
+
     <!-- حاوية التنبيهات الفورية العائمة (Toast Notifications) -->
     <div id="toast-container" class="toast-container"></div>
+
+    <!-- نافذة المفاعل الضوئي والصوتي المضاد للتصوير والتنصت (Chrono-Photonic Engine) -->
+    <div id="photonic-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>📸 مفاعل التمويه الضوئي والصوتي (Chrono-Photonic Shield)</h2>
+            <p>اختراع حصري: حماية الشاشة من الالتقاط البصري عبر إرباك مستشعرات الكاميرات (CMOS) وإغراق الميكروفونات المعزولة:</p>
+            <div class="wifi-stats-box">
+                <div class="wifi-row"><span>حالة التمويه الضوئي (Anti-CCTV):</span> <strong id="photonic-strobe-status" style="color: #ec4899;">مفعل (تردد 120Hz)</strong></div>
+                <div class="wifi-row"><span>معدل تعطيل كاميرات التصوير:</span> <strong style="color: #10b981;">100% (أشرطة ساطعة خفية)</strong></div>
+                <div class="wifi-row"><span>تشويش الميكروفونات القريبة:</span> <strong id="acoustic-jam-status" style="color: #38bdf8;">نشط (Acoustic Mask)</strong></div>
+            </div>
+            <button id="toggle-photonic-strobe-btn" class="btn-primary" style="margin-top: 15px; width: 100%; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff;">تبديل درع التمويه الضوئي المباشر</button>
+            <button id="toggle-acoustic-jam-btn" class="btn-primary" style="margin-top: 8px; width: 100%; background: #0284c7; color: #fff;">تبديل تشويش الميكروفونات ضد AI</button>
+            <button id="close-photonic-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">إغلاق المفاعل الضوئي</button>
+        </div>
+    </div>
 
     <!-- نافذة التمويه الوهمي تحت الإكراه (Decoy Calculator Mode) -->
     <div id="decoy-modal" class="modal hidden" style="background: #0f172a; z-index: 99999;">
@@ -85,14 +104,14 @@
         </div>
     </div>
 
-    <!-- نافذة مففاعل التطور العصبي الكمومي الخارق (Quantum Swarm v17) -->
+    <!-- نافذة مففاعل التطور العصبي الكمومي الخارق (Quantum Swarm v18) -->
     <div id="quantum-evolution-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>⚛️ مففاعل التطور العصبي الذاتي (Quantum Evolution v17)</h2>
+            <h2>⚛️ مففاعل التطور العصبي الذاتي (Quantum Evolution v18)</h2>
             <p>نظام دفاعي حي يتغير بنيوياً وتشفيرياً كل 60 ثانية لإرباك أي محاولة تتبع استخباراتي:</p>
             <div class="wifi-stats-box">
                 <div class="wifi-row"><span>حالة التطور الحي:</span> <strong style="color: #10b981;">نشط ويتحور برمجياً</strong></div>
-                <div class="wifi-row"><span>جيل البصمة الرقمية الحالي:</span> <strong id="quantum-gen-tag" style="color: #38bdf8;">Gen-17.4.9</strong></div>
+                <div class="wifi-row"><span>جيل البصمة الرقمية الحالي:</span> <strong id="quantum-gen-tag" style="color: #38bdf8;">Gen-18.0.1</strong></div>
                 <div class="wifi-row"><span>معدل التشابك الكمومي:</span> <strong style="color: #10b981;">100% (آمن تماماً)</strong></div>
             </div>
             <button id="trigger-quantum-mutation" class="btn-primary" style="margin-top: 15px; width: 100%;">إجبار تحور البصمة التشفيرية فوراً</button>
@@ -105,7 +124,7 @@
         <div class="modal-content glass-panel">
             <div class="modal-icon">🛡️</div>
             <h2>إفصاح الخدمة وصلاحية الـ VPN والمناعة الجماعية</h2>
-            <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> ومفاعل <strong>Swarm Neural Defense</strong> لإنشاء نفق مشفّر ومشاركة بصمات التهديدات أماناً عبر السحابة لحماية شبكتك العالمية.</p>
+            <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> ومفاعل <strong>Chrono-Photonic Neural Defense</strong> لإنشاء نفق مشفّر ومشاركة بصمات التهديدات أماناً عبر السحابة لحماية شبكتك العالمية.</p>
             <p>نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل الاتصال الآمن والمناعة السيبرانية المشتركة.</p>
             <div class="modal-buttons">
                 <button id="accept-btn" class="btn-primary">موافقة وتفعيل الحماية</button>
@@ -122,7 +141,7 @@
                 <button id="close-ai-btn" class="close-icon">&times;</button>
             </div>
             <div class="ai-chat-box" id="ai-chat-box">
-                <div class="ai-message bot">مرحباً بك يا مؤسسنا العبقري كرم حمدي! أنا مساعد مفاعل Swarm الأمني. كيف أساعدك اليوم؟</div>
+                <div class="ai-message bot">مرحباً بك يا مؤسسنا العبقري كرم حمدي! أنا مساعد مفاعل Chrono-Photonic الأمني. كيف أساعدك اليوم؟</div>
             </div>
             <div class="ai-input-area">
                 <input type="text" id="ai-input" placeholder="اسأل المساعد عن حالة المفاعل أو أمان الشبكة...">
@@ -439,7 +458,7 @@
         <header class="app-header">
             <div class="logo-area">
                 <div class="ai-dot"></div>
-                <h1>Apex Shield <span class="ai-badge">Quantum Swarm</span></h1>
+                <h1>Apex Shield <span class="ai-badge">Chrono-Photonic</span></h1>
             </div>
             <div class="header-actions">
                 <button id="panic-btn" class="icon-btn panic-icon" title="زر الذعر الفوري (تدمير مؤقت)">🚨</button>
@@ -478,9 +497,15 @@
 
             <!-- لوحة الميزات الفريدة والاختراعات الاستخباراتية -->
             <div class="advanced-panel glass-card">
-                <!-- الإضافات الكمومية والعصبية الجديدة (v17.0) -->
+                <!-- الاختراع الفريد الجديد v18.0 -->
+                <div class="setting-row clickable-row" id="open-photonic-btn">
+                    <span>📸 المفاعل الضوئي المكراني ضد كاميرات التصوير (Anti-CCTV Engine)</span>
+                    <span class="accent-link" style="color: #ec4899; font-weight: bold;">اختراع حصري 📸</span>
+                </div>
+
+                <!-- الإضافات الكمومية والعصبية -->
                 <div class="setting-row clickable-row" id="open-quantum-evolution-btn">
-                    <span>⚛️ مففاعل التطور العصبي والتحور الحي (Quantum v17)</span>
+                    <span>⚛️ مففاعل التطور العصبي والتحور الحي (Quantum v18)</span>
                     <span class="accent-link" style="color: #f59e0b; font-weight: bold;">اختراع عالمي 🚀</span>
                 </div>
                 <div class="setting-row">
@@ -618,7 +643,7 @@
         <footer class="app-footer">
             <a href="privacy-policy.html" target="_blank" id="open-policy-link">الخصوصية</a> • 
             <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
-            <span class="version-tag">v17.0 Quantum Swarm Sovereign Edition</span>
+            <span class="version-tag">v18.0 Chrono-Photonic Sovereign Edition</span>
         </footer>
     </div>
 

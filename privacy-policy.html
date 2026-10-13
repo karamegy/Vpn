@@ -1,156 +1,207 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Policy - Apex Shield</title>
-<style>
-:root {
---primary-color: #0f172a;
---accent-color: #2563eb;
---text-color: #334155;
---bg-color: #f8fafc;
---card-bg: #ffffff;
---border-color: #e2e8f0;
-}
-​body {
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-line-height: 1.7;
-color: var(--text-color);
-background-color: var(--bg-color);
-margin: 0;
-padding: 20px;
-}
-​.container {
-max-width: 800px;
-margin: 40px auto;
-background: var(--card-bg);
-padding: 40px;
-border-radius: 12px;
-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-border: 1px solid var(--border-color);
-}
-​header {
-border-bottom: 2px solid var(--border-color);
-padding-bottom: 20px;
-margin-bottom: 30px;
-}
-​h1 {
-color: var(--primary-color);
-font-size: 2.2rem;
-margin: 0 0 10px 0;
-}
-​.last-updated {
-font-size: 0.9rem;
-color: #64748b;
-}
-​h2 {
-color: var(--primary-color);
-font-size: 1.4rem;
-margin-top: 30px;
-border-bottom: 1px solid var(--border-color);
-padding-bottom: 8px;
-}
-​p, li {
-font-size: 1rem;
-}
-​ul {
-padding-left: 20px;
-}
-​li {
-margin-bottom: 8px;
-}
-​.note-box {
-background-color: #eff6ff;
-border-left: 4px solid var(--accent-color);
-padding: 15px 20px;
-margin: 20px 0;
-border-radius: 0 8px 8px 0;
-}
-​.contact-box {
-background-color: #f1f5f9;
-padding: 20px;
-border-radius: 8px;
-margin-top: 20px;
-}
-​a {
-color: var(--accent-color);
-text-decoration: none;
-}
-​a:hover {
-text-decoration: underline;
-}
-​footer {
-text-align: center;
-margin-top: 40px;
-font-size: 0.85rem;
-color: #94a3b8;
-}
-​@media (max-width: 600px) {
-.container {
-padding: 20px;
-margin: 10px auto;
-}
-h1 {
-font-size: 1.75rem;
-}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سياسة الخصوصية - Apex Shield AI</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 31, 48, 0.7);
+            --accent-color: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.2);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            color: var(--accent-color);
+            font-size: 1.3rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+
+        h2:first-of-type {
+            margin-top: 0;
+        }
+
+        p, li {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        ul {
+            padding-right: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        li strong {
+            color: var(--text-primary);
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--accent-glow);
+            color: var(--accent-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid var(--accent-color);
+            margin-top: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
 </head>
 <body>
-​<div class="container">
-<header>
-<h1>Privacy Policy</h1>
-<div class="last-updated">App Name: <strong>Apex Shield</strong> | Last updated: October 13, 2026</div>
-</header>
-​<p>Apex Shield ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how your personal information is collected, used, and disclosed by Apex Shield when you use our mobile application and related services.</p>
-​<p>By downloading, accessing, or using Apex Shield, you agree to the collection and use of information in accordance with this Privacy Policy.</p>
-​<h2>1. Information We Collect</h2>
-<p>We collect information to provide better services to all our users. The types of information we collect include:</p>
-<ul>
-<li><strong>Personal Information:</strong> Basic details such as your email address or contact information if you voluntarily register, subscribe, or contact our support team.</li>
-<li><strong>Device and Diagnostic Data:</strong> Information about your mobile device (e.g., device model, operating system version, unique device identifiers) and performance reports (e.g., crash logs).</li>
-<li><strong>App Permissions:</strong> System permissions necessary for core functionality (e.g., network access, storage access for settings, or notifications).</li>
-</ul>
-​<div class="note-box">
-<strong>Traffic & Activity Log Policy:</strong> Apex Shield strictly does not track, record, or store your browsing history, traffic destination, data content, or DNS queries.
-</div>
-​<h2>2. How We Use Your Information</h2>
-<p>We use the collected data for various purposes, including:</p>
-<ul>
-<li>To provide, operate, and maintain the security features of Apex Shield.</li>
-<li>To improve, personalize, and expand our application's performance.</li>
-<li>To detect, prevent, and address security incidents or technical issues.</li>
-<li>To communicate with you regarding updates, support requests, or security notices.</li>
-</ul>
-​<h2>3. Information Sharing and Disclosure</h2>
-<p>We do not sell, trade, or rent your personal identification information to others. We may share information only in the following scenarios:</p>
-<ul>
-<li><strong>Service Providers:</strong> Trusted third-party service providers who assist us in operating our app and hosting infrastructure under strict confidentiality agreements.</li>
-<li><strong>Legal Compliance:</strong> If required by applicable law, regulation, legal process, or governmental request.</li>
-</ul>
-​<h2>4. Data Security</h2>
-<p>The security of your data is important to us. We implement industry-standard administrative, physical, and technical safeguards to protect your personal information against unauthorized access, loss, or alteration. However, please remember that no method of transmission over the internet or electronic storage is 100% secure.</p>
-​<h2>5. User Data Rights</h2>
-<p>Depending on your location (such as under GDPR or CCPA), you have rights regarding your personal data, including:</p>
-<ul>
-<li>The right to access, update, or delete the information we have on you.</li>
-<li>The right to restrict or object to the processing of your data.</li>
-<li>The right to withdraw consent at any time.</li>
-</ul>
-​<h2>6. Children's Privacy</h2>
-<p>Apex Shield does not knowingly collect or solicit personal information from children under the age of 13. If we discover that a child under 13 has provided us with personal information, we will delete it immediately.</p>
-​<h2>7. Changes to This Privacy Policy</h2>
-<p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date above.</p>
-​<h2>8. Contact Us</h2>
-<p>If you have any questions or suggestions about our Privacy Policy, please contact us:</p>
-<div class="contact-box">
-<p style="margin: 0 0 10px 0;"><strong>Email:</strong> support@apexshield.com</p>
-<p style="margin: 0;"><strong>Website:</strong> <a href="https://github.com/your-username/apex-shield" target="_blank" rel="noopener">Apex Shield GitHub Page</a></p>
-</div>
-​<footer>
-© 2026 Apex Shield. All rights reserved.
-</footer>
-</div>
-​</body>
+
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Apex Shield AI</h1>
+            <p>سياسة الخصوصية وحماية البيانات</p>
+            <div class="badge">تاريخ آخر تحديث: 13 أكتوبر 2026</div>
+        </div>
+
+        <div class="content">
+            <p>تلتزم منصة <strong>Apex Shield AI</strong> بصلابة بحماية خصوصيتك وبياناتك الشخصية. يُعد تطبيق Apex Shield AI تطبيق ويب تقدمي (PWA) مبنياً وفق مبدأ <strong>"الخصوصية أولاً" (Privacy-First)</strong>، ويهدف إلى توفير حماية متقدمة ضد التجسس والتعقب والتصادر المادي.</p>
+
+            <p>تشرح هذه السياسة كيفية تعاملنا مع البيانات والأذونات والمعلومات الخاصة بك عند استخدام تطبيقنا المتاح عبر <a href="https://karamegy.github.io/Vpn/index.html" target="_blank">رابط التطبيق المباشر</a>.</p>
+
+            <h2>1. المبادئ الأساسية للخصوصية</h2>
+            <ul>
+                <li><strong>التشفير المحلي (Zero-Knowledge Architecture):</strong> يتم تشفير جميع البيانات الحساسة والخزائن المحلية على جهازك باستخدام تقنيات التشفير المتقدمة <code>AES-GCM 256-bit</code> و <code>PBKDF2</code>. نحن لا نملك مفاتيح التشفير ولا يمكننا الاطلاع على محتوى بياناتك المشفرة.</li>
+                <li><strong>عدم حفظ السجلات (Strict No-Logs Policy):</strong> لا نتمتع بالقدرة على تسجيل أو تتبع أنشطتك على الإنترنت، أو محتوى ذاكرة الحافظة، أو اتصالاتك الصوتية.</li>
+            </ul>
+
+            <h2>2. البيانات التي نجمعها وكيفية معالجتها</h2>
+            
+            <h3>أ. البيانات التلقائية والمستشعرات (معالجة محلية 100%)</h3>
+            <p>يقوم التطبيق بالوصول إلى بعض مستشعرات الجهاز لتقديم ميزات الحماية المتقدمة، وتتم معالجة هذه البيانات <strong>محلياً بالكامل على جهازك</strong> دون إرسالها إلى أي خوادم خارجية:</p>
+            <ul>
+                <li><strong>مستشعرات الحركة (G-Force & Accelerometer):</strong> لرصد محاولات المصادرة المادية الفجائية وتفعيل ميزة المسح الطارئ (<em>G-Force Anti-Confiscation Phalanx</em>).</li>
+                <li><strong>الحافظة (Clipboard):</strong> لتطهير البيانات الحساسة وتفريغ الحافظة تلقائياً لمنع سرقة الاعتمادات (<em>Neural Clipboard Vaporizer</em>).</li>
+                <li><strong>الميكروفون (Microphone):</strong> لتشغيل حماية البصمة الصوتية والمشوش الترددي ضد أجهزة التجسس الصوتية (<em>Deepfake Voice Shield</em>).</li>
+                <li><strong>أنماط النقر واللمس (Tap Patterns):</strong> للكشف عن حالات الإكراه والتحويل السريع إلى وضع الآلة الحاسبة الوهمية (<em>Duress Reflex & Decoy Mode</em>).</li>
+            </ul>
+
+            <h3>ب. البيانات المزامنة عبر السحابة (Cloud & Swarm Defense)</h3>
+            <ul>
+                <li><strong>شبكة الدفاع الجماعي (Swarm Neural Defense):</strong> نقوم بمشاركة بصمات التهديدات ونماذج السلوك الخبيث غير المحددة للهوية (Anonymized Threat Fingerprints) عبر Google Firebase Firestore لمزامنة التحديثات والحماية ضد الهجمات الصفرية (Zero-Day Attacks) بين مستخدمي الشبكة.</li>
+                <li><strong>المصادقة والمزامنة (Firebase Authentication):</strong> في حال قيامك بإنشاء حساب لمزامنة إعداداتك عبر السحابة، يتم حفظ بيانات الاعتماد الأساسية بشكل آمن ومشفر عبر خدمات Google Firebase.</li>
+            </ul>
+
+            <h2>3. الأذونات المطلوبة والغرض منها</h2>
+            <ul>
+                <li><strong>حركة الجهاز والمستشعرات (<code>devicemotion</code>):</strong> للكشف عن السقوط أو الانزعاج المادي المفاجئ.</li>
+                <li><strong>الوصول إلى الميكروفون:</strong> لحماية الإدخال الصوتي من التجسس الحي وتحليل التزييف العميق.</li>
+                <li><strong>التخزين المحلي (Local Storage & Service Workers):</strong> لتخزين البيانات المشفرة وتشغيل التطبيق بدون إنترنت (PWA).</li>
+            </ul>
+
+            <h2>4. مسح البيانات وإزالتها الطارئة (Emergency Wipe)</h2>
+            <p>يتضمن التطبيق ميزات المسح الذاتي الطارئ المعتمدة على المستشعرات أو وضع الإكراه، والتي تقوم بمسح جميع الجلسات والبيانات المخزنة محلياً على الجهاز فوراً وبشكل لا يمكن استرجاعه عند استشعار الخطر.</p>
+
+            <h2>5. مشاركة البيانات مع أطراف خارجية</h2>
+            <p>نحن <strong>لا نبيع، ولا نؤجر، ولا نشارك</strong> أي بيانات شخصية أو بيانات تعريفية مع أي أطراف ثالثة أو شركات إعلانية. الخدمات السحابية المعتمدة تقتصر على البنية التحتية الأساسية التشغيلية:</p>
+            <ul>
+                <li><strong>Google Firebase / Firestore:</strong> لاستضافة الخدمات المزامنة وتأمين البنية التحتية للسحابة.</li>
+                <li><strong>GitHub Pages:</strong> لاستضافة ملفات الويب الخاصة بالتطبيق (PWA).</li>
+            </ul>
+
+            <h2>6. للتواصل معنا</h2>
+            <p>إذا كان لديك أي استفسارات حول سياسة الخصوصية هذه أو ميزات الأمان، يمكنك التواصل مع المطور:</p>
+            <ul>
+                <li><strong>المؤسس والمطور:</strong> Karam Hamdy</li>
+                <li><strong>الموقع الرسمي للتطبيق:</strong> <a href="https://karamegy.github.io/Vpn/index.html" target="_blank">Apex Shield AI App</a></li>
+                <li><strong>حساب GitHub:</strong> <a href="https://github.com/karamegy" target="_blank">karamegy</a></li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            &copy; 2026 Apex Shield AI. جميع الحقوق محفوظة | تطوير Karam Hamdy
+        </div>
+    </div>
+
+</body>
 </html>

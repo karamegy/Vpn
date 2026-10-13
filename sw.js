@@ -2,7 +2,7 @@
    APEX SHIELD AI - SERVICE WORKER (v22.0 Chrono-Photonic Sovereign)
    ============================================================================ */
 
-const CACHE_NAME = 'apex-shield-v23-chrono-photonic-sovereign';
+const CACHE_NAME = 'apex-shield-v24-chrono-photonic-sovereign';
 
 // قائمة الملفات المحدثة للتخزين المؤقت لضمان العمل 100% بوضع أوفلاين
 const assetsToCache = [

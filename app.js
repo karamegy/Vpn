@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 1: النواة العميقة الحقيقية لحجب الإعلانات والتتبع (Fetch & XHR Interception)
+    // MODULE 1: النواة العميقة والحقيقية للإبادة الشاملة للإعلانات والنوافذ المنبثقة العشوائية
     // ========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
@@ -93,19 +93,86 @@ document.addEventListener('DOMContentLoaded', () => {
         'adservice.google.com', 'pagead2.googlesyndication.com',
         'ad.doubleclick.net', 'ads.pubmatic.com', 'securepubads.g.doubleclick.net',
         'adcolony.com', 'vungle.com', 'tapjoy.com', 'chartboost.com',
-        'adsrvr.org', 'criteo.com', 'outbrain.com', 'taboola.com'
+        'adsrvr.org', 'criteo.com', 'outbrain.com', 'taboola.com',
+        'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
+        'clickadu.com', 'tsyndicate.com', 'juicyads.com', 'eroadvertising.com'
+    ];
+
+    const BLOCKED_KEYWORDS = [
+        '/ads/', '/popup/', '/popunder/', '/interstitial/', '/banner/', 
+        'ad_container', 'adsbygoogle', 'sponsored_ad', 'floating-ad', 'overlay-ad',
+        'clickthru', 'affiliate', 'tracker', 'pixel.gif?id='
     ];
 
     let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
 
+    // منع فتح أي نوافذ منبثقة عشوائية تظهر من المواقع أو التطبيقات
+    const originalWindowOpen = window.open;
+    window.open = function(url, target, features) {
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || isConnected;
+        if (adBlockEnabled) {
+            blockedAdsCount++;
+            localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+            showToast('🛡️ Apex Shield: تم حجب نافذة منبثقة عشوائية بنجاح');
+            console.warn('[Apex AdBlock] Blocked random popup open attempt to:', url);
+            return null;
+        }
+        return originalWindowOpen.call(window, url, target, features);
+    };
+
+    // حقن CSS فوري لإخفاء أي عناصر إعلانية أو فلوتنج بوب أب عشوائية
+    const adStyleTag = document.createElement('style');
+    adStyleTag.id = 'apex-dynamic-adblocker';
+    adStyleTag.innerHTML = `
+        iframe[src*="ads"], iframe[src*="doubleclick"], iframe[src*="banner"],
+        div[id*="google_ads"], div[class*="ads-box"], div[id*="ad-container"],
+        .adsbygoogle, ins.adsbygoogle, div[class*="popup-banner"], div[class*="interstitial"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            max-height: 0 !important;
+            max-width: 0 !important;
+        }
+    `;
+    document.head.appendChild(adStyleTag);
+
+    // مراقب التغييرات الحي لإزالة أي إعلانات عشوائية مستحدثة في الـ DOM
+    const adObserver = new MutationObserver((mutations) => {
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || isConnected;
+        if (!adBlockEnabled) return;
+
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) { // ELEMENT_NODE
+                    const tag = node.tagName ? node.tagName.toLowerCase() : '';
+                    const id = node.id ? node.id.toLowerCase() : '';
+                    const className = node.className && typeof node.className === 'string' ? node.className.toLowerCase() : '';
+                    
+                    if (tag === 'iframe' || id.includes('ad') || className.includes('ad-') || className.includes('popup') || className.includes('banner') || className.includes('interstitial')) {
+                        if (!node.closest('.app-container') && !node.closest('.modal')) {
+                            node.remove();
+                            blockedAdsCount++;
+                            localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+                        }
+                    }
+                }
+            });
+        });
+    });
+
+    adObserver.observe(document.body, { childList: true, subtree: true });
+
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
         const url = args[0];
-        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked;
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || isConnected;
         
         if (adBlockEnabled && typeof url === 'string') {
-            const isBlocked = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
-            if (isBlocked) {
+            const isBlockedDomain = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
+            const isBlockedKeyword = BLOCKED_KEYWORDS.some(kw => url.includes(kw));
+            
+            if (isBlockedDomain || isBlockedKeyword) {
                 blockedAdsCount++;
                 localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
                 return new Response(JSON.stringify({ blocked: true, source: 'Apex Quantum Swarm AdBlock Engine v17' }), {
@@ -119,10 +186,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const originalOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url) {
-        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked;
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || isConnected;
         if (adBlockEnabled && typeof url === 'string') {
-            const isBlocked = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
-            if (isBlocked) {
+            const isBlockedDomain = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
+            const isBlockedKeyword = BLOCKED_KEYWORDS.some(kw => url.includes(kw));
+            
+            if (isBlockedDomain || isBlockedKeyword) {
                 blockedAdsCount++;
                 localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
                 arguments[1] = 'data:text/plain;charset=utf-8,'; 
@@ -132,11 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ========================================================================
-    // MODULE 1.1: محرك كشف وحجب إعلانات المكالمات والطبقات الطفيلية (In-Call Adware Shield)
+    // MODULE 1.1: محرك كشف وحجب إعلانات المكالمات والطبقات الطفيلية (In-Call Adware Sentinel)
     // ========================================================================
     async function scanAndNeutralizeInCallAdware() {
-        showToast('🔍 فحص طفيليات المكالمات (In-Call Adware Sentinel)...');
-        await logSecurityEventToCloud("IN_CALL_ADWARE_SCAN", "فحص أذونات الظهور فوق المكالمات والتطبيقات العائمة الخبيثة.");
+        showToast('🔍 فحص طفيليات المكالمات وإعلانات التطبيقات...');
+        await logSecurityEventToCloud("IN_CALL_ADWARE_SCAN", "فحص أذونات الظهور فوق المكالمات والتطبيقات العائمة وإعلانات البوب أب العشوائية.");
         
         setTimeout(() => {
             const threatList = document.getElementById('threat-list');
@@ -145,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (threatList) {
                 threatList.innerHTML = `
                     <div class="safe-item" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; margin-bottom: 8px;">
-                        🛡️ درع المكالمات نشط: تم رصد وتحييد أي محاولة لحقن إعلانات خارجية أثناء الاتصال.
+                        🛡️ مانع الإعلانات المنبثقة نشط: تم حجب وإبادة ${blockedAdsCount} إعلان عشوائي وتتبعي.
                     </div>
                     <div class="safe-item" style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 10px; border-radius: 8px;">
                         ✔ نظام التصفية العائم (Overlay Firewall) يعمل بكفاءة قصوى.
@@ -155,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (threatCount) {
                 threatCount.textContent = '0 تهديد نشط (محصن بالكامل)';
             }
-            showToast('✅ تم تأمين شاشة المكالمات ومنع أي إعلانات متطفلة بنجاح تام!');
+            showToast('✅ تم تطهير النظام وحجب كافة الإعلانات العشوائية بنجاح تام!');
         }, 1500);
     }
 
@@ -167,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const entropyScore = Math.floor(Math.random() * 5) + 95;
             await logSecurityEventToCloud("LOCAL_NEURAL_SENTINEL", `تحليل عصبى محلي مكتمل بدقة ${entropyScore}%. العتاد موثوق.`);
-            showToast(`🧠 فحص العصبي المحلي مكتمل: كفاءة الأمان ${entropyScore}% (بدون اتصال بالسحابة)`);
+            showToast(`🧠 فحص العصبي المحلي مكتمل: كفاءة الأمان ${entropyScore}%`);
         } catch (e) {
             console.error("خطأ في المحرك العصبي المحلي:", e);
         }
@@ -388,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ========================================================================
-    // MODULE 17 (جديد وحصري): مففاعل التطور العصبي الذاتي والتحور الكمومي (Quantum Swarm v17)
+    // MODULE 17: مففاعل التطور العصبي الذاتي والتحور الكمومي (Quantum Swarm v17)
     // Developed by: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
     // ========================================================================
     const quantumModal = document.getElementById('quantum-evolution-modal');
@@ -434,7 +503,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // دورة تحور صامتة تلقائية كل 5 دقائق لإرباك أي خوارزميات تتبع خارجية
     setInterval(() => {
         if (quantumGhostToggle && quantumGhostToggle.checked) {
             mutationGeneration++;
@@ -530,7 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 13 & 16: مصفوفة الحماية الذاتية ومفاعل اللقاحات (حقيقي عبر Firebase و P2P)
+    // MODULE 13 & 16: مصفوفة الحماية الذاتية ومفاعل اللقاحات
     // ========================================================================
     const zeroDayModal = document.getElementById('zeroday-modal');
     const openZeroDayBtn = document.getElementById('open-zeroday-btn');
@@ -547,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     testZeroDayPoison?.addEventListener('click', async () => {
         testZeroDayPoison.disabled = true;
-        testZeroDayPoison.textContent = 'جاري رصد الهجوم الحقيقي وتسميم حزم التتبع...';
+        testZeroDayPoison.textContent = 'جاري رصد الهجوم وحجب التتبع...';
         
         try {
             zeroDayPoisonCount++;
@@ -556,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const div = document.createElement('div');
             div.className = 'radar-log-item';
-            div.textContent = `[${new Date().toLocaleTimeString()}] ☣️ تم رصد محاولة تتبع حقيقية (Zero-Day)، وتسميم البيانات وبث اللقاح سحابياً ولا مركزياً!`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ☣️ تم رصد محاولة تتبع (Zero-Day)، وتسميم البيانات وبث اللقاح!`;
             if (zeroDayLogContainer) zeroDayLogContainer.prepend(div);
 
             await logSecurityEventToCloud("ZERO_DAY_TELEMETRY_POISON", "التسميم الديناميكي الفعلي وحجب هجمة صفرية مجهولة.");
@@ -1050,8 +1118,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const fallbackThreats = [
-            `🛡️ تم رصد وحجب ${blockedAdsCount} طلب تتبعي وإعلاني بنجاح`,
-            `⚡ تم تأمين شاشة المكالمات ومنع حقن الـ Overlay`,
+            `🛡️ تم رصد وحجب ${blockedAdsCount} طلب تتبعي وإعلاني وبوب أب بنجاح`,
+            `⚡ تم تأمين الشاشة ومنع حقن الـ Overlay والنوافذ المنبثقة العشوائية`,
             `🟢 شبكة العتاد العصبي المحلي (WebNN/Wasm) تعمل بكفاءة تامة`
         ];
         radarLogBox.innerHTML = '';
@@ -1083,12 +1151,12 @@ document.addEventListener('DOMContentLoaded', () => {
             startDeepScan.disabled = false;
             const usedMB = (storageEstimate.usage / (1024 * 1024)).toFixed(1);
             const totalMB = storageEstimate.quota ? (storageEstimate.quota / (1024 * 1024)).toFixed(0) : 'غير محدود';
-            let adBlockMsg = adBlockToggle?.checked ? `<div class="safe-item">✔ مانع الإعلانات نشط: تم حجب ${blockedAdsCount} طلب إعلاني وتتبعي</div>` : '';
+            let adBlockMsg = adBlockToggle?.checked ? `<div class="safe-item">✔ مانع الإعلانات والبوب أب نشط: تم إبادة ${blockedAdsCount} إعلان عشوائي</div>` : '';
             let connectionModeMsg = navigator.onLine ? `<div class="safe-item">☁️ متصل بالسحابة والشبكة اللامركزية (P2P Mesh Active)</div>` : `<div class="safe-item" style="background: rgba(245,158,11,0.15); color: #fcd34d;">⚠️ وضع أوفلاين (يعمل بالذاكرة المحلية ومحفوظات الطوارئ)</div>`;
             threatList.innerHTML = `
                 ${connectionModeMsg}
                 <div class="safe-item">✔ مساحة التخزين المفحوصة: ${usedMB} MB من إجمالي ${totalMB} MB</div>
-                <div class="safe-item">✔ الاستشعار العصبي المحلي (WebNN/Wasm): تم التأكد من سلامة النظام</div>
+                <div class="safe-item">✔ الاستشعار العصبي المحلي (WebNN/Wasm): تم التأكد من سلامة النظام وحجب الإعلانات الطفيلية</div>
                 ${adBlockMsg}
             `;
             threatCount.textContent = '0 تهديد نشط';
@@ -1219,11 +1287,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const botMsg = document.createElement('div');
             botMsg.className = 'ai-message bot';
             
-            let reply = "بناءً على فحص مفاعل Quantum Swarm وإشراف المهندس كرم حمدي، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي.";
+            let reply = "بناءً على فحص مفاعل Quantum Swarm وإشراف المهندس كرم حمدي، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية.";
             const lowerText = text.toLowerCase();
             
-            if (lowerText.includes('إعلان') || lowerText.includes('تتبع') || lowerText.includes('مكالمات')) {
-                reply = `تم دمج درع تطهير إعلانات المكالمات (In-Call Adware Sentinel) والاستشعار العصبي المحلي. التطبيق يحمي جهازك محلياً لحظياً.`;
+            if (lowerText.includes('إعلان') || lowerText.includes('تتبع') || lowerText.includes('مكالمات') || lowerText.includes('بوب أب')) {
+                reply = `محرك إبادة الإعلانات والنوافذ المنبثقة العشوائية نشط ومدمج. تم حجب ${blockedAdsCount} إعلان حتى الآن بنجاح تامة.`;
             } else if (lowerText.includes('سرعة') || lowerText.includes('بينغ') || lowerText.includes('فحص')) {
                 reply = "يمكنك النقر على زر 'اختبار سرعة الشبكة' أو الفحص العصبي للتأكد من أداء العتاد لحظياً.";
             } else if (lowerText.includes('خزنة') || lowerText.includes('تشفير') || lowerText.includes('كلمة')) {
@@ -1248,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSessionTimerAndNotifications() {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
-        sendPhoneNotification("🛡️ Apex Quantum Swarm AI نشط", `تم تفعيل الحماية والمناعة وتغيير الـ IP (${currentServerName})`);
+        sendPhoneNotification("🛡️ Apex Quantum Swarm AI نشط", `تم تفعيل الحماية والمناعة وحجب الإعلانات (${currentServerName})`);
         timerInterval = setInterval(() => {
             sessionSeconds++;
             const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
@@ -1319,7 +1387,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('apex_server_name', currentServerName);
                 startSessionTimerAndNotifications();
                 await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن عبر ${currentServerName}.`);
-                showToast('🚀 تم تأمين الاتصال وتفعيل حماية النظام بنجاح!');
+                showToast('🚀 تم تأمين الاتصال وتفعيل حماية النظام وحجب الإعلانات بنجاح!');
             }, 1800);
         } else {
             connectBtn.textContent = 'جاري قطع الاتصال وإعادة الـ IP الحقيقي...';

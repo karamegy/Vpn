@@ -20,38 +20,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install NPM Dependencies & Capacitor
-        run: |
-          npm install -g @capacitor/cli @capacitor/core
-          npm install @capacitor/android || true
-
-      - name: Initialize or Sync Capacitor Android
-        run: |
-          if [ ! -d "android" ]; then
-            npx cap init "Apex Shield" "io.github.karamegy.twa" --web-dir "." --web-dir index.html
-            npx cap add android
-          else
-            npx cap sync android
-          fi
-
-      - name: Restore Custom Java & Manifest Files
-        run: |
-          # التأكد من بقاء ملفات الجافا والمانفيست في مكانها الصحيح بعد المزامنة
-          mkdir -p android/app/src/main/java/com/apex/shield
-          echo "تم التحقق من هيكلة المجلدات بنجاح"
-
       - name: Make Gradlew Executable
         run: chmod +x android/gradlew
 
       - name: Build Native Android APK
         run: |
           cd android
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK to GitHub Artifacts
         uses: actions/upload-artifact@v4

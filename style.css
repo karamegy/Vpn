@@ -1,5 +1,5 @@
 /* ============================================================================
-   APEX SHIELD AI - ULTIMATE LUXURY EXECUTIVE STYLE (v16.0)
+   APEX SHIELD AI - ULTIMATE LUXURY EXECUTIVE STYLE (v17.0 Quantum Swarm Sovereign Edition)
    Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
    ============================================================================ */
 
@@ -12,12 +12,13 @@
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-/* تخصيص الثيمات الفاخرة المحدثة */
+/* تخصيص الثيمات الفاخرة المحدثة للنسخة الكمومية */
 body.theme-cyan {
     --accent-color: #38bdf8;
     --accent-gradient: linear-gradient(135deg, #4f46e5, #0284c7, #38bdf8);
     --orb-glow: rgba(56, 189, 248, 0.7);
     --panel-border: rgba(56, 189, 248, 0.25);
+    --quantum-glow: rgba(245, 158, 11, 0.8);
 }
 
 body.theme-emerald {
@@ -25,6 +26,7 @@ body.theme-emerald {
     --accent-gradient: linear-gradient(135deg, #047857, #059669, #34d399);
     --orb-glow: rgba(16, 185, 129, 0.7);
     --panel-border: rgba(16, 185, 129, 0.25);
+    --quantum-glow: rgba(16, 185, 129, 0.8);
 }
 
 body.theme-purple {
@@ -32,6 +34,7 @@ body.theme-purple {
     --accent-gradient: linear-gradient(135deg, #7e22ce, #9333ea, #e879f9);
     --orb-glow: rgba(192, 132, 252, 0.7);
     --panel-border: rgba(192, 132, 252, 0.25);
+    --quantum-glow: rgba(192, 132, 252, 0.8);
 }
 
 body.theme-gold {
@@ -39,6 +42,7 @@ body.theme-gold {
     --accent-gradient: linear-gradient(135deg, #d97706, #fb8500, #ffb703);
     --orb-glow: rgba(255, 183, 3, 0.7);
     --panel-border: rgba(255, 183, 3, 0.25);
+    --quantum-glow: rgba(255, 183, 3, 0.8);
 }
 
 body {

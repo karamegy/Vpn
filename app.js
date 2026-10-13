@@ -630,7 +630,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function triggerNativeVpnConnection(enable, serverIp, serverName) {
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AndroidVPNBridge) {
             try {
-                return await window.Capacitor.Plugins.AndroidVPNBridge.toggleVpn({ enable, serverIp, serverName });
+                const res = await window.Capacitor.Plugins.AndroidVPNBridge.toggleVpn({ enable, serverIp, serverName });
+                return res && res.success;
             } catch (e) {
                 console.warn("جسر Capacitor VPN غير مثبت أو يعمل بمتصفح الـ PWA المباشر");
             }

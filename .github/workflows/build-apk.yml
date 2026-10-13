@@ -27,7 +27,7 @@ jobs:
 
       - name: 1. Extract Java Files From Any Path
         run: |
-          echo "=== 1. تجميع جميع ملفات الجافا وحفظها مؤقتاً ==="
+          echo "=== 1. تجميع ملفات الجافا وحفظها مؤقتاً ==="
           mkdir -p /tmp/java_source
           find . -name "*.java" -exec cp {} /tmp/java_source/ \;
           ls -la /tmp/java_source/
@@ -50,33 +50,35 @@ jobs:
 
       - name: 4. Inject Java Files & Configure Manifest
         run: |
-          echo "=== 4. نقل ملفات الجافا وإضافة خدمة الـ VPN للـ Manifest ==="
+          echo "=== 4. نقل ملفات الجافا وتحديث AndroidManifest.xml ==="
           TARGET_DIR="android/app/src/main/java/com/apex/shield"
-          mkdir -p $TARGET_DIR
-          cp /tmp/java_source/*.java $TARGET_DIR/
-          ls -la $TARGET_DIR/
+          mkdir -p "$TARGET_DIR"
+          cp /tmp/java_source/*.java "$TARGET_DIR/" || true
+          ls -la "$TARGET_DIR/"
 
-          python3 -c '
-          import os
-          manifest_path = "android/app/src/main/AndroidManifest.xml"
-          if os.path.exists(manifest_path):
-              with open(manifest_path, "r") as f:
-                  content = f.read()
-              if "ApexVpnService" not in content:
-                  service_xml = """        <service android:name="com.apex.shield.ApexVpnService"
-                   android:permission="android.permission.BIND_VPN_SERVICE"
-                   android:exported="false">
-              <intent-filter>
-                  <action android:name="android.net.VpnService" />
-              </intent-filter>
-          </service>
-  </application>"""
-                  content = content.replace("</application>", service_xml)
-                  with open(manifest_path, "w") as f:
-                      f.write(content)
-                  print("تمت إضافة ApexVpnService إلى AndroidManifest.xml بنجاح.")
-          '
+          cat << 'EOF' > update_manifest.js
+          const fs = require('fs');
+          const file = 'android/app/src/main/AndroidManifest.xml';
+          if (fs.existsSync(file)) {
+            let content = fs.readFileSync(file, 'utf8');
+            if (!content.includes('ApexVpnService')) {
+              const service = `
+                  <service android:name="com.apex.shield.ApexVpnService"
+                           android:permission="android.permission.BIND_VPN_SERVICE"
+                           android:exported="false">
+                      <intent-filter>
+                          <action android:name="android.net.VpnService" />
+                      </intent-filter>
+                  </service>
+          </application>`;
+              content = content.replace('</application>', service);
+              fs.writeFileSync(file, content, 'utf8');
+              console.log('Done updating AndroidManifest.xml');
+            }
+          }
+          EOF
 
+          node update_manifest.js
           npx cap sync android
 
       - name: 5. Build APK & AAB Packages
@@ -86,13 +88,13 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug bundleRelease --no-daemon --stacktrace
 
-      - name: Upload APK (For Direct Phone Testing)
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-APK-DirectInstall
           path: android/app/build/outputs/apk/debug/*.apk
 
-      - name: Upload AAB (For Google Play Console)
+      - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-AAB-GooglePlay

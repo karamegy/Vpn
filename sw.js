@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apex-shield-v19-chrono-photonic-sovereign';
+const CACHE_NAME = 'apex-shield-v20-chrono-photonic-sovereign';
 const assetsToCache = [
   './',
   './index.html',

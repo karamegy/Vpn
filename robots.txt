@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://karamegy.github.io/vpn/sitemap.xml

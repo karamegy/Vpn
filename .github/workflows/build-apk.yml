@@ -25,28 +25,44 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Backup Custom Java Files
+      - name: Backup Custom Android Source Files
         run: |
-          mkdir -p ../java_backup
-          if [ -d "android/app/src/main/java" ]; then
-            cp -r android/app/src/main/java/* ../java_backup/ || true
+          echo "=== 1. أخذ نسخة احتياطية من ملفات الجافا والـ Manifest الخاصة بك ==="
+          mkdir -p ../android_backup
+          if [ -d "android" ]; then
+            cp -r android/* ../android_backup/ || true
+            rm -rf android
           fi
 
-      - name: Install Dependencies & Setup Capacitor
+      - name: Prepare Web Assets & Environment
         run: |
+          echo "=== 2. تجهيز حزم نود وملفات الويب ==="
+          if [ ! -f "package.json" ]; then
+            npm init -y
+          fi
+          
+          mkdir -p www
+          cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
+
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap add android || true
+
+      - name: Generate Fresh Android Project
+        run: |
+          echo "=== 3. إنشاء هيكل مشروع أندرويد مكتمل بملفات Gradle ==="
+          npx cap init "Apex Shield" "com.apex.shield" --web-dir=www || true
+          npx cap add android
           npx cap sync android
 
-      - name: Restore Custom Java Files
+      - name: Restore Custom Java & Android Manifest Files
         run: |
-          if [ -d "../java_backup" ]; then
-            mkdir -p android/app/src/main/java/
-            cp -r ../java_backup/* android/app/src/main/java/ || true
+          echo "=== 4. دمج ملفات الجافا والـ VPN الخاصة بك داخل المشروع ==="
+          if [ -d "../android_backup/app/src/main" ]; then
+            cp -r ../android_backup/app/src/main/* android/app/src/main/ || true
           fi
 
       - name: Build Both APK and AAB Packages
         run: |
+          echo "=== 5. بناء ملفات الـ APK والـ AAB ==="
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug bundleRelease --no-daemon --stacktrace

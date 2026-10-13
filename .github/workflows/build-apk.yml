@@ -25,17 +25,17 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Extract Java Files & Clean Android Dir
+      - name: 1. Extract Java Files & Clean Old Android Dir
         run: |
-          echo "=== 1. حفظ ملفات الجافا وتنظيف مجلد أندرويد القديم ==="
+          echo "=== 1. حفظ ملفات الجافا وتنظيف المجلدات القديمة ==="
           mkdir -p /tmp/java_source
           find . -name "*.java" -exec cp {} /tmp/java_source/ \;
           ls -la /tmp/java_source/
           rm -rf android
 
-      - name: 2. Prepare Web Assets & Force Custom Capacitor Config
+      - name: 2. Prepare Web Assets & Capacitor Config
         run: |
-          echo "=== 2. تجهيز مجلد www وتضمين إعداداتك المخصصة بالكامل ==="
+          echo "=== 2. تجهيز مجلد www وملف capacitor.config.json ==="
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -45,70 +45,93 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-          # كتابة إعداداتك المخصصة مع تعديل webDir إلى www لمنع الأخطاء
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.apex.shield",
-            "appName": "Apex Shield AI - Quantum Swarm Edition",
+            "appName": "Apex Shield AI",
             "webDir": "www",
             "bundledWebRuntime": false,
             "android": {
               "webContentsDebuggingEnabled": true,
               "allowMixedContent": true
-            },
-            "plugins": {
-              "SplashScreen": {
-                "launchShowDuration": 2000,
-                "backgroundColor": "#030712"
-              }
             }
           }
           EOF
 
       - name: 3. Generate Clean Android Project
         run: |
-          echo "=== 3. إنشاء مشروع أندرويد بمسار webDir موثوق ==="
+          echo "=== 3. إنشاء مشروع أندرويد جديد ==="
           npx cap add android
 
-      - name: 4. Inject Java Files & Configure Manifest
+      - name: 4. Sanitize Java Files & Configure Manifest
         run: |
-          echo "=== 4. نقل ملفات الجافا وتحديث AndroidManifest.xml ==="
+          echo "=== 4. إزالة رموز الترميز الخفية وتحديث AndroidManifest.xml ==="
           TARGET_DIR="android/app/src/main/java/com/apex/shield"
           mkdir -p "$TARGET_DIR"
           cp /tmp/java_source/*.java "$TARGET_DIR/" || true
-          ls -la "$TARGET_DIR/"
 
+          # تنظيف ترميز BOM وتثبيت اسم الحزمة
+          for f in $TARGET_DIR/*.java; do
+            if [ -f "$f" ]; then
+              sed -i '1s/^\xef\xbb\xbf//' "$f"
+              sed -i '1s/^package .*/package com.apex.shield;/' "$f"
+            fi
+          done
+
+          # تعديل المانفيست بالصلاحيات والخدمات اللازمة للـ VPN
           cat << 'EOF' > update_manifest.js
           const fs = require('fs');
           const file = 'android/app/src/main/AndroidManifest.xml';
           if (fs.existsSync(file)) {
             let content = fs.readFileSync(file, 'utf8');
+            
+            // إضافة أذونات الـ VPN والخدمة في الخلفية
+            const permissions = `
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+              <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
+            </manifest>`;
+            
+            content = content.replace('</manifest>', permissions);
+
+            // إضافة الخدمة داخل application
             if (!content.includes('ApexVpnService')) {
-              const service = `
-                  <service android:name="com.apex.shield.ApexVpnService"
-                           android:permission="android.permission.BIND_VPN_SERVICE"
-                           android:exported="false">
-                      <intent-filter>
-                          <action android:name="android.net.VpnService" />
-                      </intent-filter>
-                  </service>
-          </application>`;
-              content = content.replace('</application>', service);
-              fs.writeFileSync(file, content, 'utf8');
-              console.log('Done updating AndroidManifest.xml');
+              const serviceTag = `
+              <service android:name="com.apex.shield.ApexVpnService"
+                       android:permission="android.permission.BIND_VPN_SERVICE"
+                       android:foregroundServiceType="specialUse"
+                       android:exported="false">
+                  <intent-filter>
+                      <action android:name="android.net.VpnService" />
+                  </intent-filter>
+              </service>
+              </application>`;
+              content = content.replace('</application>', serviceTag);
             }
+            
+            fs.writeFileSync(file, content, 'utf8');
+            console.log('Done updating AndroidManifest.xml safely.');
           }
           EOF
 
           node update_manifest.js
           npx cap sync android
 
-      - name: 5. Build APK & AAB Packages
+      - name: 5. Build APK Package
         run: |
-          echo "=== 5. بناء تطبيق الـ APK والـ AAB ==="
+          echo "=== 5. بناء تطبيق الـ APK ==="
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug bundleRelease --no-daemon --stacktrace
+          export GRADLE_OPTS="-Dfile.encoding=UTF-8"
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: 6. Build AAB Package
+        run: |
+          echo "=== 6. بناء تطبيق الـ AAB للجوجل بلاي ==="
+          cd android
+          export GRADLE_OPTS="-Dfile.encoding=UTF-8"
+          ./gradlew bundleRelease --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

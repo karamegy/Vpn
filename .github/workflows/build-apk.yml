@@ -25,44 +25,47 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Backup Custom Android Source Files
+      - name: 1. Extract Java Files From Any Path
         run: |
-          echo "=== 1. أخذ نسخة احتياطية من ملفات الجافا والـ Manifest الخاصة بك ==="
-          mkdir -p ../android_backup
-          if [ -d "android" ]; then
-            cp -r android/* ../android_backup/ || true
-            rm -rf android
-          fi
+          echo "=== 1. البحث عن ملفات الجافا وحفظها بغض النظر عن تداخل المسارات ==="
+          mkdir -p /tmp/java_source
+          find . -name "*.java" -exec cp {} /tmp/java_source/ \;
+          ls -la /tmp/java_source/
+          rm -rf android
 
-      - name: Prepare Web Assets & Environment
+      - name: 2. Prepare Web Assets & Environment
         run: |
-          echo "=== 2. تجهيز حزم نود وملفات الويب ==="
+          echo "=== 2. تجهيز بيئة العمل وملفات الويب ==="
+          mkdir -p www
+          cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           if [ ! -f "package.json" ]; then
             npm init -y
           fi
-          
-          mkdir -p www
-          cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
-
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Generate Fresh Android Project
+      - name: 3. Generate Clean Android Project
         run: |
-          echo "=== 3. إنشاء هيكل مشروع أندرويد مكتمل بملفات Gradle ==="
-          npx cap init "Apex Shield" "com.apex.shield" --web-dir=www || true
+          echo "=== 3. إنشاء هيكل مشروع أندرويد نظيف ==="
           npx cap add android
-          npx cap sync android
 
-      - name: Restore Custom Java & Android Manifest Files
+      - name: 4. Inject Java Files & Configure Manifest
         run: |
-          echo "=== 4. دمج ملفات الجافا والـ VPN الخاصة بك داخل المشروع ==="
-          if [ -d "../android_backup/app/src/main" ]; then
-            cp -r ../android_backup/app/src/main/* android/app/src/main/ || true
+          echo "=== 4. نقل ملفات الجافا للمسار الصحيح وتكوين الخدمة ==="
+          TARGET_DIR="android/app/src/main/java/com/apex/shield"
+          mkdir -p $TARGET_DIR
+          cp /tmp/java_source/*.java $TARGET_DIR/
+          ls -la $TARGET_DIR/
+
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "ApexVpnService" "$MANIFEST"; then
+            sed -i '/<\/application>/i \        <service android:name="com.apex.shield.ApexVpnService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="false"><intent-filter><action android:name="android.net.VpnService"\/><\/intent-filter><\/service>' "$MANIFEST"
           fi
 
-      - name: Build Both APK and AAB Packages
+          npx cap sync android
+
+      - name: 5. Build APK & AAB Packages
         run: |
-          echo "=== 5. بناء ملفات الـ APK والـ AAB ==="
+          echo "=== 5. بدء عملية بناء الـ APK والـ AAB ==="
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug bundleRelease --no-daemon --stacktrace

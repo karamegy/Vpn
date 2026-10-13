@@ -1,8 +1,8 @@
 {
   "id": "/Vpn/",
-  "name": "Apex Shield AI - Ultimate Security & VPN",
-  "short_name": "Apex Shield",
-  "description": "تطبيق الحماية الشاملة والـ VPN المدعوم بالذكاء الاصطناعي",
+  "name": "Apex Shield AI - Quantum Swarm Sovereign Edition",
+  "short_name": "Apex Quantum",
+  "description": "تطبيق الحماية الشاملة والـ VPN المدعوم بمفاعل التطور العصبي الذاتي والتشابك الكمومي",
   "start_url": "/Vpn/index.html",
   "scope": "/Vpn/",
   "display": "standalone",

@@ -1,10 +1,10 @@
 /**
  * ============================================================================
- * APEX SHIELD AI - NEXT-GEN PWA CHRONO-PHOTONIC SOVEREIGN EDITION (v18.0)
+ * APEX SHIELD AI - NEXT-GEN SOVEREIGN EDITION (v18.0)
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
  * Architecture: Chrono-Photonic Anti-CCTV Glare Engine, Acoustic STT Jammer,
- * Quantum Swarm Core, Zero-Day Shield, AES-GCM Vault, Swarm AI Cloud Sync, 
- * Local Neural Sentinel (WebNN), P2P Mesh Sync, Adware & Popunder Anti-Infiltration.
+ * Quantum Swarm Core, Zero-Day Shield, AES-GCM 256 Vault, Swarm AI Cloud Sync, 
+ * Local Neural Sentinel, P2P Mesh Sync, Adware & Popunder Anti-Infiltration.
  * Optimized Firebase Firestore Reads with Local TTL Cache Strategy.
  * ============================================================================
  */
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
     let isConnected = false;
     let hasConsented = localStorage.getItem('vpn_consent') === 'true';
-    let isDoubleVpnActive = false;
+    let isDoubleVpnActive = localStorage.getItem('apex_double_vpn') === 'true';
     let isAudioShieldActive = true;
     let isGpsMockActive = true;
     let currentServerIp = '185.220.101.5';
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const VACCINE_CACHE_TTL = 60 * 60 * 1000;      // ساعة واحدة للإحصائيات السحابية
 
     // ========================================================================
-    // MODULE 18: مفاعل التمويه الضوئي والصوتي العابر للطيف (Chrono-Photonic)
+    // MODULE 18: مفاعل التمويه الضوئي والصوتي العابر للطيف (Chrono-Photonic Engine)
     // ========================================================================
     const photonicModal = document.getElementById('photonic-modal');
     const openPhotonicBtn = document.getElementById('open-photonic-btn');
@@ -50,11 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAcousticJamActive = true;
     let photonicAnimationId = null;
     let acousticAudioCtx = null;
+    let noiseBufferSource = null;
 
     openPhotonicBtn?.addEventListener('click', () => photonicModal?.classList.remove('hidden'));
     closePhotonicBtn?.addEventListener('click', () => photonicModal?.classList.add('hidden'));
 
-    // 1. تشغيل التمويه الضوئي على الشاشة
+    // 1. تشغيل التمويه الضوئي الحقيقي على الشاشة لتخريب الالتقاط البصري للكاميرات
     function startPhotonicCamouflage() {
         if (!photonicCanvas) return;
         const ctx = photonicCanvas.getContext('2d');
@@ -72,9 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
             frame++;
 
             if (frame % 2 === 0) {
-                ctx.fillStyle = 'rgba(236, 72, 153, 0.04)';
+                ctx.fillStyle = 'rgba(236, 72, 153, 0.045)';
             } else {
-                ctx.fillStyle = 'rgba(56, 189, 248, 0.04)';
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.045)';
             }
 
             ctx.fillRect(0, 0, photonicCanvas.width, photonicCanvas.height);
@@ -99,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 2. تشويش الميكروفونات عبر الترددات الخفية (AI Speech Jammer)
+    // 2. تشويش الميكروفونات عبر الترددات الخفية (Web Audio API Noise Synthesis)
     async function toggleAcousticSpeechJammer(enable) {
         if (enable) {
             try {
@@ -113,15 +114,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const buffer = acousticAudioCtx.createBuffer(1, bufferSize, acousticAudioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
 
+                // توليد عينات عشوائية لتشويش نبرة الصوت ومنع برامج التنصت
                 for (let i = 0; i < bufferSize; i++) {
                     data[i] = (Math.random() * 2 - 1) * 0.00035;
                 }
 
-                const noiseNode = acousticAudioCtx.createBufferSource();
-                noiseNode.buffer = buffer;
-                noiseNode.loop = true;
-                noiseNode.connect(acousticAudioCtx.destination);
-                noiseNode.start();
+                noiseBufferSource = acousticAudioCtx.createBufferSource();
+                noiseBufferSource.buffer = buffer;
+                noiseBufferSource.loop = true;
+                noiseBufferSource.connect(acousticAudioCtx.destination);
+                noiseBufferSource.start();
 
                 if (acousticJamStatus) {
                     acousticJamStatus.textContent = 'نشط (Acoustic Mask)';
@@ -132,6 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn("جاري انتظار تفاعل المستخدم لتشغيل الصوت بشكل حقيقي");
             }
         } else {
+            if (noiseBufferSource) {
+                try { noiseBufferSource.stop(); } catch(e){}
+                noiseBufferSource = null;
+            }
             if (acousticAudioCtx) { 
                 await acousticAudioCtx.close(); 
                 acousticAudioCtx = null; 
@@ -149,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleAcousticSpeechJammer(isAcousticJamActive);
     });
 
-    // تفعيل مبدئي بمجرد نقر المستخدم على الشاشة لتجاوز حظر المتصفحات للتشغيل الصوتي التلقائي
+    // تفعيل مبدئي بمجرد نقر المستخدم لتجاوز حظر المتصفحات للتشغيل الصوتي التلقائي
     const initAudioOnUserInteraction = () => {
         startPhotonicCamouflage();
         toggleAcousticSpeechJammer(true);
@@ -229,13 +235,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // جلب الخوادم مع التخزين المؤقت لمنع استهلاك getDocs بشكل مكرر
+    // جلب الخوادم مع التخزين المؤقت لتوفير استهلاك getDocs من Firestore
     async function fetchRealServersFromDB() {
         const cachedServers = localStorage.getItem('apex_cached_servers');
         const cacheTime = localStorage.getItem('apex_servers_cache_time');
         const now = Date.now();
 
-        // استخدام التخزين المحلي المؤقت إذا لم تنتهِ صلاحيته (24 ساعة)
         if (cachedServers && cacheTime && (now - parseInt(cacheTime) < SERVERS_CACHE_TTL)) {
             realServersList = JSON.parse(cachedServers);
             if (realServersList.length > 0) {
@@ -247,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // قراءة واحدة فقط من Firestore عند انتهاء التخزين المؤقت أو لأول مرة
         if (window.apexDb && window.apexFirestore && navigator.onLine) {
             try {
                 const { collection, getDocs } = window.apexFirestore;
@@ -307,6 +311,10 @@ document.addEventListener('DOMContentLoaded', () => {
             realUserPublicIp = data.ip || 'غير معروف';
         } catch (e) {
             realUserPublicIp = 'غير معروف';
+        }
+        const ipDisplay = document.getElementById('ip-display');
+        if (ipDisplay && !isConnected) {
+            ipDisplay.textContent = `IP الحقيقي: ${realUserPublicIp}`;
         }
     }
 
@@ -620,6 +628,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODULE 2.1: التواصل مع الجسر الأصلي لنظام أندرويد (Native Bridge Integration)
     // ========================================================================
     async function triggerNativeVpnConnection(enable, serverIp, serverName) {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AndroidVPNBridge) {
+            try {
+                return await window.Capacitor.Plugins.AndroidVPNBridge.toggleVpn({ enable, serverIp, serverName });
+            } catch (e) {
+                console.warn("جسر Capacitor VPN غير مثبت أو يعمل بمتصفح الـ PWA المباشر");
+            }
+        }
         if (window.AndroidVPNBridge && typeof window.AndroidVPNBridge.toggleVpn === 'function') {
             try {
                 return window.AndroidVPNBridge.toggleVpn(enable, serverIp, serverName);
@@ -715,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ultrasonicToggle?.addEventListener('change', () => toggleUltrasonicJammer(ultrasonicToggle.checked));
 
     // ========================================================================
-    // MODULE 5: بروتوكول الانفصال الحركي ضد المصادرة (G-Force)
+    // MODULE 5: بروتوكول الانفصال الحركي ضد المصادرة (G-Force Accel Event)
     // ========================================================================
     const gforceToggle = document.getElementById('gforce-toggle');
     let lastMotionEventTime = 0;
@@ -965,7 +980,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // جلب الإحصائيات السحابية مع التخزين المؤقت الذكي لتجنب استهلاك getDocs
     async function listenToGlobalSwarmVaccines() {
         const cachedCount = localStorage.getItem('apex_vaccine_count');
         const cacheTime = localStorage.getItem('apex_vaccine_cache_time');
@@ -1335,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const encryptedObj = await encryptVaultItem(content, masterPass);
             let vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
-            vault.unshift({ title, encryptedObj, date: new Date().toLocaleDateString() });
+            vault.unshift({ title, encryptedObj, date: new Date().toLocaleDateString('ar-EG') });
             localStorage.setItem('apex_vault_items', JSON.stringify(vault));
             if (vaultTitle) vaultTitle.value = ''; 
             if (vaultContent) vaultContent.value = ''; 
@@ -1361,7 +1375,7 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.cssText = 'display: flex; flex-direction: column; gap: 8px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 12px; margin-bottom: 8px;';
             div.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div><strong>🔒 ${item.title}</strong><br><span style="color: #94a3b8; font-size: 0.65rem;">محتوى مشفر (AES-GCM) • ${item.date}</span></div>
+                    <div><strong>🔒 ${item.title}</strong><br><span style="color: #94a3b8; font-size: 0.65rem;">محتوى مشفر (AES-GCM 256) • ${item.date}</span></div>
                     <button class="btn-primary" style="padding: 6px 12px; font-size: 0.7rem; cursor: pointer;" onclick="window.decryptVaultEntry(${index})">فك التشفير 🔓</button>
                 </div>
                 <div id="decrypted-view-${index}" style="display: none; margin-top: 6px; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 6px; color: #34d399; font-size: 0.75rem; word-break: break-all;"></div>
@@ -1527,7 +1541,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // تحليل استهلاك الجهاز بناءً على واجهات المتصفح الحقيقية
+    // تحليل استهلاك الجهاز بناءً على واجهات المتصفح والعتاد الحقيقية
     openAnalyticsBtn?.addEventListener('click', () => {
         const cpuEl = document.getElementById('cpu-usage');
         const ramEl = document.getElementById('ram-usage');
@@ -1539,7 +1553,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (ramEl) {
             const deviceMemGB = navigator.deviceMemory || 8;
-            cpuEl.textContent = `الذاكرة المتاحة: ${deviceMemGB} GB`;
+            ramEl.textContent = `الذاكرة المتاحة: ${deviceMemGB} GB`;
         }
         if (storageEl && navigator.storage && navigator.storage.estimate) {
             navigator.storage.estimate().then(est => {
@@ -1556,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeWifiBtn?.addEventListener('click', () => wifiModal?.classList.add('hidden'));
 
     // ========================================================================
-    // قياس السرعة والبينغ الحقيقي مع خوادم خارجية ذات كفاءة
+    // قياس السرعة والبينغ الحقيقي عبر أداء الشبكة الحقيقي
     // ========================================================================
     closeSpeedBtn?.addEventListener('click', () => speedModal?.classList.add('hidden'));
     startSpeedTest?.addEventListener('click', async () => {

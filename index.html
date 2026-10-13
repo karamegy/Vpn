@@ -8,11 +8,11 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#030712">
 
-    <!-- تهيئة وربط Firebase SDK الرسمي لمشروعك vpn1-c7cbd -->
+    <!-- تهيئة وربط Firebase SDK الرسمي وتصدير كافة أدوات الاستعلام المتقدمة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCER1zLyxzZnjd9W-fuivb_7T4VyVttiE4",
@@ -28,9 +28,9 @@
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // إتاحة قاعدة البيانات عالمياً لملف app.js
+        // إتاحة قاعدة البيانات وأدوات الاستعلام عالمياً لملف app.js
         window.apexDb = db;
-        window.apexFirestore = { collection, addDoc, getDocs };
+        window.apexFirestore = { collection, addDoc, getDocs, query, orderBy, limit };
         console.log("[Apex Chrono-Photonic AI v18] متصل بنجاح بالسحابة المركزية للمشروع vpn1-c7cbd!");
     </script>
 </head>
@@ -174,7 +174,8 @@
         <div class="modal-content glass-panel">
             <h2>🌍 شبكة الخوادم العالمية (تغيير حقيقي للـ IP)</h2>
             <input type="text" id="country-search" placeholder="ابحث عن دولة..." class="search-input">
-            <div class="server-list" id="server-list">
+            <!-- تم توحيد المعرف هنا ليتوافق مع app.js -->
+            <div class="server-list" id="servers-list-container">
                 <div class="server-item active" data-name="تلقائي (الذكاء الاصطناعي الأسرع)" data-ip="185.220.101.5" data-ping="12 ms" data-flag="⚡">
                     <span>⚡ تلقائي (الأسرع عالمياً)</span>
                     <span class="ping good">12 ms</span>

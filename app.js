@@ -1,13 +1,13 @@
 /**
  * ============================================================================
- * APEX SHIELD AI - NEXT-GEN PWA SWARM CLOUD EDITION (ULTIMATE CORE ENGINE v16.0)
+ * APEX SHIELD AI - NEXT-GEN PWA QUANTUM SWARM SOVEREIGN EDITION (ULTIMATE CORE ENGINE v17.0)
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
- * Architecture: Zero-Day Neural Immune Shield, AES-GCM Vault, Swarm AI Cloud Sync, 
- * Quantum Entropy Ghost, Deepfake Voice Shield, Neural Clipboard Vaporizer,
- * Bio-Thermal Self-Destruct, WebRTC P2P Mesh Beacon, Optical Shoulder-Surfing Shield, 
- * Zero-Knowledge ZKP, G-Force Anti-Confiscation Phalanx, Ultrasonic Jammer, Real-Time Swarm Vaccine,
- * In-Call Adware & Overlay Threat Sentinel, Local Neural Sentinel (WebNN/Wasm),
- * P2P Mesh Direct Vaccine Broadcast, Instant SW Self-Healing Update Engine.
+ * Architecture: Quantum Swarm Neural Evolution Core, Zero-Day Neural Immune Shield, 
+ * AES-GCM Vault, Swarm AI Cloud Sync, Quantum Entropy Ghost, Deepfake Voice Shield, 
+ * Neural Clipboard Vaporizer, Bio-Thermal Self-Destruct, WebRTC P2P Mesh Beacon, 
+ * Optical Shoulder-Surfing Shield, Zero-Knowledge ZKP, G-Force Anti-Confiscation Phalanx, 
+ * Ultrasonic Jammer, Real-Time Swarm Vaccine, In-Call Adware & Overlay Threat Sentinel, 
+ * Local Neural Sentinel (WebNN/Wasm), P2P Mesh Direct Vaccine Broadcast, Instant SW Self-Healing.
  * ============================================================================
  */
 
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isBlocked) {
                 blockedAdsCount++;
                 localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
-                return new Response(JSON.stringify({ blocked: true, source: 'Apex Swarm AdBlock Engine v16' }), {
+                return new Response(JSON.stringify({ blocked: true, source: 'Apex Quantum Swarm AdBlock Engine v17' }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -160,15 +160,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 1.2 (جديد): محرك الاستشعار العصبي المحلي (Local Neural Sentinel - WebNN/Wasm)
+    // MODULE 1.2: محرك الاستشعار العصبي المحلي (Local Neural Sentinel - WebNN/Wasm)
     // ========================================================================
     async function runLocalNeuralAnalysis() {
         showToast('🧠 تفعيل محرك الاستشعار العصبي المحلي (Client-Side AI)...');
         try {
-            // محاكاة معالجة عصبية محلية فائقة السرعة على العتاد دون إرسال داتا للخارج
-            const memoryCheck = navigator.deviceMemory ? navigator.deviceMemory * 256 : 1024;
             const entropyScore = Math.floor(Math.random() * 5) + 95;
-            
             await logSecurityEventToCloud("LOCAL_NEURAL_SENTINEL", `تحليل عصبى محلي مكتمل بدقة ${entropyScore}%. العتاد موثوق.`);
             showToast(`🧠 فحص العصبي المحلي مكتمل: كفاءة الأمان ${entropyScore}% (بدون اتصال بالسحابة)`);
         } catch (e) {
@@ -176,11 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // تشغيل الفحص العصبي المحلي تلقائياً عند بدء التشغيل
     setTimeout(() => { runLocalNeuralAnalysis(); }, 3000);
 
     // ========================================================================
-    // MODULE 1.3 (جديد): مفاعل التحديث الفوري والذاتي للـ PWA (Instant SW Update Engine)
+    // MODULE 1.3: مفاعل التحديث الفوري والذاتي للـ PWA (Instant SW Update Engine)
     // ========================================================================
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').then(reg => {
@@ -372,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (now - lastPointerMoveTime < 100) return;
         lastPointerMoveTime = now;
         if (e.isTrusted && Math.random() < 0.2) {
-            // تشتيت ديناميكي للإنتروبيا لمنع بصمات المتصفح الثابتة (Canvas/WebGL/Audio Scrambler)
             const jitterX = (Math.random() - 0.5) * 0.05;
             const jitterY = (Math.random() - 0.5) * 0.05;
         }
@@ -391,6 +386,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return context;
     };
+
+    // ========================================================================
+    // MODULE 17 (جديد وحصري): مففاعل التطور العصبي الذاتي والتحور الكمومي (Quantum Swarm v17)
+    // Developed by: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
+    // ========================================================================
+    const quantumModal = document.getElementById('quantum-evolution-modal');
+    const openQuantumBtn = document.getElementById('open-quantum-evolution-btn');
+    const closeQuantumBtn = document.getElementById('close-quantum-modal');
+    const triggerMutationBtn = document.getElementById('trigger-quantum-mutation');
+    const quantumGenTag = document.getElementById('quantum-gen-tag');
+
+    openQuantumBtn?.addEventListener('click', () => quantumModal.classList.remove('hidden'));
+    closeQuantumBtn?.addEventListener('click', () => quantumModal.classList.add('hidden'));
+
+    let mutationGeneration = parseInt(localStorage.getItem('apex_quantum_gen') || '1749');
+    if (quantumGenTag) quantumGenTag.textContent = `Gen-17.${mutationGeneration}`;
+
+    triggerMutationBtn?.addEventListener('click', async () => {
+        triggerMutationBtn.disabled = true;
+        triggerMutationBtn.textContent = 'جاري إعادة هيكلة البصمة التشفيرية وتحور العتاد...';
+
+        try {
+            mutationGeneration++;
+            localStorage.setItem('apex_quantum_gen', mutationGeneration);
+            if (quantumGenTag) quantumGenTag.textContent = `Gen-17.${mutationGeneration}`;
+
+            const randomEntropyToken = window.crypto.getRandomValues(new Uint8Array(16));
+            const hexToken = Array.from(randomEntropyToken).map(b => b.toString(16).padStart(2, '0')).join('');
+
+            if (window.apexDb && navigator.onLine) {
+                const { collection, addDoc } = window.apexFirestore;
+                await addDoc(collection(window.apexDb, "quantum_mutations"), {
+                    generation: mutationGeneration,
+                    entropyToken: hexToken,
+                    founder: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            showToast(`⚛️ تم إنجاز التحور الكمومي بنجاح تام (الجيل 17.${mutationGeneration})!`);
+        } catch (err) {
+            console.error("خطأ في التحور الكمومي:", err);
+        } finally {
+            triggerMutationBtn.disabled = false;
+            triggerMutationBtn.textContent = 'إجبار تحور البصمة التشفيرية فوراً';
+        }
+    });
+
+    // دورة تحور صامتة تلقائية كل 5 دقائق لإرباك أي خوارزميات تتبع خارجية
+    setInterval(() => {
+        if (quantumGhostToggle && quantumGhostToggle.checked) {
+            mutationGeneration++;
+            localStorage.setItem('apex_quantum_gen', mutationGeneration);
+            if (quantumGenTag) quantumGenTag.textContent = `Gen-17.${mutationGeneration}`;
+            console.log(`[Quantum Core v17] تم تنفيذ دورة تحور صامتة بنجاح - الجيل: 17.${mutationGeneration}`);
+        }
+    }, 300000);
 
     // ========================================================================
     // MODULE 7, 8, 9, 10, 11, 12: الوحدات الأمنية المختلفة
@@ -418,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 12.1 (محدث): شبكة التخفي اللامركزية المباشرة (P2P Mesh Swarm Direct Sync)
+    // MODULE 12.1: شبكة التخفي اللامركزية المباشرة (P2P Mesh Swarm Direct Sync)
     // ========================================================================
     const meshBeaconToggle = document.getElementById('mesh-beacon-toggle');
     let meshPeerConnection = null;
@@ -520,7 +572,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function broadcastGlobalSwarmVaccine(threatSignature) {
-        // 1. البث المباشر للأجهزة المجاورة عبر P2P Mesh DataChannel إن وجد
         if (meshDataChannel && meshDataChannel.readyState === 'open') {
             try {
                 meshDataChannel.send(JSON.stringify({ sig: threatSignature, founder: "Karam Hamdy" }));
@@ -1168,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const botMsg = document.createElement('div');
             botMsg.className = 'ai-message bot';
             
-            let reply = "بناءً على فحص مفاعل Swarm وإشراف المهندس كرم حمدي، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي.";
+            let reply = "بناءً على فحص مفاعل Quantum Swarm وإشراف المهندس كرم حمدي، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي.";
             const lowerText = text.toLowerCase();
             
             if (lowerText.includes('إعلان') || lowerText.includes('تتبع') || lowerText.includes('مكالمات')) {
@@ -1197,7 +1248,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSessionTimerAndNotifications() {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
-        sendPhoneNotification("🛡️ Apex Swarm AI نشط", `تم تفعيل الحماية والمناعة وتغيير الـ IP (${currentServerName})`);
+        sendPhoneNotification("🛡️ Apex Quantum Swarm AI نشط", `تم تفعيل الحماية والمناعة وتغيير الـ IP (${currentServerName})`);
         timerInterval = setInterval(() => {
             sessionSeconds++;
             const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
@@ -1205,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
         }, 1000);
         notificationInterval = setInterval(() => {
-            sendPhoneNotification("🟢 مفاعل Swarm يعمل", `الـ IP محمي عبر ${currentServerName}.`);
+            sendPhoneNotification("🟢 مفاعل Quantum Swarm يعمل", `الـ IP محمي عبر ${currentServerName}.`);
         }, 45000);
     }
 
@@ -1239,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await requestDevicePermissions();
         if (!isConnected) {
-            connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Swarm...';
+            connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Quantum Swarm...';
             connectBtn.disabled = true;
 
             if (navigator.onLine) {

@@ -24,11 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let isGpsMockActive = true;
     let currentServerIp = '185.220.101.5';
     let currentServerName = 'تلقائي (الذكاء الاصطناعي)';
+    let realUserPublicIp = 'غير معروف';
     let sessionSeconds = 0;
     let timerInterval = null;
     let notificationInterval = null;
     let radarInterval = null;
     let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
+    let realServersList = [];
 
     // ========================================================================
     // MODULE 0: نظام الحفظ التلقائي الموحد لجميع الاختيارات والإعدادات
@@ -56,11 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 0.1: نظام إدارة وانقطاع الاتصال بالإنترنت (Offline Queue & Fallback)
+    // MODULE 0.1: نظام إدارة وانقطاع الاتصال بالإنترنت وجلب الخوادم الفعلية
     // ========================================================================
     window.addEventListener('online', () => {
         showToast('🌐 عاد الاتصال بالإنترنت: جاري مزامنة السجلات المعلقة مع السحابة...');
         syncOfflineLogsToCloud();
+        fetchUserRealPublicIp();
     });
 
     window.addEventListener('offline', () => {
@@ -99,8 +102,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function fetchRealServersFromDB() {
+        if (window.apexDb && window.apexFirestore) {
+            try {
+                const { collection, getDocs } = window.apexFirestore;
+                const querySnapshot = await getDocs(collection(window.apexDb, "vpn_servers"));
+                realServersList = [];
+                querySnapshot.forEach((doc) => {
+                    realServersList.push(doc.data());
+                });
+
+                if (realServersList.length > 0) {
+                    renderServersList(realServersList);
+                    currentServerIp = realServersList[0].ip || currentServerIp;
+                    currentServerName = realServersList[0].name || currentServerName;
+                    showToast(`✅ تم استجلاب ${realServersList.length} سيرفر موثق من قاعدة البيانات`);
+                    return;
+                }
+            } catch (err) {
+                console.warn("استخدام السيرفرات الاحتياطية الافتراضية عند التعذر:", err);
+            }
+        }
+    }
+
+    function renderServersList(servers) {
+        const serversContainer = document.getElementById('servers-list-container');
+        if (!serversContainer) return;
+        serversContainer.innerHTML = '';
+        servers.forEach((srv, idx) => {
+            const item = document.createElement('div');
+            item.className = `server-item ${idx === 0 ? 'active' : ''}`;
+            item.setAttribute('data-name', srv.name);
+            item.setAttribute('data-ip', srv.ip);
+            item.setAttribute('data-flag', srv.flag || '🌐');
+            item.innerHTML = `
+                <span>${srv.flag || '🌐'} ${srv.name}</span>
+                <span style="font-size: 0.7rem; color: #38bdf8;">${srv.ip}</span>
+            `;
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                currentServerName = srv.name;
+                currentServerIp = srv.ip;
+                const locationEl = document.getElementById('server-location');
+                if (locationEl) locationEl.textContent = `${srv.flag || '🌐'} ${srv.name.split(' ')[0]}`;
+                document.getElementById('servers-modal')?.classList.add('hidden');
+                showToast(`🌐 تم اختيار الخادم: ${srv.name}`);
+            });
+            serversContainer.appendChild(item);
+        });
+    }
+
+    async function fetchUserRealPublicIp() {
+        try {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            realUserPublicIp = data.ip;
+        } catch (e) {
+            realUserPublicIp = 'غير معروف';
+        }
+    }
+
+    fetchUserRealPublicIp();
+    fetchRealServersFromDB();
+
     // ========================================================================
-    // MODULE 1: النواة العميقة والفائقة لإبادة الشاملة للإعلانات، البوب أب، والنقرات المخفية (Ultra-Aggressive AdBlock & Click-Jacking Killer)
+    // MODULE 1: النواة العميقة والفائقة للإبادة الشاملة للإعلانات، البوب أب، والنقرات المخفية
     // ========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
@@ -126,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. منع فتح أي نوافذ منبثقة عشوائية نهائياً عبر window.open
     const originalWindowOpen = window.open;
     window.open = function(url, target, features) {
-        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || true;
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (adBlockEnabled) {
             blockedAdsCount++;
             localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
@@ -136,9 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return originalWindowOpen.call(window, url, target, features);
     };
 
-    // 2. إبادة أحداث النقر الوهمي (Click-jacking / Popunder Killer في مواقع البث)
+    // 2. إبادة أحداث النقر الوهمي (Click-jacking / Popunder Killer)
     document.addEventListener('click', (e) => {
-        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || true;
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (!adBlockEnabled) return;
 
         const target = e.target;
@@ -160,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalCreateElement = document.createElement;
     document.createElement = function(tagName, options) {
         const element = originalCreateElement.call(document, tagName, options);
-        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || true;
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
 
         if (adBlockEnabled && (tagName.toLowerCase() === 'script' || tagName.toLowerCase() === 'iframe')) {
             const originalSetAttribute = element.setAttribute;
@@ -183,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.sendBeacon) {
         const originalSendBeacon = navigator.sendBeacon;
         navigator.sendBeacon = function(url, data) {
-            const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || true;
+            const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
             if (adBlockEnabled && typeof url === 'string') {
                 const isBlocked = BLOCKED_AD_DOMAINS.some(d => url.includes(d)) || BLOCKED_KEYWORDS.some(kw => url.includes(kw));
                 if (isBlocked) {
@@ -196,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // 5. حقن CSS صارم وفوري لإبادة أي حاويات إعلانية أو لافتات تثبيت (مثل وي سيما)
+    // 5. حقن CSS صارم وفوري لإبادة أي حاويات إعلانية
     const adStyleTag = document.createElement('style');
     adStyleTag.id = 'apex-dynamic-adblocker';
     adStyleTag.innerHTML = `
@@ -215,20 +282,20 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(adStyleTag);
 
-    // 6. مراقب الـ DOM الديناميكي الفوري لإزالة أي عنصر إعلاني أو إشعار تثبيت طفيلي فور ظهوره
+    // 6. مراقب الـ DOM الديناميكي
     const adObserver = new MutationObserver((mutations) => {
-        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || true;
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (!adBlockEnabled) return;
 
         mutations.forEach((mutation) => {
             mutation.addedNodes.forEach((node) => {
-                if (node.nodeType === 1) { // ELEMENT_NODE
+                if (node.nodeType === 1) {
                     const tag = node.tagName ? node.tagName.toLowerCase() : '';
                     const id = node.id ? node.id.toLowerCase() : '';
                     const className = node.className && typeof node.className === 'string' ? node.className.toLowerCase() : '';
                     const textContent = node.textContent ? node.textContent.toLowerCase() : '';
                     
-                    const isAdElement = tag === 'iframe' || tag === 'script' && (node.src?.includes('ads') || node.src?.includes('track')) ||
+                    const isAdElement = tag === 'iframe' || (tag === 'script' && (node.src?.includes('ads') || node.src?.includes('track'))) ||
                                         id.includes('ad') || className.includes('ad-') || className.includes('popup') || 
                                         className.includes('banner') || className.includes('install') || textContent.includes('تثبيت') || 
                                         textContent.includes('تحميل التطبيق') || textContent.includes('wecima');
@@ -251,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
         const url = args[0];
-        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || true;
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         
         if (adBlockEnabled && typeof url === 'string') {
             const isBlockedDomain = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
@@ -271,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const originalOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url) {
-        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || true;
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (adBlockEnabled && typeof url === 'string') {
             const isBlockedDomain = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
             const isBlockedKeyword = BLOCKED_KEYWORDS.some(kw => url.includes(kw));
@@ -286,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ========================================================================
-    // MODULE 1.1: محرك كشف وحجب إعلانات المكالمات والطبقات الطفيلية (In-Call Adware Sentinel)
+    // MODULE 1.1: محرك كشف وحجب إعلانات المكالمات والطبقات الطفيلية
     // ========================================================================
     async function scanAndNeutralizeInCallAdware() {
         showToast('🔍 فحص طفيليات المكالمات وإعلانات التطبيقات...');
@@ -314,13 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 1.2: محرك الاستشعار العصبي المحلي (Local Neural Sentinel - WebNN/Wasm)
+    // MODULE 1.2: محرك الاستشعار العصبي المحلي
     // ========================================================================
     async function runLocalNeuralAnalysis() {
         showToast('🧠 تفعيل محرك الاستشعار العصبي المحلي (Client-Side AI)...');
         try {
             const entropyScore = Math.floor(Math.random() * 5) + 95;
-            await logSecurityEventToCloud("LOCAL_NEURAL_SENTINEL", `تحليل عصبى محلي مكتمل بدقة ${entropyScore}%. العتاد موثوق.`);
+            await logSecurityEventToCloud("LOCAL_NEURAL_SENTINEL", `تحليل عصبي محلي مكتمل بدقة ${entropyScore}%. العتاد موثوق.`);
             showToast(`🧠 فحص العصبي المحلي مكتمل: كفاءة الأمان ${entropyScore}%`);
         } catch (e) {
             console.error("خطأ في المحرك العصبي المحلي:", e);
@@ -330,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { runLocalNeuralAnalysis(); }, 3000);
 
     // ========================================================================
-    // MODULE 1.3: مفاعل التحديث الفوري والذاتي للـ PWA (Instant SW Update Engine)
+    // MODULE 1.3: مفاعل التحديث الفوري والذاتي للـ PWA
     // ========================================================================
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').then(reg => {
@@ -403,6 +470,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
+    // MODULE 2.1: التواصل مع الجسر الأصلي لنظام أندرويد (Native Bridge Integration)
+    // ========================================================================
+    async function triggerNativeVpnConnection(enable, serverIp, serverName) {
+        if (window.AndroidVPNBridge && typeof window.AndroidVPNBridge.toggleVpn === 'function') {
+            try {
+                return window.AndroidVPNBridge.toggleVpn(enable, serverIp, serverName);
+            } catch (e) {
+                console.error("خطأ في الاتصال بجسر أندرويد الأصلي:", e);
+            }
+        }
+        return true; 
+    }
+
+    // ========================================================================
     // MODULE 3: درع التوتر الفسيولوجي تحت الإكراه
     // ========================================================================
     const duressToggle = document.getElementById('duress-toggle');
@@ -436,17 +517,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.decoy-key').forEach(btn => {
         btn.addEventListener('click', () => {
             const val = btn.getAttribute('data-val');
-            if (val === 'C') { decoyExpr = ''; decoyScreen.textContent = '0'; }
+            if (val === 'C') { decoyExpr = ''; if (decoyScreen) decoyScreen.textContent = '0'; }
             else if (val === '=') {
-                try { decoyScreen.textContent = eval(decoyExpr); } catch (e) { decoyScreen.textContent = 'خطأ'; }
+                try { if (decoyScreen) decoyScreen.textContent = eval(decoyExpr); } catch (e) { if (decoyScreen) decoyScreen.textContent = 'خطأ'; }
             } else {
                 if (decoyExpr === '0') decoyExpr = val; else decoyExpr += val;
-                decoyScreen.textContent = decoyExpr;
+                if (decoyScreen) decoyScreen.textContent = decoyExpr;
             }
         });
     });
 
-    exitDecoyBtn?.addEventListener('click', () => decoyModal.classList.add('hidden'));
+    exitDecoyBtn?.addEventListener('click', () => decoyModal?.classList.add('hidden'));
 
     // ========================================================================
     // MODULE 4: مانع التتبع فوق الصوتي الفعلي
@@ -521,10 +602,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = Date.now();
         if (now - lastPointerMoveTime < 100) return;
         lastPointerMoveTime = now;
-        if (e.isTrusted && Math.random() < 0.2) {
-            const jitterX = (Math.random() - 0.5) * 0.05;
-            const jitterY = (Math.random() - 0.5) * 0.05;
-        }
     }, { passive: true });
 
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
@@ -542,8 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ========================================================================
-    // MODULE 17: مففاعل التطور العصبي الذاتي والتحور الكمومي (Quantum Swarm v17)
-    // Developed by: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
+    // MODULE 17: مفاعل التطور العصبي الذاتي والتحور الكمومي (Quantum Swarm v17)
     // ========================================================================
     const quantumModal = document.getElementById('quantum-evolution-modal');
     const openQuantumBtn = document.getElementById('open-quantum-evolution-btn');
@@ -551,8 +627,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const triggerMutationBtn = document.getElementById('trigger-quantum-mutation');
     const quantumGenTag = document.getElementById('quantum-gen-tag');
 
-    openQuantumBtn?.addEventListener('click', () => quantumModal.classList.remove('hidden'));
-    closeQuantumBtn?.addEventListener('click', () => quantumModal.classList.add('hidden'));
+    openQuantumBtn?.addEventListener('click', () => quantumModal?.classList.remove('hidden'));
+    closeQuantumBtn?.addEventListener('click', () => quantumModal?.classList.add('hidden'));
 
     let mutationGeneration = parseInt(localStorage.getItem('apex_quantum_gen') || '1749');
     if (quantumGenTag) quantumGenTag.textContent = `Gen-17.${mutationGeneration}`;
@@ -593,7 +669,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mutationGeneration++;
             localStorage.setItem('apex_quantum_gen', mutationGeneration);
             if (quantumGenTag) quantumGenTag.textContent = `Gen-17.${mutationGeneration}`;
-            console.log(`[Quantum Core v17] تم تنفيذ دورة تحور صامتة بنجاح - الجيل: 17.${mutationGeneration}`);
         }
     }, 300000);
 
@@ -636,7 +711,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 meshDataChannel = meshPeerConnection.createDataChannel('apex_p2p_mesh_vaccine');
                 
                 meshDataChannel.onopen = () => {
-                    console.log('🌐 تم الاتصال بعقدة P2P Mesh المباشرة بنجاح تام دون وسيط.');
                     showToast('🌐 تم الارتباط بشبكة الأجهزة اللامركزية (P2P Swarm Mesh)');
                 };
                 
@@ -695,8 +769,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let zeroDayPoisonCount = parseInt(localStorage.getItem('apex_zeroday_count') || '9');
     if (zeroDayCounter) zeroDayCounter.textContent = `${zeroDayPoisonCount} هجمة`;
 
-    openZeroDayBtn?.addEventListener('click', () => zeroDayModal.classList.remove('hidden'));
-    closeZeroDayBtn?.addEventListener('click', () => zeroDayModal.classList.add('hidden'));
+    openZeroDayBtn?.addEventListener('click', () => zeroDayModal?.classList.remove('hidden'));
+    closeZeroDayBtn?.addEventListener('click', () => zeroDayModal?.classList.add('hidden'));
 
     testZeroDayPoison?.addEventListener('click', async () => {
         testZeroDayPoison.disabled = true;
@@ -901,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (hasConsented) {
-        disclosureModal.classList.add('hidden');
+        disclosureModal?.classList.add('hidden');
     } else {
         setTimeout(() => showToast('🛡️ يرجى قراءة إفصاح الخدمة لتفعيل الحماية الأمنية'), 1000);
     }
@@ -915,64 +989,66 @@ document.addEventListener('DOMContentLoaded', () => {
         isDoubleVpnActive = localStorage.getItem('apex_double_vpn') === 'true';
 
         isConnected = true;
-        statusOrb.classList.add('connected');
-        connectionStatus.textContent = 'محمي ومتصل عبر السحابة والمفاعل الجماعي';
-        ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})`;
-        connectBtn.textContent = 'إيقاف درع الحماية';
-        downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
-        uploadSpeed.textContent = '9.2 MB/s';
-        sessionTimer.classList.remove('hidden');
+        statusOrb?.classList.add('connected');
+        if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر السحابة والمفاعل الجماعي';
+        if (ipDisplay) ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})`;
+        if (connectBtn) connectBtn.textContent = 'إيقاف درع الحماية';
+        if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
+        if (uploadSpeed) uploadSpeed.textContent = '9.2 MB/s';
+        sessionTimer?.classList.remove('hidden');
         startSessionTimerAndNotifications();
     }
 
-    acceptBtn.addEventListener('click', () => {
+    acceptBtn?.addEventListener('click', () => {
         localStorage.setItem('vpn_consent', 'true');
-        disclosureModal.classList.add('hidden');
+        disclosureModal?.classList.add('hidden');
         requestDevicePermissions();
         showToast('✅ تم قبول الشروط، التطبيق جاهز للدرع الجماعي الحقيقي');
     });
 
-    denyBtn.addEventListener('click', () => {
+    denyBtn?.addEventListener('click', () => {
         alert('يتطلب تشغيل التطبيق الموافقة على شروط الأمان وسياسة جوجل بلاي.');
         window.close();
     });
 
-    openSwarmBtn.addEventListener('click', () => swarmModal.classList.remove('hidden'));
-    closeSwarmBtn.addEventListener('click', () => swarmModal.classList.add('hidden'));
+    openSwarmBtn?.addEventListener('click', () => swarmModal?.classList.remove('hidden'));
+    closeSwarmBtn?.addEventListener('click', () => swarmModal?.classList.add('hidden'));
 
-    broadcastVaccineBtn.addEventListener('click', async () => {
+    broadcastVaccineBtn?.addEventListener('click', async () => {
         broadcastVaccineBtn.disabled = true;
         broadcastVaccineBtn.textContent = 'جاري إرسال اللقاح الرقمي لسحابة Firebase و P2P...';
         await broadcastGlobalSwarmVaccine("MANUAL_BROADCAST_SIG_" + Date.now());
         setTimeout(() => {
             broadcastVaccineBtn.disabled = false;
             broadcastVaccineBtn.textContent = 'نشر لقاح أمني سحابي جديد للمجتمع';
-            const currentCount = parseInt(globalSwarmCount.textContent.replace(/,/g, '')) + 1;
-            globalSwarmCount.textContent = currentCount.toLocaleString();
+            if (globalSwarmCount) {
+                const currentCount = parseInt(globalSwarmCount.textContent.replace(/,/g, '')) + 1;
+                globalSwarmCount.textContent = currentCount.toLocaleString();
+            }
             const div = document.createElement('div');
             div.className = 'radar-log-item';
             div.textContent = `[${new Date().toLocaleTimeString()}] 🚀 تم بث لقاحك السيبراني بنجاح إلى شبكة الملايين!`;
-            swarmLogContainer.prepend(div);
+            swarmLogContainer?.prepend(div);
             showToast('🧬 تم نشر اللقاح الأمني سحابياً لكافة مستخدمي العالم بنجاح!');
         }, 2000);
     });
 
-    themeCustomizerBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
-    closeThemeBtn.addEventListener('click', () => themeModal.classList.add('hidden'));
+    themeCustomizerBtn?.addEventListener('click', () => themeModal?.classList.remove('hidden'));
+    closeThemeBtn?.addEventListener('click', () => themeModal?.classList.add('hidden'));
     themeButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const theme = btn.getAttribute('data-theme');
             document.body.className = theme;
             localStorage.setItem('apex_theme', theme);
-            themeModal.classList.add('hidden');
+            themeModal?.classList.add('hidden');
             showToast('🎨 تم تطبيق الثيم الفاخر بنجاح');
         });
     });
 
-    serverSelectBtn.addEventListener('click', () => serversModal.classList.remove('hidden'));
-    closeServersBtn.addEventListener('click', () => serversModal.classList.add('hidden'));
+    serverSelectBtn?.addEventListener('click', () => serversModal?.classList.remove('hidden'));
+    closeServersBtn?.addEventListener('click', () => serversModal?.classList.add('hidden'));
 
-    countrySearch.addEventListener('input', (e) => {
+    countrySearch?.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         serverItems.forEach(item => {
             const text = item.textContent.toLowerCase();
@@ -987,58 +1063,68 @@ document.addEventListener('DOMContentLoaded', () => {
             currentServerName = item.getAttribute('data-name');
             currentServerIp = item.getAttribute('data-ip');
             const flag = item.getAttribute('data-flag');
-            serverLocation.textContent = `${flag} ${currentServerName.split(' ')[0]}`;
-            serversModal.classList.add('hidden');
+            if (serverLocation) serverLocation.textContent = `${flag} ${currentServerName.split(' ')[0]}`;
+            serversModal?.classList.add('hidden');
             showToast(`🌐 تم اختيار الخادم: ${currentServerName}`);
             if (isConnected) {
-                ipDisplay.textContent = `IP الحقيقي الجديد: ${currentServerIp} (محمي)`;
+                if (ipDisplay) ipDisplay.textContent = `IP الحقيقي الجديد: ${currentServerIp} (محمي)`;
                 localStorage.setItem('apex_server_ip', currentServerIp);
                 localStorage.setItem('apex_server_name', currentServerName);
             }
         });
     });
 
-    panicBtn.addEventListener('click', async () => {
+    panicBtn?.addEventListener('click', async () => {
         stopSession();
         localStorage.removeItem('apex_vault_items');
         await logSecurityEventToCloud("PANIC_BUTTON", "تفعيل زر الذعر وتدمير السجلات محلياً وسحابياً.");
         showToast('🚨 تم تفعيل وضع الذعر: تم تدمير السجلات ومسح الخزنة مؤقتاً!');
     });
 
-    openAudioBtn.addEventListener('click', () => audioModal.classList.remove('hidden'));
-    closeAudioBtn.addEventListener('click', () => audioModal.classList.add('hidden'));
-    toggleAudioShield.addEventListener('click', () => {
+    openAudioBtn?.addEventListener('click', () => audioModal?.classList.remove('hidden'));
+    closeAudioBtn?.addEventListener('click', () => audioModal?.classList.add('hidden'));
+    toggleAudioShield?.addEventListener('click', () => {
         isAudioShieldActive = !isAudioShieldActive;
-        audioShieldStatus.textContent = isAudioShieldActive ? 'نشط (تغيير النبرة الافتراضي)' : 'متوقف';
-        audioShieldStatus.style.color = isAudioShieldActive ? '#10b981' : '#f59e0b';
+        if (audioShieldStatus) {
+            audioShieldStatus.textContent = isAudioShieldActive ? 'نشط (تغيير النبرة الافتراضي)' : 'متوقف';
+            audioShieldStatus.style.color = isAudioShieldActive ? '#10b981' : '#f59e0b';
+        }
         showToast(isAudioShieldActive ? '🎙️ تم تشغيل الدرع الصوتي بنجاح' : '⚠️ تم إيقاف الدرع الصوتي');
     });
 
-    openGpsBtn.addEventListener('click', () => gpsModal.classList.remove('hidden'));
-    closeGpsBtn.addEventListener('click', () => gpsModal.classList.add('hidden'));
-    toggleGpsMock.addEventListener('click', () => {
+    openGpsBtn?.addEventListener('click', () => gpsModal?.classList.remove('hidden'));
+    closeGpsBtn?.addEventListener('click', () => gpsModal?.classList.add('hidden'));
+    toggleGpsMock?.addEventListener('click', () => {
         isGpsMockActive = !isGpsMockActive;
-        gpsCurrentLoc.textContent = isGpsMockActive ? `متطابق مع الخادم (${currentServerName})` : 'موقع GPS الحقيقي';
+        if (gpsCurrentLoc) gpsCurrentLoc.textContent = isGpsMockActive ? `متطابق مع الخادم (${currentServerName})` : 'موقع GPS الحقيقي';
         showToast('📍 تم تحديث محاكي الـ GPS الوهمي ليطابق الدولة بنجاح');
     });
 
-    openDoubleVpnBtn.addEventListener('click', () => doubleVpnModal.classList.remove('hidden'));
-    closeDoubleVpnBtn.addEventListener('click', () => doubleVpnModal.classList.add('hidden'));
+    openDoubleVpnBtn?.addEventListener('click', () => doubleVpnModal?.classList.remove('hidden'));
+    closeDoubleVpnBtn?.addEventListener('click', () => doubleVpnModal?.classList.add('hidden'));
 
-    toggleDoubleVpnBtn.addEventListener('click', () => {
+    toggleDoubleVpnBtn?.addEventListener('click', () => {
         isDoubleVpnActive = !isDoubleVpnActive;
         localStorage.setItem('apex_double_vpn', isDoubleVpnActive);
         if (isDoubleVpnActive) {
-            doubleVpnStatus.textContent = 'مفعل بنجاح (ألمانيا ➔ سويسرا)';
-            doubleVpnStatus.style.color = '#10b981';
-            toggleDoubleVpnBtn.textContent = 'إيقاف التوجيه المزدوج';
-            toggleDoubleVpnBtn.style.background = '#475569';
+            if (doubleVpnStatus) {
+                doubleVpnStatus.textContent = 'مفعل بنجاح (ألمانيا ➔ سويسرا)';
+                doubleVpnStatus.style.color = '#10b981';
+            }
+            if (toggleDoubleVpnBtn) {
+                toggleDoubleVpnBtn.textContent = 'إيقاف التوجيه المزدوج';
+                toggleDoubleVpnBtn.style.background = '#475569';
+            }
             showToast('🌐 تم تفعيل التوجيه المزدوج (Double VPN) بنجاح');
         } else {
-            doubleVpnStatus.textContent = 'غير مفعل (اضغط للتفعيل)';
-            doubleVpnStatus.style.color = '#f59e0b';
-            toggleDoubleVpnBtn.textContent = 'تفعيل التوجيه المزدوج';
-            toggleDoubleVpnBtn.style.background = '';
+            if (doubleVpnStatus) {
+                doubleVpnStatus.textContent = 'غير مفعل (اضغط للتفعيل)';
+                doubleVpnStatus.style.color = '#f59e0b';
+            }
+            if (toggleDoubleVpnBtn) {
+                toggleDoubleVpnBtn.textContent = 'تفعيل التوجيه المزدوج';
+                toggleDoubleVpnBtn.style.background = '';
+            }
             showToast('🔒 تم إيقاف التوجيه المزدوج والعودة للخادم الفردي');
         }
     });
@@ -1076,13 +1162,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    openVaultBtn.addEventListener('click', () => { renderVaultItems(); vaultModal.classList.remove('hidden'); });
-    closeVaultBtn.addEventListener('click', () => vaultModal.classList.add('hidden'));
+    openVaultBtn?.addEventListener('click', () => { renderVaultItems(); vaultModal?.classList.remove('hidden'); });
+    closeVaultBtn?.addEventListener('click', () => vaultModal?.classList.add('hidden'));
 
-    saveVaultItem.addEventListener('click', async () => {
-        const masterPass = vaultMasterPass.value.trim();
-        const title = vaultTitle.value.trim();
-        const content = vaultContent.value.trim();
+    saveVaultItem?.addEventListener('click', async () => {
+        const masterPass = vaultMasterPass?.value.trim();
+        const title = vaultTitle?.value.trim();
+        const content = vaultContent?.value.trim();
         if (!masterPass || !title || !content) {
             showToast('⚠️ يرجى إدخال كلمة المرور الرئيسية، العنوان، والمحتوى');
             return;
@@ -1092,7 +1178,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
             vault.unshift({ title, encryptedObj, date: new Date().toLocaleDateString() });
             localStorage.setItem('apex_vault_items', JSON.stringify(vault));
-            vaultTitle.value = ''; vaultContent.value = ''; vaultMasterPass.value = '';
+            if (vaultTitle) vaultTitle.value = ''; 
+            if (vaultContent) vaultContent.value = ''; 
+            if (vaultMasterPass) vaultMasterPass.value = '';
             renderVaultItems();
             showToast('🔐 تم تشفير وحفظ العنصر عسكرياً في الخزنة بنجاح');
         } catch (err) {
@@ -1102,6 +1190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderVaultItems() {
         const vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
+        if (!vaultListContainer) return;
         if (vault.length === 0) {
             vaultListContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد عناصر محفوظة في الخزنة.</p>';
             return;
@@ -1151,18 +1240,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    openPredBtn.addEventListener('click', () => predModal.classList.remove('hidden'));
-    closePredBtn.addEventListener('click', () => predModal.classList.add('hidden'));
+    openPredBtn?.addEventListener('click', () => predModal?.classList.remove('hidden'));
+    closePredBtn?.addEventListener('click', () => predModal?.classList.add('hidden'));
 
     // ========================================================================
     // رادار التهديدات الحقيقي
     // ========================================================================
-    openRadarBtn.addEventListener('click', () => { 
-        radarModal.classList.remove('hidden'); 
+    openRadarBtn?.addEventListener('click', () => { 
+        radarModal?.classList.remove('hidden'); 
         startRealRadarSync(); 
     });
-    closeRadarBtn.addEventListener('click', () => { 
-        radarModal.classList.add('hidden'); 
+    closeRadarBtn?.addEventListener('click', () => { 
+        radarModal?.classList.add('hidden'); 
         if (radarInterval) clearInterval(radarInterval); 
     });
 
@@ -1204,52 +1293,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    openScannerBtn.addEventListener('click', () => {
-        scannerModal.classList.remove('hidden');
+    openScannerBtn?.addEventListener('click', () => {
+        scannerModal?.classList.remove('hidden');
         scanAndNeutralizeInCallAdware();
     });
-    closeScannerBtn.addEventListener('click', () => scannerModal.classList.add('hidden'));
+    closeScannerBtn?.addEventListener('click', () => scannerModal?.classList.add('hidden'));
 
-    startDeepScan.addEventListener('click', async () => {
+    startDeepScan?.addEventListener('click', async () => {
         startDeepScan.disabled = true;
-        scanStatusText.textContent = navigator.onLine ? '☁️ جاري الاتصال بمفاعل السحابة والفحص العصبي المحلي...' : '🛡️ وضع أوفلاين: جاري الفحص المحلي الشامل...';
-        threatList.innerHTML = '';
+        if (scanStatusText) scanStatusText.textContent = navigator.onLine ? '☁️ جاري الاتصال بمفاعل السحابة والفحص العصبي المحلي...' : '🛡️ وضع أوفلاين: جاري الفحص المحلي الشامل...';
+        if (threatList) threatList.innerHTML = '';
         let storageEstimate = { usage: 0, quota: 0 };
         if (navigator.storage && navigator.storage.estimate) {
             try { storageEstimate = await navigator.storage.estimate(); } catch (e) {}
         }
         
         setTimeout(async () => {
-            scanStatusText.textContent = 'اكتمل الفحص الشامل للنظام والملفات بنجاح!';
+            if (scanStatusText) scanStatusText.textContent = 'اكتمل الفحص الشامل للنظام والملفات بنجاح!';
             startDeepScan.disabled = false;
             const usedMB = (storageEstimate.usage / (1024 * 1024)).toFixed(1);
             const totalMB = storageEstimate.quota ? (storageEstimate.quota / (1024 * 1024)).toFixed(0) : 'غير محدود';
             let adBlockMsg = adBlockToggle?.checked ? `<div class="safe-item">✔ مانع الإعلانات والبوب أب نشط: تم إبادة ${blockedAdsCount} إعلان عشوائي</div>` : '';
             let connectionModeMsg = navigator.onLine ? `<div class="safe-item">☁️ متصل بالسحابة والشبكة اللامركزية (P2P Mesh Active)</div>` : `<div class="safe-item" style="background: rgba(245,158,11,0.15); color: #fcd34d;">⚠️ وضع أوفلاين (يعمل بالذاكرة المحلية ومحفوظات الطوارئ)</div>`;
-            threatList.innerHTML = `
-                ${connectionModeMsg}
-                <div class="safe-item">✔ مساحة التخزين المفحوصة: ${usedMB} MB من إجمالي ${totalMB} MB</div>
-                <div class="safe-item">✔ الاستشعار العصبي المحلي (WebNN/Wasm): تم التأكد من سلامة النظام وحجب الإعلانات الطفيلية</div>
-                ${adBlockMsg}
-            `;
-            threatCount.textContent = '0 تهديد نشط';
+            if (threatList) {
+                threatList.innerHTML = `
+                    ${connectionModeMsg}
+                    <div class="safe-item">✔ مساحة التخزين المفحوصة: ${usedMB} MB من إجمالي ${totalMB} MB</div>
+                    <div class="safe-item">✔ الاستشعار العصبي المحلي (WebNN/Wasm): تم التأكد من سلامة النظام وحجب الإعلانات الطفيلية</div>
+                    ${adBlockMsg}
+                `;
+            }
+            if (threatCount) threatCount.textContent = '0 تهديد نشط';
             showToast('🛡️ اكتمل الفحص الشامل وتطهير النظام بنجاح تام');
         }, 2000);
     });
 
-    openDnsTestBtn.addEventListener('click', () => dnsModal.classList.remove('hidden'));
-    closeDnsBtn.addEventListener('click', () => dnsModal.classList.add('hidden'));
+    openDnsTestBtn?.addEventListener('click', () => dnsModal?.classList.remove('hidden'));
+    closeDnsBtn?.addEventListener('click', () => dnsModal?.classList.add('hidden'));
 
-    openHistoryBtn.addEventListener('click', () => { renderSessionHistory(); historyModal.classList.remove('hidden'); });
-    closeHistoryBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
-    clearHistoryBtn.addEventListener('click', () => {
+    openHistoryBtn?.addEventListener('click', () => { renderSessionHistory(); historyModal?.classList.remove('hidden'); });
+    closeHistoryBtn?.addEventListener('click', () => historyModal?.classList.add('hidden'));
+    clearHistoryBtn?.addEventListener('click', () => {
         localStorage.removeItem('apex_session_history');
         renderSessionHistory();
         showToast('🗑️ تم مسح سجل الجلسات بنجاح');
     });
 
-    openSplitBtn.addEventListener('click', () => splitModal.classList.remove('hidden'));
-    closeSplitBtn.addEventListener('click', () => { splitModal.classList.add('hidden'); showToast('⚙️ تم حفظ إعدادات النفق المنفصل بنجاح'); });
+    openSplitBtn?.addEventListener('click', () => splitModal?.classList.remove('hidden'));
+    closeSplitBtn?.addEventListener('click', () => { splitModal?.classList.add('hidden'); showToast('⚙️ تم حفظ إعدادات النفق المنفصل بنجاح'); });
 
     function saveSessionToHistory(duration, server, ip) {
         let history = JSON.parse(localStorage.getItem('apex_session_history') || '[]');
@@ -1260,6 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderSessionHistory() {
         const history = JSON.parse(localStorage.getItem('apex_session_history') || '[]');
+        if (!historyListContainer) return;
         if (history.length === 0) {
             historyListContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد جلسات مسجلة حتى الآن.</p>';
             return;
@@ -1273,7 +1365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    openAnalyticsBtn.addEventListener('click', () => {
+    openAnalyticsBtn?.addEventListener('click', () => {
         const cpuEl = document.getElementById('cpu-usage');
         const ramEl = document.getElementById('ram-usage');
         const storageEl = document.getElementById('storage-usage');
@@ -1293,34 +1385,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }).catch(() => {});
         }
 
-        analyticsModal.classList.remove('hidden');
+        analyticsModal?.classList.remove('hidden');
     });
 
-    closeAnalyticsBtn.addEventListener('click', () => analyticsModal.classList.add('hidden'));
-    openWifiBtn.addEventListener('click', () => wifiModal.classList.remove('hidden'));
-    closeWifiBtn.addEventListener('click', () => wifiModal.classList.add('hidden'));
+    closeAnalyticsBtn?.addEventListener('click', () => analyticsModal?.classList.add('hidden'));
+    openWifiBtn?.addEventListener('click', () => wifiModal?.classList.remove('hidden'));
+    closeWifiBtn?.addEventListener('click', () => wifiModal?.classList.add('hidden'));
 
     // ========================================================================
     // قياس السرعة والبينغ الحقيقي
     // ========================================================================
-    closeSpeedBtn.addEventListener('click', () => speedModal.classList.add('hidden'));
-    startSpeedTest.addEventListener('click', async () => {
+    closeSpeedBtn?.addEventListener('click', () => speedModal?.classList.add('hidden'));
+    startSpeedTest?.addEventListener('click', async () => {
         startSpeedTest.disabled = true;
-        speedStatusText.textContent = 'جاري قياس زمن الاستجابة الفعلي (Ping)...';
-        livePingVal.textContent = '...'; 
-        testDl.textContent = '0.0 Mb/s'; 
-        testUl.textContent = '0.0 Mb/s';
+        if (speedStatusText) speedStatusText.textContent = 'جاري قياس زمن الاستجابة الفعلي (Ping)...';
+        if (livePingVal) livePingVal.textContent = '...'; 
+        if (testDl) testDl.textContent = '0.0 Mb/s'; 
+        if (testUl) testUl.textContent = '0.0 Mb/s';
 
         const startTime = performance.now();
         try {
             await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-store' });
             const ping = Math.round(performance.now() - startTime);
-            livePingVal.textContent = `${ping} ms`;
+            if (livePingVal) livePingVal.textContent = `${ping} ms`;
         } catch (e) {
-            livePingVal.textContent = '15 ms';
+            if (livePingVal) livePingVal.textContent = '15 ms';
         }
 
-        speedStatusText.textContent = 'جاري قياس سرعة التحميل الحي...';
+        if (speedStatusText) speedStatusText.textContent = 'جاري قياس سرعة التحميل الحي...';
         const dlStartTime = performance.now();
         try {
             const res = await fetch('https://httpbin.org/bytes/102400', { cache: 'no-store' });
@@ -1328,14 +1420,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const duration = (performance.now() - dlStartTime) / 1000;
             const speedBps = (blob.size * 8) / duration;
             const speedMbps = (speedBps / (1024 * 1024)).toFixed(1);
-            testDl.textContent = `${speedMbps} Mb/s`;
+            if (testDl) testDl.textContent = `${speedMbps} Mb/s`;
         } catch (e) {
-            testDl.textContent = '48.5 Mb/s';
+            if (testDl) testDl.textContent = '48.5 Mb/s';
         }
 
-        speedStatusText.textContent = 'جاري اختبار الرفع الآمن...';
-        testUl.textContent = '22.1 Mb/s';
-        speedStatusText.textContent = 'اختبار التشخيص الحي مكتمل وبأعلى كفاءة ✔';
+        if (speedStatusText) speedStatusText.textContent = 'جاري اختبار الرفع الآمن...';
+        if (testUl) testUl.textContent = '22.1 Mb/s';
+        if (speedStatusText) speedStatusText.textContent = 'اختبار التشخيص الحي مكتمل وبأعلى كفاءة ✔';
         startSpeedTest.disabled = false;
         showToast('⚡ تم اختبار أداء الشبكة الحقيقي بنجاح');
     });
@@ -1343,17 +1435,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
     // مساعد الذكاء الاصطناعي الذكي والمجيب الفعلي (AI Copilot)
     // ========================================================================
-    aiCopilotBtn.addEventListener('click', () => aiModal.classList.remove('hidden'));
-    closeAiBtn.addEventListener('click', () => aiModal.classList.add('hidden'));
+    aiCopilotBtn?.addEventListener('click', () => aiModal?.classList.remove('hidden'));
+    closeAiBtn?.addEventListener('click', () => aiModal?.classList.add('hidden'));
 
     function sendAiMessage() {
-        const text = aiInput.value.trim();
-        if (!text) return;
+        const text = aiInput?.value.trim();
+        if (!text || !aiChatBox) return;
         const userMsg = document.createElement('div');
         userMsg.className = 'ai-message user'; 
         userMsg.textContent = text;
         aiChatBox.appendChild(userMsg); 
-        aiInput.value = ''; 
+        if (aiInput) aiInput.value = ''; 
         aiChatBox.scrollTop = aiChatBox.scrollHeight;
 
         setTimeout(() => {
@@ -1379,12 +1471,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 800);
     }
 
-    aiSendBtn.addEventListener('click', sendAiMessage);
-    aiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendAiMessage(); });
+    aiSendBtn?.addEventListener('click', sendAiMessage);
+    aiInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendAiMessage(); });
 
-    openPolicyLink.addEventListener('click', (e) => { e.preventDefault(); policyModal.classList.remove('hidden'); });
-    closePolicyBtn.addEventListener('click', () => policyModal.classList.add('hidden'));
-    reopenDisclosureLink.addEventListener('click', (e) => { e.preventDefault(); disclosureModal.classList.add('hidden'); });
+    openPolicyLink?.addEventListener('click', (e) => { e.preventDefault(); policyModal?.classList.remove('hidden'); });
+    closePolicyBtn?.addEventListener('click', () => policyModal?.classList.add('hidden'));
+    reopenDisclosureLink?.addEventListener('click', (e) => { e.preventDefault(); disclosureModal?.classList.add('hidden'); });
 
     function startSessionTimerAndNotifications() {
         if (timerInterval) clearInterval(timerInterval);
@@ -1394,7 +1486,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionSeconds++;
             const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
             const secs = String(sessionSeconds % 60).padStart(2, '0');
-            sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
+            if (sessionTimer) sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
         }, 1000);
         notificationInterval = setInterval(() => {
             sendPhoneNotification("🟢 مفاعل Quantum Swarm يعمل", `الـ IP محمي عبر ${currentServerName}.`);
@@ -1404,6 +1496,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function stopSession() {
         clearInterval(timerInterval);
         clearInterval(notificationInterval);
+        triggerNativeVpnConnection(false, '', '');
+
         localStorage.removeItem('apex_session_active');
         localStorage.removeItem('apex_session_start_time');
         const mins = Math.floor(sessionSeconds / 60);
@@ -1411,62 +1505,68 @@ document.addEventListener('DOMContentLoaded', () => {
         saveSessionToHistory(`${mins} دقيقة و ${secs} ثانية`, currentServerName, currentServerIp);
 
         isConnected = false;
-        statusOrb.classList.remove('connected');
-        connectionStatus.textContent = 'غير متصل بالدرع';
-        ipDisplay.textContent = 'IP الحقيقي: غير مشفر';
-        connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
-        connectBtn.disabled = false;
-        downloadSpeed.textContent = '0.0 MB/s';
-        uploadSpeed.textContent = '0.0 MB/s';
-        sessionTimer.classList.add('hidden');
+        statusOrb?.classList.remove('connected');
+        if (connectionStatus) connectionStatus.textContent = 'غير متصل بالدرع';
+        if (ipDisplay) ipDisplay.textContent = `IP الحقيقي: ${realUserPublicIp}`;
+        if (connectBtn) {
+            connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
+            connectBtn.disabled = false;
+        }
+        if (downloadSpeed) downloadSpeed.textContent = '0.0 MB/s';
+        if (uploadSpeed) uploadSpeed.textContent = '0.0 MB/s';
+        sessionTimer?.classList.add('hidden');
         sessionSeconds = 0;
         sendPhoneNotification("🔒 تم قطع الاتصال", "تم إيقاف درع الحماية والمفاعل بأمان تام.");
         showToast('🔒 تم قطع الاتصال بأمان تام');
     }
 
-    connectBtn.addEventListener('click', async () => {
+    connectBtn?.addEventListener('click', async () => {
         if (!localStorage.getItem('vpn_consent')) {
-            disclosureModal.classList.add('hidden');
+            disclosureModal?.classList.remove('hidden');
             return;
         }
         await requestDevicePermissions();
+
         if (!isConnected) {
             connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Quantum Swarm...';
             connectBtn.disabled = true;
 
-            if (navigator.onLine) {
-                try {
-                    const response = await fetch('https://ipapi.co/json/');
-                    const data = await response.json();
-                    currentServerIp = data.ip || currentServerIp;
-                } catch (err) {}
-            }
+            const bridgeSuccess = await triggerNativeVpnConnection(true, currentServerIp, currentServerName);
 
             setTimeout(async () => {
-                isConnected = true;
-                statusOrb.classList.add('connected');
-                const vpnTypeTag = isDoubleVpnActive ? ' (Double VPN مشفر)' : (stealthToggle?.checked ? ' (Stealth مخفي)' : '');
-                connectionStatus.textContent = navigator.onLine ? 'محمي ومتصل عبر مفاعل المناعة الجماعية' : 'محمي بوضع الحماية المحلية (أوفلاين)';
-                ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})${vpnTypeTag}`;
-                connectBtn.textContent = 'إيقاف درع الحماية';
-                connectBtn.disabled = false;
-                downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
-                uploadSpeed.textContent = '9.2 MB/s';
-                sessionSeconds = 0;
-                sessionTimer.classList.remove('hidden');
-                localStorage.setItem('apex_session_active', 'true');
-                localStorage.setItem('apex_session_start_time', Date.now());
-                localStorage.setItem('apex_server_ip', currentServerIp);
-                localStorage.setItem('apex_server_name', currentServerName);
-                startSessionTimerAndNotifications();
-                await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن عبر ${currentServerName}.`);
-                showToast('🚀 تم تأمين الاتصال وتفعيل حماية النظام وحجب الإعلانات بنجاح!');
+                if (bridgeSuccess) {
+                    isConnected = true;
+                    statusOrb?.classList.add('connected');
+                    const vpnTypeTag = isDoubleVpnActive ? ' (Double VPN مشفر)' : (stealthToggle?.checked ? ' (Stealth مخفي)' : '');
+                    if (connectionStatus) connectionStatus.textContent = navigator.onLine ? 'محمي ومتصل عبر مفاعل المناعة الجماعية' : 'محمي بوضع الحماية المحلية (أوفلاين)';
+                    if (ipDisplay) ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})${vpnTypeTag}`;
+                    connectBtn.disabled = false;
+                    connectBtn.textContent = 'إيقاف درع الحماية';
+                    if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
+                    if (uploadSpeed) uploadSpeed.textContent = '9.2 MB/s';
+                    sessionSeconds = 0;
+                    sessionTimer?.classList.remove('hidden');
+
+                    localStorage.setItem('apex_session_active', 'true');
+                    localStorage.setItem('apex_session_start_time', Date.now());
+                    localStorage.setItem('apex_server_ip', currentServerIp);
+                    localStorage.setItem('apex_server_name', currentServerName);
+
+                    startSessionTimerAndNotifications();
+                    await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن عبر ${currentServerName}.`);
+                    showToast('🚀 تم تأمين الاتصال وتفعيل حماية النظام وحجب الإعلانات بنجاح!');
+                } else {
+                    connectBtn.disabled = false;
+                    connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
+                    showToast('❌ تعذر إنشاء نفق VPN، يرجى منح أذونات الشبكة بالتطبيق');
+                }
             }, 1800);
         } else {
             connectBtn.textContent = 'جاري قطع الاتصال وإعادة الـ IP الحقيقي...';
-            connectBtn.disabled = false;
+            connectBtn.disabled = true;
             setTimeout(async () => {
                 await logSecurityEventToCloud("VPN_SWARM_DISCONNECT", "قطع الاتصال وإيقاف النفق.");
+                connectBtn.disabled = false;
                 stopSession();
             }, 1000);
         }

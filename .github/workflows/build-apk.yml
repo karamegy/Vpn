@@ -25,11 +25,9 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Clean and Setup Android Platform
+      - name: 1. Setup Environment & Web Assets
         run: |
-          echo "=== 1. تنظيف مجلد أندرويد القديم تماماً لمنع أي تعارض ==="
-          rm -rf android
-          
+          echo "=== 1. تجهيز مجلد www والإعدادات ==="
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -52,15 +50,16 @@ jobs:
           }
           EOF
 
-      - name: 2. Generate Clean Android Project
+      - name: 2. Generate Android Project & Sync
         run: |
-          echo "=== 2. إنشاء مشروع أندرويد نظيف واحترافي ==="
+          echo "=== 2. إنشاء وتجهيز مشروع أندرويد نظيف ==="
+          rm -rf android
           npx cap add android
           npx cap sync android
 
       - name: 3. Build APK & AAB Packages
         run: |
-          echo "=== 3. بناء ملفات APK و AAB عبر غرادلي مباشرة ==="
+          echo "=== 3. بناء الحزم (APK & AAB) ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"

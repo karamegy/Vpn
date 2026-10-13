@@ -25,9 +25,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Setup Environment & Web Assets
+      - name: 1. Clean and Setup Android Platform
         run: |
-          echo "=== 1. تجهيز بيئة العمل وملفات الويب ==="
+          echo "=== 1. تنظيف مجلد أندرويد القديم تماماً لمنع أي تعارض ==="
+          rm -rf android
+          
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -42,19 +44,23 @@ jobs:
             "appId": "com.apex.shield",
             "appName": "Apex Shield AI",
             "webDir": "www",
-            "bundledWebRuntime": false
+            "bundledWebRuntime": false,
+            "android": {
+              "webContentsDebuggingEnabled": true,
+              "allowMixedContent": true
+            }
           }
           EOF
 
-      - name: 2. Add Android Platform Cleanly
+      - name: 2. Generate Clean Android Project
         run: |
-          echo "=== 2. إضافة منصة أندرويد ومزامنة الملفات ==="
+          echo "=== 2. إنشاء مشروع أندرويد نظيف واحترافي ==="
           npx cap add android
           npx cap sync android
 
       - name: 3. Build APK & AAB Packages
         run: |
-          echo "=== 3. بناء الحزم (APK & AAB) عبر غรادلي مباشرة ==="
+          echo "=== 3. بناء ملفات APK و AAB عبر غرادلي مباشرة ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"

@@ -1,4 +1,5 @@
-const CACHE_NAME = 'apex-shield-quantum-v19-sovereign';
+
+const CACHE_NAME = 'apex-shield-quantum-v20-sovereign';
 const assetsToCache = [
   '/Vpn/',
   '/Vpn/index.html',
@@ -6,6 +7,21 @@ const assetsToCache = [
   '/Vpn/app.js',
   '/Vpn/manifest.json',
   '/Vpn/icon-512.png'
+];
+
+// قائمة نطاقات الإعلانات والتتبع والبث الخبيثة المحظورة كلياً من الشبكة
+const BLOCKED_AD_DOMAINS = [
+    'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
+    'adnxs.com', 'unityads.unity3d.com', 'applovin.com', 'ironsrc.com',
+    'ads.mopub.com', 'analytics.google.com', 'facebook.com/tr',
+    'adservice.google.com', 'pagead2.googlesyndication.com',
+    'ad.doubleclick.net', 'ads.pubmatic.com', 'securepubads.g.doubleclick.net',
+    'adcolony.com', 'vungle.com', 'tapjoy.com', 'chartboost.com',
+    'adsrvr.org', 'criteo.com', 'outbrain.com', 'taboola.com',
+    'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
+    'clickadu.com', 'tsyndicate.com', 'juicyads.com', 'eroadvertising.com',
+    'ssp.adtarget.com', 'bidder.criteo.com', 'ad-delivery.net', 'track.voluum.com',
+    'wecima', 'akoam', 'egybest', 'mycima', 'shahid', 'streambucket', 'uptobox', 'ads', 'popunder'
 ];
 
 // تثبيت ملفات التخزين المؤقت عند التحميل الأول
@@ -34,8 +50,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// التعامل مع طلبات الشبكة والعمل دون اتصال (Offline Support)
+// التعامل مع طلبات الشبكة وحجب الإعلانات على مستوى السيرفر ووكير (Network-Level Interception)
 self.addEventListener('fetch', (event) => {
+  const url = event.request.url.toLowerCase();
+  
+  // التحقق الفوري مما إذا كان الطلب ينتمي للإعلانات أو نطاقات التوجيه الخبيثة
+  const isBlocked = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
+  if (isBlocked) {
+      event.respondWith(
+          new Response(JSON.stringify({ blocked: true, engine: 'Apex Quantum Network Firewall v17' }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+          })
+      );
+      return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request).catch(() => {

@@ -6,7 +6,7 @@ const CACHE_NAME = 'apex-shield-v23-chrono-photonic-sovereign';
 
 // قائمة الملفات المحدثة للتخزين المؤقت لضمان العمل 100% بوضع أوفلاين
 const assetsToCache = [
-  './',
+  './Nal',
   './index.html',
   './style.css',
   './app.js',

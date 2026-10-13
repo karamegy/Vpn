@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Apex Shield AI - Next-Gen PWA Chrono-Photonic Edition</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
@@ -174,7 +174,6 @@
         <div class="modal-content glass-panel">
             <h2>🌍 شبكة الخوادم العالمية (تغيير حقيقي للـ IP)</h2>
             <input type="text" id="country-search" placeholder="ابحث عن دولة..." class="search-input">
-            <!-- تم توحيد المعرف هنا ليتوافق مع app.js -->
             <div class="server-list" id="servers-list-container">
                 <div class="server-item active" data-name="تلقائي (الذكاء الاصطناعي الأسرع)" data-ip="185.220.101.5" data-ping="12 ms" data-flag="⚡">
                     <span>⚡ تلقائي (الأسرع عالمياً)</span>
@@ -456,22 +455,25 @@
 
     <!-- واجهة التطبيق الرئيسية الفاخرة -->
     <div class="app-container glass-panel">
-        <header class="app-header">
-            <div class="logo-area">
-                <div class="ai-dot"></div>
-                <h1>Apex Shield <span class="ai-badge">Chrono-Photonic</span></h1>
-            </div>
-            <div class="header-actions">
-                <button id="panic-btn" class="icon-btn panic-icon" title="زر الذعر الفوري (تدمير مؤقت)">🚨</button>
-                <button id="theme-customizer-btn" class="icon-btn" title="تخصيص الثيم">🎨</button>
-                <button id="ai-copilot-btn" class="icon-btn" title="مساعد الذكاء الاصطناعي">🤖</button>
-                <button id="server-select-btn" class="badge-btn">
-                    <span id="server-location" class="badge">🌐 تلقائي (AI)</span>
-                </button>
-            </div>
-        </header>
+        
+        <!-- المنطقة المثبتة بالأعلى (Sticky Top Area) -->
+        <div class="sticky-top-area">
+            <header class="app-header">
+                <div class="logo-area">
+                    <div class="ai-dot"></div>
+                    <h1>Apex Shield</h1>
+                    <span class="ai-badge">AI</span>
+                </div>
+                <div class="header-actions">
+                    <button id="panic-btn" class="icon-btn panic-icon" title="زر الذعر الفوري (تدمير مؤقت)">🚨</button>
+                    <button id="theme-customizer-btn" class="icon-btn" title="تخصيص الثيم">🎨</button>
+                    <button id="ai-copilot-btn" class="icon-btn" title="مساعد الذكاء الاصطناعي">🤖</button>
+                    <button id="server-select-btn" class="badge-btn">
+                        <span id="server-location" class="badge">🌐 تلقائي (AI)</span>
+                    </button>
+                </div>
+            </header>
 
-        <main class="main-content">
             <!-- زر الاتصال التفاعلي ثلاثي الأبعاد -->
             <div class="connection-card glass-card">
                 <div class="orb-container">
@@ -486,7 +488,10 @@
                 
                 <button id="connect-btn" class="connect-btn">تفعيل درع الحماية والمناعة الجماعية</button>
             </div>
+        </div>
 
+        <!-- المنطقة القابلة للتمرير والخيارات السفلية -->
+        <main class="main-content">
             <!-- عداد حماية التهديدات -->
             <div class="threat-widget glass-card" id="open-scanner-btn" style="cursor: pointer;">
                 <div class="threat-info">

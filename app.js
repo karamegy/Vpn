@@ -15,6 +15,22 @@ document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
     // ========================================================================
+    // النطاق الأساسي للحالة العامة (مُعرف مسبقاً لتجنب أي أخطاء نطاق)
+    // ========================================================================
+    let isConnected = false;
+    let hasConsented = localStorage.getItem('vpn_consent') === 'true';
+    let isDoubleVpnActive = false;
+    let isAudioShieldActive = true;
+    let isGpsMockActive = true;
+    let currentServerIp = '185.220.101.5';
+    let currentServerName = 'تلقائي (الذكاء الاصطناعي)';
+    let sessionSeconds = 0;
+    let timerInterval = null;
+    let notificationInterval = null;
+    let radarInterval = null;
+    let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
+
+    // ========================================================================
     // MODULE 0: نظام الحفظ التلقائي الموحد لجميع الاختيارات والإعدادات
     // ========================================================================
     const allToggleIds = [
@@ -84,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 1: النواة العميقة والحقيقية للإبادة الشاملة للإعلانات والنوافذ المنبثقة العشوائية
+    // MODULE 1: النواة العميقة والفائقة للإبادة الشاملة للإعلانات والتتبعات (Ultra-Aggressive AdBlock Engine)
     // ========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
@@ -95,49 +111,91 @@ document.addEventListener('DOMContentLoaded', () => {
         'adcolony.com', 'vungle.com', 'tapjoy.com', 'chartboost.com',
         'adsrvr.org', 'criteo.com', 'outbrain.com', 'taboola.com',
         'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
-        'clickadu.com', 'tsyndicate.com', 'juicyads.com', 'eroadvertising.com'
+        'clickadu.com', 'tsyndicate.com', 'juicyads.com', 'eroadvertising.com',
+        'ssp.adtarget.com', 'bidder.criteo.com', 'ad-delivery.net', 'track.voluum.com'
     ];
 
     const BLOCKED_KEYWORDS = [
         '/ads/', '/popup/', '/popunder/', '/interstitial/', '/banner/', 
         'ad_container', 'adsbygoogle', 'sponsored_ad', 'floating-ad', 'overlay-ad',
-        'clickthru', 'affiliate', 'tracker', 'pixel.gif?id='
+        'clickthru', 'affiliate', 'tracker', 'pixel.gif?id=', 'conversion', 'track/', 'adserver'
     ];
 
-    let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
-
-    // منع فتح أي نوافذ منبثقة عشوائية تظهر من المواقع أو التطبيقات
+    // 1. منع فتح أي نوافذ منبثقة عشوائية نهائياً
     const originalWindowOpen = window.open;
     window.open = function(url, target, features) {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || isConnected;
         if (adBlockEnabled) {
             blockedAdsCount++;
             localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
-            showToast('🛡️ Apex Shield: تم حجب نافذة منبثقة عشوائية بنجاح');
-            console.warn('[Apex AdBlock] Blocked random popup open attempt to:', url);
+            showToast('🛡️ Apex Shield: تم حجب نافذة منبثقة أو توجيه إعلاني بنجاح');
+            console.warn('[Apex AdBlock] Blocked popup/redirect attempt to:', url);
             return null;
         }
         return originalWindowOpen.call(window, url, target, features);
     };
 
-    // حقن CSS فوري لإخفاء أي عناصر إعلانية أو فلوتنج بوب أب عشوائية
+    // 2. الاعتراض المبكر لإنشاء العناصر (Script & Iframe Interception)
+    const originalCreateElement = document.createElement;
+    document.createElement = function(tagName, options) {
+        const element = originalCreateElement.call(document, tagName, options);
+        const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || isConnected;
+
+        if (adBlockEnabled && (tagName.toLowerCase() === 'script' || tagName.toLowerCase() === 'iframe')) {
+            const originalSetAttribute = element.setAttribute;
+            element.setAttribute = function(name, value) {
+                if ((name === 'src' || name === 'href') && typeof value === 'string') {
+                    const isBlocked = BLOCKED_AD_DOMAINS.some(d => value.includes(d)) || BLOCKED_KEYWORDS.some(kw => value.includes(kw));
+                    if (isBlocked) {
+                        blockedAdsCount++;
+                        localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+                        console.warn('[Apex AdBlock] Blocked injected ad asset:', value);
+                        return;
+                    }
+                }
+                return originalSetAttribute.call(this, name, value);
+            };
+        }
+        return element;
+    };
+
+    // 3. منع إرسال بيانات التتبع عبر beacon
+    if (navigator.sendBeacon) {
+        const originalSendBeacon = navigator.sendBeacon;
+        navigator.sendBeacon = function(url, data) {
+            const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || isConnected;
+            if (adBlockEnabled && typeof url === 'string') {
+                const isBlocked = BLOCKED_AD_DOMAINS.some(d => url.includes(d)) || BLOCKED_KEYWORDS.some(kw => url.includes(kw));
+                if (isBlocked) {
+                    blockedAdsCount++;
+                    localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+                    return true;
+                }
+            }
+            return originalSendBeacon.call(navigator, url, data);
+        };
+    }
+
+    // 4. حقن CSS صارم وفوري لإبادة أي حاويات إعلانية أو فلوتنج بوب أب
     const adStyleTag = document.createElement('style');
     adStyleTag.id = 'apex-dynamic-adblocker';
     adStyleTag.innerHTML = `
-        iframe[src*="ads"], iframe[src*="doubleclick"], iframe[src*="banner"],
-        div[id*="google_ads"], div[class*="ads-box"], div[id*="ad-container"],
-        .adsbygoogle, ins.adsbygoogle, div[class*="popup-banner"], div[class*="interstitial"] {
+        iframe[src*="ads"], iframe[src*="doubleclick"], iframe[src*="banner"], iframe[src*="popup"],
+        div[id*="google_ads"], div[class*="ads-box"], div[id*="ad-container"], div[class*="floating-ad"],
+        .adsbygoogle, ins.adsbygoogle, div[class*="popup-banner"], div[class*="interstitial"],
+        div[class*="overlay-ad"], div[id*="cookie-banner"] {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
             pointer-events: none !important;
             max-height: 0 !important;
             max-width: 0 !important;
+            z-index: -999999 !important;
         }
     `;
     document.head.appendChild(adStyleTag);
 
-    // مراقب التغييرات الحي لإزالة أي إعلانات عشوائية مستحدثة في الـ DOM
+    // 5. مراقب الـ DOM الديناميكي الفوري لإزالة أي عنصر إعلاني طفيلي فور ظهوره
     const adObserver = new MutationObserver((mutations) => {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked || isConnected;
         if (!adBlockEnabled) return;
@@ -148,8 +206,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tag = node.tagName ? node.tagName.toLowerCase() : '';
                     const id = node.id ? node.id.toLowerCase() : '';
                     const className = node.className && typeof node.className === 'string' ? node.className.toLowerCase() : '';
+                    const src = node.src ? node.src.toLowerCase() : '';
                     
-                    if (tag === 'iframe' || id.includes('ad') || className.includes('ad-') || className.includes('popup') || className.includes('banner') || className.includes('interstitial')) {
+                    const isAdElement = tag === 'iframe' || tag === 'script' && (src.includes('ads') || src.includes('track')) ||
+                                        id.includes('ad') || className.includes('ad-') || className.includes('popup') || 
+                                        className.includes('banner') || className.includes('interstitial') || className.includes('overlay');
+                    
+                    if (isAdElement) {
                         if (!node.closest('.app-container') && !node.closest('.modal')) {
                             node.remove();
                             blockedAdsCount++;
@@ -163,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     adObserver.observe(document.body, { childList: true, subtree: true });
 
+    // 6. اعتراض وتصفية Fetch و XMLHttpRequest
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
         const url = args[0];
@@ -803,18 +867,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sessionTimer = document.getElementById('session-timer');
     const downloadSpeed = document.getElementById('download-speed');
     const uploadSpeed = document.getElementById('upload-speed');
-
-    let isConnected = false;
-    let hasConsented = localStorage.getItem('vpn_consent') === 'true';
-    let isDoubleVpnActive = false;
-    let isAudioShieldActive = true;
-    let isGpsMockActive = true;
-    let currentServerIp = '185.220.101.5';
-    let currentServerName = 'تلقائي (الذكاء الاصطناعي)';
-    let sessionSeconds = 0;
-    let timerInterval = null;
-    let notificationInterval = null;
-    let radarInterval = null;
 
     const savedTheme = localStorage.getItem('apex_theme') || 'theme-cyan';
     document.body.className = savedTheme;

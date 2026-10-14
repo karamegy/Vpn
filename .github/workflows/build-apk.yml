@@ -114,11 +114,11 @@ jobs:
 
       - name: 3. Build APK & AAB Packages
         run: |
-          echo "=== 3. بناء الحزم (APK & AAB) بنجاح تام ==="
+          echo "=== 3. بناء الحزم (APK & AAB) بصورة مباشرة ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
-          ./gradlew assembleDebug bundleRelease --no-daemon
+          ./gradlew clean assembleDebug bundleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

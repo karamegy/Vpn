@@ -27,7 +27,7 @@ jobs:
 
       - name: 1. Setup Web Assets & Dependencies
         run: |
-          echo "=== 1. تجهيز مجلد الويب والتبعيات ==="
+          echo "=== 1. تجهيز مجلد www والإعدادات ==="
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -50,17 +50,71 @@ jobs:
           }
           EOF
 
-      - name: 2. Sync Existing Android Project
+      - name: 2. Force Generate Android Project & Inject Manifest
         run: |
-          echo "=== 2. مزامنة مشروع أندرويد الموجود في المستودع ==="
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          echo "=== 2. إعادة إنشاء وتوليد مشروع أندرويد وملف gradlew من الصفر ==="
+          rm -rf android
+          npx cap add android
+
+          # تحديث الـ Manifest بالرابط الصحيح /Vpn/
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          cat << 'EOF' > "$MANIFEST_PATH"
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.apex.shield">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/appName"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name="com.apex.shield.MainActivity"
+                      android:label="@string/launcherName"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:launchMode="singleTask"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="https" android:host="karamegy.github.io" android:pathPrefix="/Vpn/" />
+                      </intent-filter>
+                  </activity>
+
+                  <service
+                      android:name="com.apex.shield.ApexVpnService"
+                      android:permission="android.permission.BIND_VPN_SERVICE"
+                      android:exported="false">
+                      <intent-filter>
+                          <action android:name="android.net.VpnService" />
+                      </intent-filter>
+                  </service>
+
+              </application>
+          </manifest>
+          EOF
+
           npx cap sync android
 
       - name: 3. Build APK & AAB Packages
         run: |
-          echo "=== 3. بناء الحزم (APK & AAB) مباشرة ==="
+          echo "=== 3. بناء الحزم (APK & AAB) بنجاح تام ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"

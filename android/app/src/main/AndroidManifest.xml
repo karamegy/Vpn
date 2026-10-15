@@ -1,13 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.apex.shield">
 
-    <!-- الأذونات المباشرة والشبكة والإشعارات -->
+    <!-- الأذونات المباشرة والشبكة والإشعارات الأساسية -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 1. أذونات جدار حماية ترافيك التطبيقات (App Firewall & Traffic Inspector) -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+
+    <!-- 2. أذونات كاشف برمجيات التجسس (Stalkerware & Spyware Detector) لفحص كافة التطبيقات على أندرويد 11+ -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.GET_PACKAGE_SIZE" />
+
+    <!-- 3. أذونات فحص وتقييم أمان شبكات الواي فاي (Wi-Fi Auditor & Anti-MITM) -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:allowBackup="true"

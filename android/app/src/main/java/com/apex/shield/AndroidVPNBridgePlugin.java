@@ -1,4 +1,4 @@
-package com.apex.shield;
+package io.github.karamegy.vpn;
 
 import android.app.Activity;
 import android.content.Context;
@@ -42,6 +42,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
         if (result.getResultCode() == Activity.RESULT_OK) {
             JSObject ret = new JSObject();
             ret.put("prepared", true);
+            ret.put("success", true);
             call.resolve(ret);
         } else {
             call.reject("تم رفض إذن VPN من قبل المستخدم");
@@ -67,7 +68,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
         if (Boolean.TRUE.equals(enable)) {
             Intent prepareIntent = VpnService.prepare(context);
             if (prepareIntent != null) {
-                // طلب الإذن باستخدام أداة Capacitor المعتمدة
                 startActivityForResult(call, prepareIntent, "vpnPermissionResult");
             } else {
                 try {

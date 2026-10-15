@@ -14,20 +14,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java JDK 17
+      - name: Set up Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
+          java-version: '21'
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '22'
 
-      - name: 1. Install Dependencies & Prepare Assets
+      - name: 1. Setup Web Assets & Dependencies
         run: |
           echo "=== 1. تجهيز مجلد www والتبعيات ==="
           mkdir -p www
@@ -39,13 +37,14 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: 2. Sync Capacitor (Without Overwriting Native Code)
+      - name: 2. Sync Web Assets to Android
         run: |
-          echo "=== 2. مزامنة الأصول وتحديث منصة أندرويد ==="
-          # إذا لم يكن المجلد موجوداً يتم إنشاؤه، وإذا كان موجوداً لا يتم مسحه
+          echo "=== 2. مزامنة ملفات الويب مع مجلد أندرويد الحقيقي ==="
+          # إذا لم يكن مجلد android موجوداً بالكامل في المستودع يتم إنشاؤه فقط
           if [ ! -d "android" ]; then
             npx cap add android
           fi
+          # تحديث ملفات الويب داخل الأندرويد دون مسح ملفات Java أو تغيير capacitor.config.json
           npx cap sync android
 
       - name: 3. Build APK & AAB Packages

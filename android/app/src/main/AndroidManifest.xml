@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- إذن الشراء والاشتراكات عبر متجر جوجل بلاي (Apex Shield Pro) -->
+    <uses-permission android:name="com.android.vending.BILLING" />
+
     <!-- 1. أذونات جدار حماية ترافيك التطبيقات (App Firewall & Traffic Inspector) -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
@@ -47,7 +50,7 @@
             <!-- دعم الروابط المباشرة للنطاق https://karamegy.github.io/Vpn/ -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.action.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"

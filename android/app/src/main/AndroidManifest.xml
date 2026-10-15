@@ -2,10 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.apex.shield">
 
-    <!-- أذونات الشبكة والـ VPN والإشعارات القياسية -->
+    <!-- الأذونات المباشرة والشبكة -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -16,31 +17,36 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- الشاشة الرئيسية -->
         <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:name="com.apex.shield.MainActivity"
-            android:label="@string/launcherName"
-            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:label="@string/appName"
+            android:exported="true"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- دعم Deep Link -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="@string/hostName" android:pathPrefix="/Vpn/" />
+                <data
+                    android:scheme="https"
+                    android:host="apex.shield"
+                    android:pathPrefix="/Vpn/" />
             </intent-filter>
         </activity>
 
-        <!-- تسجيل خدمة VpnService الحقيقية -->
+        <!-- خدمة VpnService الحقيقية -->
         <service
             android:name="com.apex.shield.ApexVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
+            android:foregroundServiceType="connectedDevice"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.net.VpnService" />

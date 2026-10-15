@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.apex.shield">
+    package="io.github.karamegy.vpn">
 
     <!-- الأذونات المباشرة والشبكة والإشعارات الأساسية -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -36,7 +36,7 @@
 
         <!-- الشاشة الرئيسية (Capacitor BridgeActivity) -->
         <activity
-            android:name="com.apex.shield.MainActivity"
+            android:name="io.github.karamegy.vpn.MainActivity"
             android:label="@string/appName"
             android:exported="true"
             android:launchMode="singleTask"
@@ -50,7 +50,7 @@
             <!-- دعم الروابط المباشرة للنطاق https://karamegy.github.io/Vpn/ -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.action.DEFAULT" />
+                <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
@@ -61,7 +61,7 @@
 
         <!-- خدمة VpnService الحقيقية -->
         <service
-            android:name="com.apex.shield.ApexVpnService"
+            android:name="io.github.karamegy.vpn.ApexVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:foregroundServiceType="connectedDevice"
             android:exported="false">

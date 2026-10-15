@@ -62,7 +62,7 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Clean Capacitor Android Platform & Fix Strings
+      - name: 2. Initialize Clean Capacitor Android Platform, Target SDK 36 & Fix Strings
         run: |
           echo "=== 2. حفظ ملفات الجافا والـ Manifest وإعادة بناء بيئة أندرويد ==="
           mkdir -p /tmp/native_backup
@@ -75,6 +75,12 @@ jobs:
 
           rm -rf android
           npx cap add android
+
+          # إجبار ضبط مستهدف الـ SDK إلى API 36 تلقائياً
+          if [ -f "android/variables.gradle" ]; then
+            sed -i 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
+            sed -i 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
+          fi
 
           # استرجاع أكواد الجافا والجسور والـ Manifest الخاصة بك
           if [ -d "/tmp/native_backup/java" ]; then

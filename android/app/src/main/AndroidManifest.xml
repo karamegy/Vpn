@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.apex.shield">
 
-    <!-- الأذونات المباشرة والشبكة -->
+    <!-- الأذونات المباشرة والشبكة والإشعارات -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -17,27 +17,27 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <!-- الشاشة الرئيسية -->
+        <!-- الشاشة الرئيسية (Capacitor BridgeActivity) -->
         <activity
             android:name="com.apex.shield.MainActivity"
             android:label="@string/appName"
             android:exported="true"
             android:launchMode="singleTask"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale">
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- دعم Deep Link -->
+            <!-- دعم الروابط المباشرة للنطاق https://karamegy.github.io/Vpn/ -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="apex.shield"
+                    android:host="@string/hostName"
                     android:pathPrefix="/Vpn/" />
             </intent-filter>
         </activity>

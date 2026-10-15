@@ -62,7 +62,7 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Clean Capacitor Android Platform, Target SDK 36 & Fix Strings
+      - name: 2. Initialize Clean Capacitor Android Platform, Target SDK 36 & Version Code 23
         run: |
           echo "=== 2. حفظ ملفات الجافا والـ Manifest وإعادة بناء بيئة أندرويد ==="
           mkdir -p /tmp/native_backup
@@ -80,6 +80,12 @@ jobs:
           if [ -f "android/variables.gradle" ]; then
             sed -i 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
             sed -i 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
+          fi
+
+          # زيادة رقم الإصدار versionCode ليصبح 23 (أعلى من 22) وتحديد versionName
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i 's/versionCode 1/versionCode 23/' android/app/build.gradle
+            sed -i 's/versionName "1.0"/versionName "2.3.0"/' android/app/build.gradle
           fi
 
           # استرجاع أكواد الجافا والجسور والـ Manifest الخاصة بك

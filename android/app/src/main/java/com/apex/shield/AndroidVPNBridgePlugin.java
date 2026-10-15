@@ -59,6 +59,8 @@ public class AndroidVPNBridgePlugin extends Plugin {
         Boolean enable = call.getBoolean("enable", false);
         String serverIp = call.getString("serverIp", "");
         String serverName = call.getString("serverName", "");
+        String warpClientIp = call.getString("warpClientIp", "");
+        String warpEndpoint = call.getString("warpEndpoint", "");
 
         Intent intent = new Intent(context, ApexVpnService.class);
 
@@ -72,6 +74,8 @@ public class AndroidVPNBridgePlugin extends Plugin {
                     intent.setAction(ApexVpnService.ACTION_CONNECT);
                     intent.putExtra("serverIp", serverIp);
                     intent.putExtra("serverName", serverName);
+                    intent.putExtra("warpClientIp", warpClientIp);
+                    intent.putExtra("warpEndpoint", warpEndpoint);
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         context.startForegroundService(intent);
@@ -112,12 +116,16 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
         String serverIp = call.getString("serverIp", "");
         String serverName = call.getString("serverName", "");
+        String warpClientIp = call.getString("warpClientIp", "");
+        String warpEndpoint = call.getString("warpEndpoint", "");
 
         try {
             Intent intent = new Intent(context, ApexVpnService.class);
             intent.setAction(ApexVpnService.ACTION_CONNECT);
             intent.putExtra("serverIp", serverIp);
             intent.putExtra("serverName", serverName);
+            intent.putExtra("warpClientIp", warpClientIp);
+            intent.putExtra("warpEndpoint", warpEndpoint);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent);

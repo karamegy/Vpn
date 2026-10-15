@@ -47,6 +47,33 @@
     <!-- حاوية التنبيهات الفورية العائمة (Toast Notifications) -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- نافذة الاشتراكات المتقدمة (Apex Shield Pro) [جديد] -->
+    <div id="pro-subscription-modal" class="modal hidden" style="z-index: 1000000;">
+        <div class="modal-content glass-panel text-center" style="border: 1px solid #f59e0b; box-shadow: 0 0 25px rgba(245, 158, 11, 0.3);">
+            <h2 style="color: #f59e0b; font-size: 1.6rem; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);">💎 Apex Shield Pro</h2>
+            <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;">قم بالترقية الآن وافتح القفل عن كافة الاختراعات الأمنية والميزات الحصرية:</p>
+            
+            <div style="text-align: right; background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                <ul style="list-style: none; padding: 0; margin: 0; color: #10b981; font-size: 0.8rem; line-height: 1.8;">
+                    <li>✔ مفاعل التمويه الضوئي المكراني (Anti-CCTV)</li>
+                    <li>✔ تشويش الميكروفونات العابر للطيف (Acoustic Jammer)</li>
+                    <li>✔ التوجيه المزدوج للـ VPN (Double Tunnel)</li>
+                    <li>✔ الخزنة الرقمية العسكرية (AES-GCM 256)</li>
+                    <li>✔ أولوية الاتصال بخوادم الـ VIP الفائقة السرعة</li>
+                    <li>✔ حظر غير محدود للإعلانات والبوب أب</li>
+                </ul>
+            </div>
+
+            <!-- حاوية عرض خطط الأسعار (سيتم تعبئتها برمجياً من جوجل بلاي) -->
+            <div id="subscription-plans-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                <div style="color: #38bdf8; font-size: 0.8rem; padding: 10px;">⏳ جاري جلب العروض الحصرية من متجر جوجل...</div>
+            </div>
+
+            <p style="font-size: 0.65rem; color: #64748b; margin-bottom: 15px;">الاشتراك يتجدد تلقائياً. يمكنك الإلغاء في أي وقت من إعدادات حساب Google Play الخاص بك.</p>
+            <button id="close-pro-modal-btn" class="btn-secondary" style="width: 100%;">الاستمرار بالنسخة المجانية المحدودة</button>
+        </div>
+    </div>
+
     <!-- نافذة المفاعل الضوئي والصوتي المضاد للتصوير والتنصت (Chrono-Photonic Engine) -->
     <div id="photonic-modal" class="modal hidden">
         <div class="modal-content glass-panel">
@@ -63,7 +90,7 @@
         </div>
     </div>
 
-    <!-- نافذة جدار حماية التطبيقات (App Firewall & Traffic Inspector) [جديد] -->
+    <!-- نافذة جدار حماية التطبيقات (App Firewall & Traffic Inspector) -->
     <div id="app-firewall-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>📱 جدار حماية التطبيقات (Traffic Inspector)</h2>
@@ -73,7 +100,7 @@
         </div>
     </div>
 
-    <!-- نافذة كاشف برمجيات التجسس (Stalkerware & Spyware Detector) [جديد] -->
+    <!-- نافذة كاشف برمجيات التجسس (Stalkerware & Spyware Detector) -->
     <div id="stalkerware-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>🕵️ كاشف برمجيات التجسس (Stalkerware Detector)</h2>
@@ -84,7 +111,7 @@
         </div>
     </div>
 
-    <!-- نافذة تقييم أمان الواي فاي (Wi-Fi Security Auditor) [جديد] -->
+    <!-- نافذة تقييم أمان الواي فاي (Wi-Fi Security Auditor) -->
     <div id="wifi-auditor-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>📶 تقييم أمان شبكات الواي فاي (Wi-Fi Auditor)</h2>
@@ -95,7 +122,7 @@
         </div>
     </div>
 
-    <!-- نافذة تقرير الأمان اليومي التفاعلي (Security Insights & Dashboard) [جديد] -->
+    <!-- نافذة تقرير الأمان اليومي التفاعلي (Security Insights & Dashboard) -->
     <div id="insights-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>📊 تقرير الأمان اليومي (Security Insights)</h2>
@@ -166,7 +193,7 @@
         </div>
     </div>
 
-    <!-- نافذة الإفصاح البارز وموافقة المستخدم (متطلب صارم لجوجل بلاي) -->
+    <!-- نافذة الإفصاح البارز وموافقة المستخدم -->
     <div id="disclosure-modal" class="modal">
         <div class="modal-content glass-panel">
             <div class="modal-icon">🛡️</div>
@@ -197,7 +224,7 @@
         </div>
     </div>
 
-    <!-- نافذة مفاعل الدفاع العصبي الجماعي واللقاحات الحية (Swarm AI & Vaccine Engine) -->
+    <!-- نافذة مفاعل الدفاع العصبي الجماعي واللقاحات الحية (Swarm AI) -->
     <div id="swarm-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>🌐 مفاعل المناعة السيبرانية الجماعية واللقاحات الحية (Swarm AI)</h2>
@@ -550,13 +577,20 @@
 
             <!-- لوحة الميزات الفريدة والاختراعات المصرية -->
             <div class="advanced-panel glass-card">
+
+                <!-- زر الترقية لنسخة Pro [جديد] -->
+                <div class="setting-row clickable-row" id="open-pro-subscription-btn" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%); border: 1px solid rgba(245, 158, 11, 0.3);">
+                    <span style="color: #f59e0b; font-weight: bold;">💎 الترقية إلى Apex Shield Pro</span>
+                    <span class="accent-link" style="color: #fcd34d; font-weight: bold;">ترقية الآن</span>
+                </div>
+
                 <!-- الاختراع الفريد الجديد v18.0 -->
                 <div class="setting-row clickable-row" id="open-photonic-btn">
                     <span>📸 المفاعل الضوئي المكراني ضد كاميرات التصوير (Anti-CCTV Engine)</span>
                     <span class="accent-link" style="color: #ec4899; font-weight: bold;">اختراع حصري 📸</span>
                 </div>
 
-                <!-- الإضافات المتقدمة الجديدة [جديد] -->
+                <!-- الإضافات المتقدمة الجديدة -->
                 <div class="setting-row clickable-row" id="open-app-firewall-btn">
                     <span>📱 جدار حماية التطبيقات (App Traffic Inspector)</span>
                     <span class="accent-link" style="color: #38bdf8; font-weight: bold;">مراقب 🔒</span>
@@ -574,7 +608,7 @@
                     <span class="accent-link" style="color: #f59e0b; font-weight: bold;">تقرير 📈</span>
                 </div>
 
-                <!-- مفاتيح التفعيل المباشرة الجديدة (Toggles) [جديد] -->
+                <!-- مفاتيح التفعيل المباشرة الجديدة (Toggles) -->
                 <div class="setting-row">
                     <span>🧱 جدار حماية ترافيك التطبيقات (App Firewall)</span>
                     <label class="switch"><input type="checkbox" id="app-firewall-toggle" checked><span class="slider"></span></label>

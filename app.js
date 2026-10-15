@@ -7,7 +7,7 @@
  * Local Neural Sentinel, P2P Mesh Sync, Cloudflare WARP Engine Integration,
  * App Firewall & Traffic Inspector, Stalkerware & Spyware Detector,
  * Wi-Fi Security Auditor (Anti-MITM/Evil Twin), Advanced Clipboard Shield,
- * Interactive Security Insights & Dashboard.
+ * Interactive Security Insights & Dashboard, Apex Pro Subscription Billing Core.
  * Optimized Firebase Firestore Reads/Writes for 5M+ Users Scale.
  * ============================================================================
  */
@@ -38,6 +38,129 @@ document.addEventListener('DOMContentLoaded', () => {
     const VACCINE_CACHE_TTL = 60 * 60 * 1000;      // ساعة واحدة للإحصائيات السحابية
 
     // ========================================================================
+    // MODULE 00: نظام الاشتراكات المتقدمة (Apex Shield Pro - Google Play / RevenueCat)
+    // ========================================================================
+    let isProUser = localStorage.getItem('apex_pro_status') === 'true';
+    const proModal = document.getElementById('pro-subscription-modal');
+    const openProBtn = document.getElementById('open-pro-subscription-btn');
+    const closeProBtn = document.getElementById('close-pro-modal-btn');
+    const plansContainer = document.getElementById('subscription-plans-container');
+
+    openProBtn?.addEventListener('click', () => {
+        proModal?.classList.remove('hidden');
+        fetchAndDisplaySubscriptions();
+    });
+
+    closeProBtn?.addEventListener('click', () => {
+        proModal?.classList.add('hidden');
+    });
+
+    async function initBillingSystem() {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) {
+            try {
+                // استبدل المفتاح أدناه بمفتاحك الخاص من منصة RevenueCat
+                await window.Capacitor.Plugins.Purchases.configure({ apiKey: "goog_API_KEY_HERE" });
+                const customerInfo = await window.Capacitor.Plugins.Purchases.getCustomerInfo();
+                checkProStatus(customerInfo);
+            } catch (error) {
+                console.warn("جاري التشغيل بوضع تجربة المتصفح / المحلي دون اتصال بمتجر جوجل بلاي.");
+            }
+        }
+    }
+
+    async function fetchAndDisplaySubscriptions() {
+        if (isProUser) {
+            if (plansContainer) {
+                plansContainer.innerHTML = '<div style="color: #10b981; font-weight: bold; padding: 15px; text-align: center; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px;">💎 أنت مشترك بالفعل في باقة Apex Pro الحصرية! جميع الميزات فائقة الأمان مفعلة لديك.</div>';
+            }
+            return;
+        }
+
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) {
+            try {
+                const offerings = await window.Capacitor.Plugins.Purchases.getOfferings();
+                if (offerings.current !== null && offerings.current.availablePackages.length !== 0) {
+                    if (plansContainer) plansContainer.innerHTML = '';
+                    offerings.current.availablePackages.forEach((pkg) => {
+                        const isAnnual = pkg.identifier.toLowerCase().includes('annual') || pkg.identifier.toLowerCase().includes('year');
+                        const btn = document.createElement('button');
+                        btn.className = 'btn-primary';
+                        btn.style.cssText = `
+                            display: flex; justify-content: space-between; align-items: center; 
+                            width: 100%; padding: 12px 15px; margin-bottom: 8px; 
+                            background: ${isAnnual ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(15, 23, 42, 0.8)'};
+                            border: ${isAnnual ? 'none' : '1px solid #38bdf8'};
+                            color: ${isAnnual ? '#fff' : '#38bdf8'};
+                            border-radius: 8px; font-weight: bold; cursor: pointer;
+                        `;
+                        let badgeHtml = isAnnual ? '<span style="background:#fff; color:#d97706; padding:2px 6px; border-radius:4px; font-size:0.65rem; margin-right:5px;">وفر 40%</span>' : '';
+                        btn.innerHTML = `<span>${pkg.product.title} ${badgeHtml}</span><span>${pkg.product.priceString}</span>`;
+                        btn.addEventListener('click', () => purchaseProSubscription(pkg));
+                        plansContainer.appendChild(btn);
+                    });
+                } else {
+                    if (plansContainer) plansContainer.innerHTML = '<div style="color: #f59e0b; text-align: center;">لا توجد باقات متاحة حالياً.</div>';
+                }
+            } catch (error) {
+                if (plansContainer) plansContainer.innerHTML = '<div style="color: #ef4444; font-size: 0.8rem; text-align: center;">❌ تعذر الاتصال بمتجر جوجل بلاي. تأكد من اتصالك بالإنترنت.</div>';
+            }
+        } else {
+            // واجهة تجريبية تفاعلية للباقات في البيئة المحلية
+            if (plansContainer) {
+                plansContainer.innerHTML = `
+                    <button class="btn-primary" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 15px; background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; margin-bottom: 8px; cursor: pointer;">
+                        <span>الاشتراك الشهري Pro</span><span>$3.99 / شهر</span>
+                    </button>
+                    <button class="btn-primary" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 15px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: #fff; border-radius: 8px; cursor: pointer;">
+                        <span>الاشتراك السنوي Pro <span style="background:#fff; color:#d97706; padding:2px 6px; border-radius:4px; font-size:0.65rem; margin-right:5px;">وفر 45%</span></span><span>$24.99 / سنة</span>
+                    </button>
+                    <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 10px; text-align: center;">(ميزة الشراء الحقيقي تفعل عند بناء التطبيق كـ Android APK ورؤيتها عبر متجر جوجل)</div>
+                `;
+            }
+        }
+    }
+
+    async function purchaseProSubscription(packageToBuy) {
+        showToast('🔄 جاري تحويلك لبوابة دفع جوجل بلاي الآمنة...');
+        try {
+            const { customerInfo } = await window.Capacitor.Plugins.Purchases.purchasePackage({ aPackage: packageToBuy });
+            checkProStatus(customerInfo);
+        } catch (error) {
+            if (!error.userCancelled) {
+                showToast('❌ تعذر إتمام عملية الدفع. يرجى المحاولة لاحقاً.');
+            } else {
+                showToast('⚠️ تم إلغاء عملية الدفع.');
+            }
+        }
+    }
+
+    function checkProStatus(customerInfo) {
+        if (customerInfo && customerInfo.entitlements && typeof customerInfo.entitlements.active['apex_pro'] !== "undefined") {
+            isProUser = true;
+            localStorage.setItem('apex_pro_status', 'true');
+            if (openProBtn) openProBtn.style.display = 'none';
+            showToast('💎 تم تفعيل درع Apex Shield Pro! جميع الميزات الحصرية متاحة لك الآن.');
+            proModal?.classList.add('hidden');
+        } else {
+            isProUser = false;
+            localStorage.setItem('apex_pro_status', 'false');
+            if (openProBtn) openProBtn.style.display = 'flex';
+        }
+    }
+
+    function enforceProLock(featureName, callback) {
+        if (isProUser) {
+            callback(); 
+        } else {
+            proModal?.classList.remove('hidden');
+            fetchAndDisplaySubscriptions();
+            showToast(`💎 ميزة (${featureName}) حصرية لمشتركي باقة Pro المدفوعة.`);
+        }
+    }
+
+    initBillingSystem();
+
+    // ========================================================================
     // MODULE 18: مفاعل التمويه الضوئي والصوتي العابر للطيف (Chrono-Photonic Engine)
     // ========================================================================
     const photonicModal = document.getElementById('photonic-modal');
@@ -55,7 +178,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let acousticAudioCtx = null;
     let noiseBufferSource = null;
 
-    openPhotonicBtn?.addEventListener('click', () => photonicModal?.classList.remove('hidden'));
+    openPhotonicBtn?.addEventListener('click', () => {
+        enforceProLock('المفاعل الضوئي Anti-CCTV', () => {
+            photonicModal?.classList.remove('hidden');
+        });
+    });
     closePhotonicBtn?.addEventListener('click', () => photonicModal?.classList.add('hidden'));
 
     // 1. تشغيل التمويه الضوئي الحقيقي على الشاشة لتخريب الالتقاط البصري للكاميرات
@@ -160,8 +287,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // تفعيل مبدئي بمجرد نقر المستخدم لتجاوز حظر المتصفحات للتشغيل الصوتي التلقائي
     const initAudioOnUserInteraction = () => {
-        startPhotonicCamouflage();
-        toggleAcousticSpeechJammer(true);
+        if (isProUser) {
+            startPhotonicCamouflage();
+            toggleAcousticSpeechJammer(true);
+        }
         window.removeEventListener('click', initAudioOnUserInteraction);
         window.removeEventListener('touchstart', initAudioOnUserInteraction);
     };
@@ -210,7 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function queueLogOffline(eventType, details) {
         let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
         offlineQueue.push({ event: eventType, details: details, timestamp: new Date().toISOString() });
-        // تقييد الحجم الأقصى للطابور لمنع امتلاء localStorage (Max 20 items)
         if (offlineQueue.length > 20) {
             offlineQueue = offlineQueue.slice(-20);
         }
@@ -224,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const { collection, addDoc } = window.apexFirestore;
-            // مزامنة أحدث 5 سجلات فقط لتوفير عمليات الكتابة (Batching)
             const logsToSync = offlineQueue.slice(0, 5);
             for (const logItem of logsToSync) {
                 await addDoc(collection(window.apexDb, "cloud_security_logs"), {
@@ -249,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // جلب الخوادم مع التخزين المؤقت لتوفير استهلاك getDocs من Firestore
     async function fetchRealServersFromDB() {
         const cachedServers = localStorage.getItem('apex_cached_servers');
         const cacheTime = localStorage.getItem('apex_servers_cache_time');
@@ -295,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!serversContainer) return;
         serversContainer.innerHTML = '';
         
-        // إدراج خيار Cloudflare WARP الرئيسي أولاً
         const warpItem = document.createElement('div');
         warpItem.className = 'server-item active';
         warpItem.setAttribute('data-name', 'Cloudflare WARP (شبكة الحماية العالمية)');
@@ -364,25 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function generateCloudflareWarpConfig() {
         const cachedConfig = localStorage.getItem('apex_warp_config');
         if (cachedConfig) {
-            try {
-                return JSON.parse(cachedConfig);
-            } catch (e) {}
+            try { return JSON.parse(cachedConfig); } catch (e) {}
         }
 
         try {
             const response = await fetch('https://api.cloudflareclient.com/v0a1922/reg', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'okhttp/3.12.1'
-                },
-                body: JSON.stringify({
-                    "install_id": "",
-                    "fcm_token": "",
-                    "tos": new Date().toISOString(),
-                    "model": "Android",
-                    "locale": "ar_EG"
-                })
+                headers: { 'Content-Type': 'application/json', 'User-Agent': 'okhttp/3.12.1' },
+                body: JSON.stringify({ "install_id": "", "fcm_token": "", "tos": new Date().toISOString(), "model": "Android", "locale": "ar_EG" })
             });
 
             const data = await response.json();
@@ -399,38 +513,28 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn("استخدام التكوين التلقائي لشبكة Cloudflare WARP:", e);
         }
 
-        return {
-            clientIp: "172.16.0.2/32",
-            peerPublicKey: "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=",
-            endpoint: "162.159.192.1:2408"
-        };
+        return { clientIp: "172.16.0.2/32", peerPublicKey: "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=", endpoint: "162.159.192.1:2408" };
     }
 
     // ==========================================================================
     // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات، البوب أب، والنقرات المخفية
     // ==========================================================================
     const BLOCKED_AD_DOMAINS = [
-        'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
-        'adnxs.com', 'unityads.unity3d.com', 'applovin.com', 'ironsrc.com',
-        'ads.mopub.com', 'analytics.google.com', 'facebook.com/tr',
-        'adservice.google.com', 'pagead2.googlesyndication.com',
-        'ad.doubleclick.net', 'ads.pubmatic.com', 'securepubads.g.doubleclick.net',
-        'adcolony.com', 'vungle.com', 'tapjoy.com', 'chartboost.com',
-        'adsrvr.org', 'criteo.com', 'outbrain.com', 'taboola.com',
-        'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
-        'clickadu.com', 'tsyndicate.com', 'juicyads.com', 'eroadvertising.com',
-        'ssp.adtarget.com', 'bidder.criteo.com', 'ad-delivery.net', 'track.voluum.com',
-        'wecima', 'akoam', 'egybest', 'mycima', 'shahid'
+        'doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'adnxs.com', 'unityads.unity3d.com', 
+        'applovin.com', 'ironsrc.com', 'ads.mopub.com', 'analytics.google.com', 'facebook.com/tr',
+        'adservice.google.com', 'pagead2.googlesyndication.com', 'ad.doubleclick.net', 'ads.pubmatic.com', 
+        'securepubads.g.doubleclick.net', 'adcolony.com', 'vungle.com', 'tapjoy.com', 'chartboost.com',
+        'adsrvr.org', 'criteo.com', 'outbrain.com', 'taboola.com', 'popads.net', 'popcash.net', 'propellerads.com', 
+        'adsterra.com', 'clickadu.com', 'tsyndicate.com', 'juicyads.com', 'eroadvertising.com',
+        'ssp.adtarget.com', 'bidder.criteo.com', 'ad-delivery.net', 'track.voluum.com', 'wecima', 'akoam', 'egybest', 'mycima', 'shahid'
     ];
 
     const BLOCKED_KEYWORDS = [
-        '/ads/', '/popup/', '/popunder/', '/interstitial/', '/banner/', 
-        'ad_container', 'adsbygoogle', 'sponsored_ad', 'floating-ad', 'overlay-ad',
-        'clickthru', 'affiliate', 'tracker', 'pixel.gif?id=', 'conversion', 'track/', 'adserver',
-        'install', 'popup-banner'
+        '/ads/', '/popup/', '/popunder/', '/interstitial/', '/banner/', 'ad_container', 'adsbygoogle', 'sponsored_ad', 
+        'floating-ad', 'overlay-ad', 'clickthru', 'affiliate', 'tracker', 'pixel.gif?id=', 'conversion', 'track/', 
+        'adserver', 'install', 'popup-banner'
     ];
 
-    // 1. منع فتح أي نوافذ منبثقة عشوائية عبر window.open
     const originalWindowOpen = window.open;
     window.open = function(url, target, features) {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
@@ -443,11 +547,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return originalWindowOpen.call(window, url, target, features);
     };
 
-    // 2. إبادة أحداث النقر الوهمي (Click-jacking / Popunder Killer)
     document.addEventListener('click', (e) => {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (!adBlockEnabled) return;
-
         const target = e.target;
         if (target) {
             const href = target.getAttribute ? target.getAttribute('href') : '';
@@ -463,12 +565,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, true);
 
-    // 3. الاعتراض المبكر لإنشاء العناصر (Script & Iframe Interception)
     const originalCreateElement = document.createElement;
     document.createElement = function(tagName, options) {
         const element = originalCreateElement.call(document, tagName, options);
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
-
         if (adBlockEnabled && (tagName.toLowerCase() === 'script' || tagName.toLowerCase() === 'iframe')) {
             const originalSetAttribute = element.setAttribute;
             element.setAttribute = function(name, value) {
@@ -486,7 +586,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return element;
     };
 
-    // 4. منع إرسال بيانات التتبع عبر beacon
     if (navigator.sendBeacon) {
         const originalSendBeacon = navigator.sendBeacon;
         navigator.sendBeacon = function(url, data) {
@@ -503,7 +602,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // 5. حقن CSS صارم وفوري لإبادة أي حاويات إعلانية
     const adStyleTag = document.createElement('style');
     adStyleTag.id = 'apex-dynamic-adblocker';
     adStyleTag.innerHTML = `
@@ -511,18 +609,12 @@ document.addEventListener('DOMContentLoaded', () => {
         div[id*="google_ads"], div[class*="ads-box"], div[id*="ad-container"], div[class*="floating-ad"],
         div[class*="install"], div[id*="install-banner"], div[class*="popup-banner"], div[class*="interstitial"],
         div[class*="overlay-ad"], div[id*="cookie-banner"], .adsbygoogle, ins.adsbygoogle {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            max-height: 0 !important;
-            max-width: 0 !important;
-            z-index: -999999 !important;
+            display: none !important; visibility: hidden !important; opacity: 0 !important;
+            pointer-events: none !important; max-height: 0 !important; max-width: 0 !important; z-index: -999999 !important;
         }
     `;
     document.head.appendChild(adStyleTag);
 
-    // 6. مراقب الـ DOM الديناميكي
     const adObserver = new MutationObserver((mutations) => {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (!adBlockEnabled) return;
@@ -554,7 +646,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     adObserver.observe(document.body, { childList: true, subtree: true });
 
-    // 7. اعتراض وتصفية Fetch و XMLHttpRequest
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
         const url = args[0];
@@ -795,7 +886,6 @@ document.addEventListener('DOMContentLoaded', () => {
         logSecurityEventToCloud("CLIPBOARD_PROTECTED_COPY", "تم رصد حركة نسخ نص، تفعيل التشفير والتطهر الذاتي.");
 
         if (clipboardClearTimeout) clearTimeout(clipboardClearTimeout);
-        // مسح وتطهير الحافظة تلقائياً بعد 15 ثانية لحماية كلمات المرور والبطاقات
         clipboardClearTimeout = setTimeout(() => {
             navigator.clipboard?.writeText('').then(() => {
                 showToast('🧹 تم مسح الحافظة تلقائياً لحماية بياناتك السرية من التجسس');
@@ -1275,7 +1365,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ⭐ جلب وتحديث الإحصائيات بأعلى كفاءة لـ 5M مستخدم مجاناً (1 Read Query)
     async function listenToGlobalSwarmVaccines() {
         const cachedCount = localStorage.getItem('apex_vaccine_count');
         const cacheTime = localStorage.getItem('apex_vaccine_cache_time');
@@ -1294,11 +1383,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let vaccineCount = 14892;
 
             if (getCountFromServer) {
-                // تستهلك قراءة 1 فقط حتى مع وجود ملايين المستندات!
                 const snapshot = await getCountFromServer(coll);
                 vaccineCount = (snapshot.data().count || 0) + 14892;
             } else {
-                // Fallback احتياطي في حال عدم دعم المترجم القديم
                 const querySnapshot = await getDocs(coll);
                 vaccineCount = querySnapshot.size + 14892;
             }
@@ -1578,7 +1665,12 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('📍 تم تحديث محاكي الـ GPS الوهمي ليطابق الدولة بنجاح');
     });
 
-    openDoubleVpnBtn?.addEventListener('click', () => doubleVpnModal?.classList.remove('hidden'));
+    // تقييد التوجيه المزدوج للنسخة المدفوعة Pro
+    openDoubleVpnBtn?.addEventListener('click', () => {
+        enforceProLock('التوجيه المزدوج Double VPN', () => {
+            doubleVpnModal?.classList.remove('hidden');
+        });
+    });
     closeDoubleVpnBtn?.addEventListener('click', () => doubleVpnModal?.classList.add('hidden'));
 
     toggleDoubleVpnBtn?.addEventListener('click', () => {
@@ -1643,7 +1735,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    openVaultBtn?.addEventListener('click', () => { renderVaultItems(); vaultModal?.classList.remove('hidden'); });
+    // تقييد الخزنة المشفرة للنسخة المدفوعة Pro
+    openVaultBtn?.addEventListener('click', () => {
+        enforceProLock('الخزنة المشفرة عسكرياً', () => {
+            renderVaultItems();
+            vaultModal?.classList.remove('hidden');
+        });
+    });
     closeVaultBtn?.addEventListener('click', () => vaultModal?.classList.add('hidden'));
 
     saveVaultItem?.addEventListener('click', async () => {
@@ -1847,7 +1945,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // تحليل استهلاك الجهاز بناءً على واجهات المتصفح والعتاد الحقيقية
     openAnalyticsBtn?.addEventListener('click', () => {
         const cpuEl = document.getElementById('cpu-usage');
         const ramEl = document.getElementById('ram-usage');

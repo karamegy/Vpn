@@ -25,9 +25,9 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Setup Web Assets & Dependencies
+      - name: 1. Setup Web Assets, Dependencies & Config
         run: |
-          echo "=== 1. تجهيز مجلد www والتبعيات ==="
+          echo "=== 1. تجهيز مجلد www وتوليد capacitor.config.json بالنطاق الصحيح ==="
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -37,15 +37,35 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: 2. Sync Web Assets to Android
+          # إنشاء ملف الإعدادات بالنطاق المباشر لتطبيق Apex Shield
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "com.apex.shield",
+            "appName": "Apex Shield AI",
+            "webDir": "www",
+            "bundledWebRuntime": false,
+            "server": {
+              "url": "https://karamegy.github.io/Vpn/",
+              "cleartext": true,
+              "allowNavigation": [
+                "karamegy.github.io",
+                "*.github.io"
+              ]
+            },
+            "android": {
+              "webContentsDebuggingEnabled": true,
+              "allowMixedContent": true
+            }
+          }
+          EOF
+
+      - name: 2. Copy Web Assets to Android (Preserving Java Code)
         run: |
-          echo "=== 2. مزامنة ملفات الويب مع مجلد أندرويد الحقيقي ==="
-          # إذا لم يكن مجلد android موجوداً بالكامل في المستودع يتم إنشاؤه فقط
+          echo "=== 2. نسخ أصول الويب مع الحفاظ التام على أكواد الجافا والـ Manifest ==="
           if [ ! -d "android" ]; then
             npx cap add android
           fi
-          # تحديث ملفات الويب داخل الأندرويد دون مسح ملفات Java أو تغيير capacitor.config.json
-          npx cap sync android
+          npx cap copy android
 
       - name: 3. Build APK & AAB Packages
         run: |

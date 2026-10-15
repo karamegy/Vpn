@@ -1,4 +1,4 @@
-package com.apex.shield;
+package io.github.karamegy.vpn;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -15,9 +15,9 @@ public class ApexVpnService extends VpnService {
     private static final String CHANNEL_ID = "ApexVpnChannel";
     private static final int NOTIFICATION_ID = 101;
 
-    // ثوابت الأوامر لمطابقة الجسر AndroidVPNBridgePlugin
-    public static final String ACTION_CONNECT = "com.apex.shield.START";
-    public static final String ACTION_DISCONNECT = "com.apex.shield.STOP";
+    // ثوابت الأوامر بمعرف الحزمة الصحيح io.github.karamegy.vpn
+    public static final String ACTION_CONNECT = "io.github.karamegy.vpn.START";
+    public static final String ACTION_DISCONNECT = "io.github.karamegy.vpn.STOP";
 
     private ParcelFileDescriptor vpnInterface = null;
 

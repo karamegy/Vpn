@@ -1,4 +1,4 @@
-package com.apex.shield;
+package io.github.karamegy.vpn;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

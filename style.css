@@ -1,5 +1,5 @@
 /* ============================================================================
-   APEX SHIELD AI - ULTIMATE LUXURY EXECUTIVE STYLE (v17.0 Quantum Swarm Sovereign Edition)
+   APEX SHIELD AI - ULTIMATE LUXURY EXECUTIVE STYLE (v18.0 Chrono-Photonic Edition)
    Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
    ============================================================================ */
 
@@ -599,6 +599,25 @@ input:checked + .slider:before { transform: translateX(18px); }
 .wifi-stats-box { background: rgba(2, 6, 23, 0.5); padding: 12px; border-radius: 12px; font-size: 0.75rem; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(255,255,255,0.05); }
 .wifi-row { display: flex; justify-content: space-between; font-weight: 500; }
 .wifi-row strong { color: var(--accent-color); font-weight: 700; }
+
+/* ============================================================================
+   تنسيقات الإضافات والميزات الجديدة (v18.0 Extended UI Styles) [جديد]
+   ============================================================================ */
+#firewall-traffic-container::-webkit-scrollbar,
+#stalkerware-results-container::-webkit-scrollbar,
+#insights-stats-box::-webkit-scrollbar {
+    width: 4px;
+}
+
+#firewall-traffic-container::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 4px;
+}
+
+/* تنسيقات المخططات البيانية في تقرير الأمان اليومي */
+#insights-stats-box {
+    animation: fadeInModal 0.4s ease-out;
+}
 
 /* Theme Buttons & AI Chat */
 .theme-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }

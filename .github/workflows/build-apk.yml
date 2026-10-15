@@ -14,18 +14,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java JDK 21
-        uses: actions/setup-java@v5
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
+          cache: 'gradle'
 
-      - name: Set up Node.js 22
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
+          cache: 'npm'
 
-      - name: 1. Setup Web Assets & Dependencies
+      - name: 1. Install Dependencies & Prepare Assets
         run: |
           echo "=== 1. تجهيز مجلد www والتبعيات ==="
           mkdir -p www
@@ -37,31 +39,14 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-          cat << 'EOF' > capacitor.config.json
-          {
-            "appId": "com.apex.shield",
-            "appName": "Apex Shield AI",
-            "webDir": "www",
-            "bundledWebRuntime": false,
-            "android": {
-              "webContentsDebuggingEnabled": true,
-              "allowMixedContent": true
-            }
-          }
-          EOF
-
-      - name: 2. Initialize Clean Capacitor Android
+      - name: 2. Sync Capacitor (Without Overwriting Native Code)
         run: |
-          echo "=== 2. تهيئة وتوليد منصة أندرويد نظيفة تماماً ==="
-          rm -rf android
-          npx cap add android
-          npx cap sync android
-
-          # حقن مسار الاستضافة الصحيح في الـ Manifest
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_PATH" ]; then
-            sed -i 's|android:pathPrefix="/.*"|android:pathPrefix="/Vpn/"|g' "$MANIFEST_PATH" || true
+          echo "=== 2. مزامنة الأصول وتحديث منصة أندرويد ==="
+          # إذا لم يكن المجلد موجوداً يتم إنشاؤه، وإذا كان موجوداً لا يتم مسحه
+          if [ ! -d "android" ]; then
+            npx cap add android
           fi
+          npx cap sync android
 
       - name: 3. Build APK & AAB Packages
         run: |

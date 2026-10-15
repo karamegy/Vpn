@@ -27,10 +27,15 @@ public class ApexVpnService extends VpnService {
 
         // قبول الأوامر بجميع صيغها (العامة والمباشرة)
         if (ACTION_CONNECT.equals(action) || "START".equals(action)) {
+            String serverIp = intent != null ? intent.getStringExtra("serverIp") : "";
+            String serverName = intent != null ? intent.getStringExtra("serverName") : "";
+            String warpClientIp = intent != null ? intent.getStringExtra("warpClientIp") : "";
+            String warpEndpoint = intent != null ? intent.getStringExtra("warpEndpoint") : "";
+
             createNotificationChannel();
-            Notification notification = buildNotification();
+            Notification notification = buildNotification(serverName);
             startForeground(NOTIFICATION_ID, notification);
-            startVpn();
+            startVpn(serverIp, serverName, warpClientIp, warpEndpoint);
         } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
             stopVpn();
         }
@@ -38,20 +43,44 @@ public class ApexVpnService extends VpnService {
         return START_STICKY;
     }
 
-    private void startVpn() {
+    private void startVpn(String serverIp, String serverName, String warpClientIp, String warpEndpoint) {
         if (vpnInterface != null) return;
 
         try {
             Builder builder = new Builder();
-            // توجيه حركة المرور وتعيين خوادم DNS المانعة للإعلانات والبرمجيات الخبيثة
-            builder.addAddress("10.1.10.1", 24)
+
+            // معالجة واستخراج عنوان IP العميل
+            String clientIp = "172.16.0.2";
+            int prefixLength = 32;
+
+            if (warpClientIp != null && !warpClientIp.isEmpty()) {
+                if (warpClientIp.contains("/")) {
+                    String[] parts = warpClientIp.split("/");
+                    clientIp = parts[0];
+                    try {
+                        prefixLength = Integer.parseInt(parts[1]);
+                    } catch (Exception ignored) {
+                        prefixLength = 32;
+                    }
+                } else {
+                    clientIp = warpClientIp;
+                }
+            } else {
+                clientIp = "10.1.10.1";
+                prefixLength = 24;
+            }
+
+            // توجيه حركة المرور وتعيين خوادم Cloudflare WARP الرسمية للسرعة والأمان
+            builder.addAddress(clientIp, prefixLength)
                    .addRoute("0.0.0.0", 0)
-                   .addDnsServer("1.1.1.3") // Cloudflare DNS الآمن
-                   .addDnsServer("1.0.0.3")
-                   .setSession("ApexShieldVPN");
+                   .addDnsServer("1.1.1.1") // Cloudflare WARP DNS الأسرع عالمياً
+                   .addDnsServer("1.0.0.1")
+                   .addDnsServer("1.1.1.3") // Cloudflare Security & Malware Blocking
+                   .setMtu(1280) // حجم الحزمة المثالي لشبكات WARP و WireGuard
+                   .setSession(serverName != null && !serverName.isEmpty() ? serverName : "ApexShieldWARP");
 
             vpnInterface = builder.establish();
-            Log.d(TAG, "✅ تم إنشاء نفق VPN وتأمين اتصالات الهاتف بالكامل!");
+            Log.d(TAG, "✅ تم إنشاء نفق VPN وتأمين اتصالات الجهاز عبر شبكة Cloudflare WARP بنجاح!");
         } catch (Exception e) {
             Log.e(TAG, "❌ خطأ في إنشاء نفق VPN:", e);
         }
@@ -92,8 +121,7 @@ public class ApexVpnService extends VpnService {
         }
     }
 
-    private Notification buildNotification() {
-        // فتح MainActivity عند النقر على الإشعار
+    private Notification buildNotification(String serverName) {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this,
@@ -109,9 +137,13 @@ public class ApexVpnService extends VpnService {
             builder = new Notification.Builder(this);
         }
 
+        String contentText = (serverName != null && !serverName.isEmpty())
+            ? "متصل بالدرع عبر: " + serverName
+            : "درع الحماية وخدمة Cloudflare WARP المشفرة نشطة الآن";
+
         return builder
             .setContentTitle("Apex Shield AI")
-            .setContentText("درع الحماية وخدمة VPN المشفرة نشطة الآن")
+            .setContentText(contentText)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

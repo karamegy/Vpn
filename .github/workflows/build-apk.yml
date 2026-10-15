@@ -59,7 +59,7 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Clean Capacitor Android Platform
+      - name: 2. Initialize Clean Capacitor Android Platform & Fix Strings
         run: |
           echo "=== 2. حفظ ملفات الجافا والـ Manifest وإعادة بناء بيئة أندرويد ==="
           mkdir -p /tmp/native_backup
@@ -82,13 +82,20 @@ jobs:
             cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           fi
 
-          # إدراج اسم النطاق داخل strings.xml لتجنب أخطاء التجميع
-          STRINGS_PATH="android/app/src/main/res/values/strings.xml"
-          if [ -f "$STRINGS_PATH" ]; then
-            if ! grep -q "hostName" "$STRINGS_PATH"; then
-              sed -i 's|</resources>|    <string name="hostName">karamegy.github.io</string>\n</resources>|g' "$STRINGS_PATH"
-            fi
-          fi
+          # إجبار إنشاء ملف strings.xml بكافة الموارد المطلوبة من Manifest
+          mkdir -p android/app/src/main/res/values
+          cat << 'EOF' > android/app/src/main/res/values/strings.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Apex Shield</string>
+              <string name="appName">Apex Shield</string>
+              <string name="launcherName">Apex Shield</string>
+              <string name="hostName">karamegy.github.io</string>
+              <string name="title_activity_main">Apex Shield</string>
+              <string name="package_name">com.apex.shield</string>
+              <string name="custom_url_scheme">com.apex.shield</string>
+          </resources>
+          EOF
 
           npx cap sync android
 

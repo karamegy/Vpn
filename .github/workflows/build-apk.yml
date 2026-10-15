@@ -25,9 +25,9 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Setup Web Assets & Dependencies
+      - name: 1. Setup Web Assets & Config
         run: |
-          echo "=== 1. تجهيز مجلد www وتوليد الإعدادات بالنطاق الصحيح ==="
+          echo "=== 1. تجهيز مجلد www وتثبيت النطاق الصحيح ==="
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -37,7 +37,7 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-          # كتابة ملف الإعدادات المعتمد بالنطاق الصحيح لتطبيقات الـ VPN
+          # إنشاء ملف capacitor.config.json المعتمد بالنطاق الخاص بك
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.apex.shield",
@@ -59,12 +59,37 @@ jobs:
           }
           EOF
 
-      - name: 2. Sync Capacitor Android Platform
+      - name: 2. Initialize Clean Capacitor Android Platform
         run: |
-          echo "=== 2. مزامنة وتحديث منصة أندرويد ==="
-          if [ ! -d "android" ]; then
-            npx cap add android
+          echo "=== 2. حفظ ملفات الجافا والـ Manifest وإعادة بناء بيئة أندرويد ==="
+          mkdir -p /tmp/native_backup
+          if [ -d "android/app/src/main/java" ]; then
+            cp -r android/app/src/main/java /tmp/native_backup/
           fi
+          if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+            cp android/app/src/main/AndroidManifest.xml /tmp/native_backup/
+          fi
+
+          rm -rf android
+          npx cap add android
+
+          # استرجاع أكواد الجافا والجسور والـ Manifest الخاصة بك
+          if [ -d "/tmp/native_backup/java" ]; then
+            mkdir -p android/app/src/main/java
+            cp -r /tmp/native_backup/java/* android/app/src/main/java/
+          fi
+          if [ -f "/tmp/native_backup/AndroidManifest.xml" ]; then
+            cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          fi
+
+          # إدراج اسم النطاق داخل strings.xml لتجنب أخطاء التجميع
+          STRINGS_PATH="android/app/src/main/res/values/strings.xml"
+          if [ -f "$STRINGS_PATH" ]; then
+            if ! grep -q "hostName" "$STRINGS_PATH"; then
+              sed -i 's|</resources>|    <string name="hostName">karamegy.github.io</string>\n</resources>|g' "$STRINGS_PATH"
+            fi
+          fi
+
           npx cap sync android
 
       - name: 3. Build APK & AAB Packages

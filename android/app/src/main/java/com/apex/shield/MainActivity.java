@@ -1,4 +1,4 @@
-package io.github.karamegy.vpn;
+package io.github.karamegy.Vpn;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

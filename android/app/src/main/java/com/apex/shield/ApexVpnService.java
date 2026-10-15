@@ -15,9 +15,9 @@ public class ApexVpnService extends VpnService {
     private static final String CHANNEL_ID = "ApexVpnChannel";
     private static final int NOTIFICATION_ID = 101;
 
-    // ثوابت الأوامر بمعرف الحزمة الصحيح io.github.karamegy.vpn
-    public static final String ACTION_CONNECT = "io.github.karamegy.vpn.START";
-    public static final String ACTION_DISCONNECT = "io.github.karamegy.vpn.STOP";
+    // ثوابت الأوامر بمعرف الحزمة الصحيح بالحرف الكبير io.github.karamegy.Vpn
+    public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START";
+    public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP";
 
     private ParcelFileDescriptor vpnInterface = null;
 

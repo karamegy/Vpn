@@ -36,7 +36,7 @@
 
         <!-- الشاشة الرئيسية (Capacitor BridgeActivity) -->
         <activity
-            android:name="io.github.karamegy.vpn.MainActivity"
+            android:name="io.github.karamegy.Vpn.MainActivity"
             android:label="@string/appName"
             android:exported="true"
             android:launchMode="singleTask"
@@ -61,7 +61,7 @@
 
         <!-- خدمة VpnService الحقيقية -->
         <service
-            android:name="io.github.karamegy.vpn.ApexVpnService"
+            android:name="io.github.karamegy.Vpn.ApexVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:foregroundServiceType="connectedDevice"
             android:exported="false">

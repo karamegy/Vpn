@@ -1,8 +1,16 @@
 {
-  "appId": "com.apexshield.ai",
-  "appName": "Apex Shield AI - Quantum Swarm Edition",
-  "webDir": ".",
+  "appId": "com.apex.shield",
+  "appName": "Apex Shield",
+  "webDir": "www",
   "bundledWebRuntime": false,
+  "server": {
+    "url": "https://karamegy.github.io/Vpn/",
+    "cleartext": true,
+    "allowNavigation": [
+      "karamegy.github.io",
+      "*.github.io"
+    ]
+  },
   "android": {
     "webContentsDebuggingEnabled": true,
     "allowMixedContent": true

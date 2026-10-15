@@ -78,14 +78,14 @@ jobs:
 
           # إجبار ضبط مستهدف الـ SDK إلى API 36 تلقائياً
           if [ -f "android/variables.gradle" ]; then
-            sed -i 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
-            sed -i 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
+            sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
+            sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
           fi
 
-          # زيادة رقم الإصدار versionCode ليصبح 23 (أعلى من 22) وتحديد versionName
+          # إجبار ضبط versionCode إلى 23 و versionName إلى 36
           if [ -f "android/app/build.gradle" ]; then
-            sed -i 's/versionCode 1/versionCode 23/' android/app/build.gradle
-            sed -i 's/versionName "1.0"/versionName "2.3.0"/' android/app/build.gradle
+            sed -i -E 's/versionCode [0-9]+/versionCode 23/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]+"/versionName "36"/' android/app/build.gradle
           fi
 
           # استرجاع ملفات الجافا ونقلها للمسار الصحيح باسم الحزمة الجديد
@@ -104,7 +104,7 @@ jobs:
           # توحيد عبارات package و import في كافة ملفات Java لتطابق io.github.karamegy.Vpn
           find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
 
-          # إجبار إنشاء ملف strings.xml باسم الحزمة الاصلي
+          # إجبار إنشاء ملف strings.xml باسم الحزمة الأصلي
           mkdir -p android/app/src/main/res/values
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version="1.0" encoding="utf-8"?>

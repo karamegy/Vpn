@@ -648,3 +648,69 @@ input:checked + .slider:before { transform: translateX(18px); }
 .app-footer { text-align: center; font-size: 0.65rem; color: #64748b; margin-top: 12px; font-weight: 600; }
 .app-footer a { color: #94a3b8; text-decoration: none; transition: color 0.2s; }
 .app-footer a:hover { color: var(--accent-color); }
+/* ============================================================================
+   تنسيقات باقة (Apex Shield Pro) الحصرية [جديد]
+   ============================================================================ */
+
+/* تأثيرات التوهج الذهبي لنافذة الـ Pro */
+#pro-subscription-modal .modal-content {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid #f59e0b;
+    box-shadow: 0 0 40px rgba(245, 158, 11, 0.25), inset 0 0 20px rgba(245, 158, 11, 0.05);
+    animation: proGlowPulse 3s infinite alternate ease-in-out;
+}
+
+@keyframes proGlowPulse {
+    0% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.2), inset 0 0 15px rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.6); }
+    100% { box-shadow: 0 0 50px rgba(245, 158, 11, 0.4), inset 0 0 25px rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 1); }
+}
+
+/* تنسيق زر الترقية لنسخة Pro في القائمة الجانبية */
+#open-pro-subscription-btn {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.02) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.4) !important;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+#open-pro-subscription-btn:hover {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0.05) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(245, 158, 11, 0.2);
+}
+
+/* لمعة خفيفة تمر على زر الترقية */
+#open-pro-subscription-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shineSweep 4s infinite linear;
+}
+
+@keyframes shineSweep {
+    0% { left: -100%; }
+    20% { left: 200%; }
+    100% { left: 200%; }
+}
+
+/* تنسيقات أزرار خطط الأسعار داخل النافذة */
+#subscription-plans-container .btn-primary {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+
+#subscription-plans-container .btn-primary:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+}
+
+/* تأثير التمويه الضوئي المباشر - تحديث للسرعة والشفافية */
+#photonic-canvas-overlay {
+    transition: opacity 0.3s ease;
+}

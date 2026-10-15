@@ -1,8 +1,14 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "io.github.karamegy.Vpn",
-        "sha256_cert_fingerprints": ["A3:25:2A:28:70:66:EF:4A:41:8A:56:39:01:C7:CC:F1:DD:5E:DC:0F:54:8A:66:80:35:9A:1A:F9:B8:BF:0D:55"]
-      }
-}]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.karamegy.Vpn",
+      "sha256_cert_fingerprints": [
+        "A3:25:2A:28:70:66:EF:4A:41:8A:56:39:01:C7:CC:F1:DD:5E:DC:0F:54:8A:66:80:35:9A:1A:F9:B8:BF:0D:55",
+        "45:C9:09:47:D8:AA:42:B2:9D:4B:A1:5F:57:90:CD:A8:C8:E3:FB:05:E9:5C:11:7F:8B:C4:A9:95:D4:F5:51:F7",
+        "89:27:F1:5E:8E:6A:36:CF:92:50:72:92:49:36:F9:57:99:EB:F9:04:CD:78:52:19:D4:90:76:86:B1:9B:DF:A0"
+      ]
+    }
+  }
+]

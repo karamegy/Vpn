@@ -25,9 +25,9 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Setup Web Assets, Dependencies & Config
+      - name: 1. Setup Web Assets & Dependencies
         run: |
-          echo "=== 1. تجهيز مجلد www وتوليد capacitor.config.json بالنطاق الصحيح ==="
+          echo "=== 1. تجهيز مجلد www وتوليد الإعدادات بالنطاق الصحيح ==="
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -37,7 +37,7 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-          # إنشاء ملف الإعدادات بالنطاق المباشر لتطبيق Apex Shield
+          # كتابة ملف الإعدادات المعتمد بالنطاق الصحيح لتطبيقات الـ VPN
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.apex.shield",
@@ -59,13 +59,29 @@ jobs:
           }
           EOF
 
-      - name: 2. Copy Web Assets to Android (Preserving Java Code)
+      - name: 2. Initialize Clean Capacitor Android (Preserving Native Java Code)
         run: |
-          echo "=== 2. نسخ أصول الويب مع الحفاظ التام على أكواد الجافا والـ Manifest ==="
-          if [ ! -d "android" ]; then
-            npx cap add android
+          echo "=== 2. حفظ أكواد الجافا والـ Manifest ثم إعادة توليد البيئة ==="
+          mkdir -p /tmp/android_backup
+          if [ -d "android/app/src/main/java" ]; then
+            cp -r android/app/src/main/java /tmp/android_backup/
           fi
-          npx cap copy android
+          if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+            cp android/app/src/main/AndroidManifest.xml /tmp/android_backup/
+          fi
+
+          rm -rf android
+          npx cap add android
+
+          # استعادة أكواد الجافا والجسور والـ Manifest الخاصة بك
+          if [ -d "/tmp/android_backup/java" ]; then
+            cp -r /tmp/android_backup/java/* android/app/src/main/java/
+          fi
+          if [ -f "/tmp/android_backup/AndroidManifest.xml" ]; then
+            cp /tmp/android_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          fi
+
+          npx cap sync android
 
       - name: 3. Build APK & AAB Packages
         run: |

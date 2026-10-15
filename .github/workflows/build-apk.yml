@@ -59,28 +59,12 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Clean Capacitor Android (Preserving Native Java Code)
+      - name: 2. Sync Capacitor Android Platform
         run: |
-          echo "=== 2. حفظ أكواد الجافا والـ Manifest ثم إعادة توليد البيئة ==="
-          mkdir -p /tmp/android_backup
-          if [ -d "android/app/src/main/java" ]; then
-            cp -r android/app/src/main/java /tmp/android_backup/
+          echo "=== 2. مزامنة وتحديث منصة أندرويد ==="
+          if [ ! -d "android" ]; then
+            npx cap add android
           fi
-          if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
-            cp android/app/src/main/AndroidManifest.xml /tmp/android_backup/
-          fi
-
-          rm -rf android
-          npx cap add android
-
-          # استعادة أكواد الجافا والجسور والـ Manifest الخاصة بك
-          if [ -d "/tmp/android_backup/java" ]; then
-            cp -r /tmp/android_backup/java/* android/app/src/main/java/
-          fi
-          if [ -f "/tmp/android_backup/AndroidManifest.xml" ]; then
-            cp /tmp/android_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
-          fi
-
           npx cap sync android
 
       - name: 3. Build APK & AAB Packages

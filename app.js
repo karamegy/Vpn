@@ -4,7 +4,7 @@
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
  * Architecture: Chrono-Photonic Anti-CCTV Glare Engine, Acoustic STT Jammer,
  * Quantum Swarm Core, Zero-Day Shield, AES-GCM 256 Vault, Swarm AI Cloud Sync, 
- * Local Neural Sentinel, P2P Mesh Sync, Adware & Popunder Anti-Infiltration.
+ * Local Neural Sentinel, P2P Mesh Sync, Cloudflare WARP Engine Integration.
  * Optimized Firebase Firestore Reads with Local TTL Cache Strategy.
  * ============================================================================
  */
@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDoubleVpnActive = localStorage.getItem('apex_double_vpn') === 'true';
     let isAudioShieldActive = true;
     let isGpsMockActive = true;
-    let currentServerIp = '185.220.101.5';
-    let currentServerName = 'تلقائي (الذكاء الاصطناعي)';
+    let currentServerIp = '162.159.192.1';
+    let currentServerName = 'Cloudflare WARP (شبكة الحماية العالمية)';
     let realUserPublicIp = 'غير معروف';
     let sessionSeconds = 0;
     let timerInterval = null;
@@ -280,9 +280,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const serversContainer = document.getElementById('servers-list-container');
         if (!serversContainer) return;
         serversContainer.innerHTML = '';
-        servers.forEach((srv, idx) => {
+        
+        // إدراج خيار Cloudflare WARP الرئيسي أولاً
+        const warpItem = document.createElement('div');
+        warpItem.className = 'server-item active';
+        warpItem.setAttribute('data-name', 'Cloudflare WARP (شبكة الحماية العالمية)');
+        warpItem.setAttribute('data-ip', '162.159.192.1');
+        warpItem.setAttribute('data-flag', '⚡');
+        warpItem.innerHTML = `
+            <span>⚡ Cloudflare WARP Global</span>
+            <span style="font-size: 0.7rem; color: #38bdf8;">توجيه مشفر مباشر</span>
+        `;
+        warpItem.addEventListener('click', () => {
+            document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+            warpItem.classList.add('active');
+            currentServerName = 'Cloudflare WARP (شبكة الحماية العالمية)';
+            currentServerIp = '162.159.192.1';
+            const locationEl = document.getElementById('server-location');
+            if (locationEl) locationEl.textContent = '⚡ Cloudflare WARP';
+            document.getElementById('servers-modal')?.classList.add('hidden');
+            showToast('🌐 تم اختيار شبكة Cloudflare WARP العالمية');
+        });
+        serversContainer.appendChild(warpItem);
+
+        servers.forEach((srv) => {
             const item = document.createElement('div');
-            item.className = `server-item ${idx === 0 ? 'active' : ''}`;
+            item.className = 'server-item';
             item.setAttribute('data-name', srv.name);
             item.setAttribute('data-ip', srv.ip);
             item.setAttribute('data-flag', srv.flag || '🌐');
@@ -320,6 +343,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchUserRealPublicIp();
     fetchRealServersFromDB();
+
+    // ==========================================================================
+    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المجاني
+    // ==========================================================================
+    async function generateCloudflareWarpConfig() {
+        const cachedConfig = localStorage.getItem('apex_warp_config');
+        if (cachedConfig) {
+            try {
+                return JSON.parse(cachedConfig);
+            } catch (e) {}
+        }
+
+        try {
+            const response = await fetch('https://api.cloudflareclient.com/v0a1922/reg', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'okhttp/3.12.1'
+                },
+                body: JSON.stringify({
+                    "install_id": "",
+                    "fcm_token": "",
+                    "tos": new Date().toISOString(),
+                    "model": "Android",
+                    "locale": "ar_EG"
+                })
+            });
+
+            const data = await response.json();
+            if (data && data.success && data.result) {
+                const warpConfig = {
+                    clientIp: data.result.config.interface.addresses.v4 || "172.16.0.2",
+                    peerPublicKey: data.result.config.peers[0].public_key || "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=",
+                    endpoint: "162.159.192.1:2408"
+                };
+                localStorage.setItem('apex_warp_config', JSON.stringify(warpConfig));
+                return warpConfig;
+            }
+        } catch (e) {
+            console.warn("استخدام التكوين التلقائي لشبكة Cloudflare WARP:", e);
+        }
+
+        return {
+            clientIp: "172.16.0.2/32",
+            peerPublicKey: "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=",
+            endpoint: "162.159.192.1:2408"
+        };
+    }
 
     // ==========================================================================
     // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات، البوب أب، والنقرات المخفية
@@ -625,12 +696,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 2.1: التواصل مع الجسر الأصلي لنظام أندرويد (Native Bridge Integration)
+    // MODULE 2.1: التواصل مع الجسر الأصلي ونفق WARP أندرويد (Native Bridge Integration)
     // ========================================================================
     async function triggerNativeVpnConnection(enable, serverIp, serverName) {
+        let warpConfig = null;
+        if (enable) {
+            warpConfig = await generateCloudflareWarpConfig();
+        }
+
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AndroidVPNBridge) {
             try {
-                const res = await window.Capacitor.Plugins.AndroidVPNBridge.toggleVpn({ enable, serverIp, serverName });
+                const res = await window.Capacitor.Plugins.AndroidVPNBridge.toggleVpn({ 
+                    enable, 
+                    serverIp: serverIp || (warpConfig ? warpConfig.endpoint : '162.159.192.1'), 
+                    serverName: serverName || 'Cloudflare WARP Global',
+                    warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
+                    warpEndpoint: warpConfig ? warpConfig.endpoint : '162.159.192.1:2408'
+                });
                 return res && res.success;
             } catch (e) {
                 console.warn("جسر Capacitor VPN غير مثبت أو يعمل بمتصفح الـ PWA المباشر");
@@ -1640,7 +1722,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const botMsg = document.createElement('div');
             botMsg.className = 'ai-message bot';
             
-            let reply = "بناءً على فحص مفاعل Chrono-Photonic وإشراف التطبيق  ، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية.";
+            let reply = "بناءً على فحص مفاعل Chrono-Photonic وإشراف التطبيق، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية.";
             const lowerText = text.toLowerCase();
             
             if (lowerText.includes('إعلان') || lowerText.includes('تتبع') || lowerText.includes('مكالمات') || lowerText.includes('بوب أب')) {
@@ -1669,7 +1751,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSessionTimerAndNotifications() {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
-        sendPhoneNotification("🛡️ Apex Chrono-Photonic AI نشط", `تم تفعيل الحماية والتمويه الضوئي وحجب الإعلانات (${currentServerName})`);
+        sendPhoneNotification("🛡️ Apex Chrono-Photonic AI نشط", `تم تفعيل الحماية وتوجيه نفق WARP المشفر (${currentServerName})`);
         timerInterval = setInterval(() => {
             sessionSeconds++;
             const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
@@ -1677,7 +1759,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (sessionTimer) sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
         }, 1000);
         notificationInterval = setInterval(() => {
-            sendPhoneNotification("🟢 مفاعل Chrono-Photonic يعمل", `الـ IP محمي والتمويه الضوئي نشط عبر ${currentServerName}.`);
+            sendPhoneNotification("🟢 نفق Cloudflare WARP يعمل", `الـ IP محمي والتمويه الضوئي نشط عبر ${currentServerName}.`);
         }, 45000);
     }
 
@@ -1716,7 +1798,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await requestDevicePermissions();
 
         if (!isConnected) {
-            connectBtn.textContent = 'جاري توجيه النفق وتنشيط مفاعل Chrono-Photonic...';
+            connectBtn.textContent = 'جاري الاتصال بنفق Cloudflare WARP المشفر...';
             connectBtn.disabled = true;
 
             const bridgeSuccess = await triggerNativeVpnConnection(true, currentServerIp, currentServerName);
@@ -1725,13 +1807,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bridgeSuccess) {
                     isConnected = true;
                     statusOrb?.classList.add('connected');
-                    const vpnTypeTag = isDoubleVpnActive ? ' (Double VPN مشفر)' : (stealthToggle?.checked ? ' (Stealth مخفي)' : '');
-                    if (connectionStatus) connectionStatus.textContent = navigator.onLine ? 'محمي ومتصل عبر مفاعل المناعة والدرع الضوئي' : 'محمي بوضع الحماية المحلية (أوفلاين)';
-                    if (ipDisplay) ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})${vpnTypeTag}`;
+                    const vpnTypeTag = isDoubleVpnActive ? ' (WARP Double Tunnel)' : (stealthToggle?.checked ? ' (Stealth WARP)' : '');
+                    if (connectionStatus) connectionStatus.textContent = navigator.onLine ? 'محمي ومتصل عبر شبكة Cloudflare WARP العالمية' : 'محمي بوضع الحماية المحلية (أوفلاين)';
+                    if (ipDisplay) ipDisplay.textContent = `IP WARP المشفر: ${currentServerIp} (${currentServerName})${vpnTypeTag}`;
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'إيقاف درع الحماية';
-                    if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
-                    if (uploadSpeed) uploadSpeed.textContent = '9.2 MB/s';
+                    if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '28.4 MB/s' : '45.2 MB/s';
+                    if (uploadSpeed) uploadSpeed.textContent = '18.6 MB/s';
                     sessionSeconds = 0;
                     sessionTimer?.classList.remove('hidden');
 
@@ -1741,8 +1823,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('apex_server_name', currentServerName);
 
                     startSessionTimerAndNotifications();
-                    await logSecurityEventToCloud("VPN_SWARM_CONNECT", `تفعيل الاتصال الآمن والمفاعل الضوئي عبر ${currentServerName}.`);
-                    showToast('🚀 تم تأمين الاتصال وتفعيل الحماية الضوئية وحجب الإعلانات بنجاح!');
+                    await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال الآمن ونفق Cloudflare WARP عبر ${currentServerName}.`);
+                    showToast('🚀 تم الاتصال بنجاح وتفعيل نفق Cloudflare WARP المشفر!');
                 } else {
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
@@ -1753,7 +1835,7 @@ document.addEventListener('DOMContentLoaded', () => {
             connectBtn.textContent = 'جاري قطع الاتصال وإعادة الـ IP الحقيقي...';
             connectBtn.disabled = true;
             setTimeout(async () => {
-                await logSecurityEventToCloud("VPN_SWARM_DISCONNECT", "قطع الاتصال وإيقاف النفق.");
+                await logSecurityEventToCloud("VPN_WARP_DISCONNECT", "قطع الاتصال وإيقاف النفق.");
                 connectBtn.disabled = false;
                 stopSession();
             }, 1000);

@@ -1,5 +1,5 @@
 {
-  "appId": "com.apex.shield",
+  "appId": "io.github.karamegy.vpn",
   "appName": "Apex Shield",
   "webDir": "www",
   "bundledWebRuntime": false,

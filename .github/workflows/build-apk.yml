@@ -40,10 +40,10 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-          # إنشاء ملف capacitor.config.json المعتمد بالنطاق الخاص بك
+          # إنشاء ملف capacitor.config.json باسم الحزمة الأصلي
           cat << 'EOF' > capacitor.config.json
           {
-            "appId": "com.apex.shield",
+            "appId": "io.github.karamegy.Vpn",
             "appName": "Apex Shield AI",
             "webDir": "www",
             "bundledWebRuntime": false,
@@ -88,16 +88,23 @@ jobs:
             sed -i 's/versionName "1.0"/versionName "2.3.0"/' android/app/build.gradle
           fi
 
-          # استرجاع أكواد الجافا والجسور والـ Manifest الخاصة بك
+          # استرجاع ملفات الجافا ونقلها للمسار الصحيح باسم الحزمة الجديد
+          TARGET_JAVA_DIR="android/app/src/main/java/io/github/karamegy/Vpn"
+          mkdir -p "$TARGET_JAVA_DIR"
           if [ -d "/tmp/native_backup/java" ]; then
-            mkdir -p android/app/src/main/java
-            cp -r /tmp/native_backup/java/* android/app/src/main/java/
-          fi
-          if [ -f "/tmp/native_backup/AndroidManifest.xml" ]; then
-            cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+            find /tmp/native_backup/java -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
           fi
 
-          # إجبار إنشاء ملف strings.xml بكافة الموارد المطلوبة من Manifest
+          # استرجاع Manifest وتحديث اسم الحزمة داخله إذا وجد
+          if [ -f "/tmp/native_backup/AndroidManifest.xml" ]; then
+            cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+            sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' android/app/src/main/AndroidManifest.xml
+          fi
+
+          # توحيد عبارات package و import في كافة ملفات Java لتطابق io.github.karamegy.Vpn
+          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
+
+          # إجبار إنشاء ملف strings.xml باسم الحزمة الاصلي
           mkdir -p android/app/src/main/res/values
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -107,8 +114,8 @@ jobs:
               <string name="launcherName">Apex Shield</string>
               <string name="hostName">karamegy.github.io</string>
               <string name="title_activity_main">Apex Shield</string>
-              <string name="package_name">com.apex.shield</string>
-              <string name="custom_url_scheme">com.apex.shield</string>
+              <string name="package_name">io.github.karamegy.Vpn</string>
+              <string name="custom_url_scheme">io.github.karamegy.Vpn</string>
           </resources>
           EOF
 

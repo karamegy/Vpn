@@ -63,6 +63,48 @@
         </div>
     </div>
 
+    <!-- نافذة جدار حماية التطبيقات (App Firewall & Traffic Inspector) [جديد] -->
+    <div id="app-firewall-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>📱 جدار حماية التطبيقات (Traffic Inspector)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8;">مراقبة وتصفية حركة البيانات الصادرة والواردة لكل تطبيق بشكل مستقل:</p>
+            <div id="firewall-traffic-container" style="max-height: 250px; overflow-y: auto; margin: 12px 0;"></div>
+            <button id="close-app-firewall-btn" class="btn-secondary" style="width: 100%;">إغلاق جدار الحماية</button>
+        </div>
+    </div>
+
+    <!-- نافذة كاشف برمجيات التجسس (Stalkerware & Spyware Detector) [جديد] -->
+    <div id="stalkerware-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>🕵️ كاشف برمجيات التجسس (Stalkerware Detector)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8;">فحص صلاحيات الكاميرا والميكروفون وقراءة الشاشة وخدمات الوصول الخفية:</p>
+            <div id="stalkerware-results-container" style="margin: 12px 0;"></div>
+            <button id="start-stalkerware-scan" class="btn-primary" style="margin-bottom: 8px; width: 100%;">بدء الفحص العميق للتجسس</button>
+            <button id="close-stalkerware-btn" class="btn-secondary" style="width: 100%;">إغلاق الكاشف</button>
+        </div>
+    </div>
+
+    <!-- نافذة تقييم أمان الواي فاي (Wi-Fi Security Auditor) [جديد] -->
+    <div id="wifi-auditor-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>📶 تقييم أمان شبكات الواي فاي (Wi-Fi Auditor)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8;">كشف هجمات رجل في المنتصف (MITM) والشبكات الوهمية (Evil Twin):</p>
+            <div id="wifi-audit-results" style="margin: 12px 0;"></div>
+            <button id="run-wifi-audit-btn" class="btn-primary" style="margin-bottom: 8px; width: 100%;">فحص شبكة الواي فاي الحالية</button>
+            <button id="close-wifi-auditor-btn" class="btn-secondary" style="width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة تقرير الأمان اليومي التفاعلي (Security Insights & Dashboard) [جديد] -->
+    <div id="insights-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>📊 تقرير الأمان اليومي (Security Insights)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8;">لوحة بيانات مرئية توضح الإحصائيات الأسبوعية للهجمات والإعلانات المحجوبة:</p>
+            <div id="insights-stats-box" style="margin: 12px 0;"></div>
+            <button id="close-insights-btn" class="btn-secondary" style="width: 100%;">إغلاق التقرير</button>
+        </div>
+    </div>
+
     <!-- نافذة التمويه الوهمي تحت الإكراه (Decoy Calculator Mode) -->
     <div id="decoy-modal" class="modal hidden" style="background: #0f172a; z-index: 99999;">
         <div class="modal-content glass-panel text-center">
@@ -452,7 +494,7 @@
     <div id="policy-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>سياسة الخصوصية والشفافية</h2>
-            <p>نحن نؤمن بأن الخصوصية حق أساسي. لا نقوم بجمع أو بيع بيانات التصفح، ويتم تشفير كافة البيانات عبر بروتوكولات متقدمة.</p>
+            <p>نحن نؤمن بأن الخصوصية حق أساسي. لا نقوم بجمع أو بيع بيانات التصفح، ويتم تشفير كافة البيانات عبر بروتوكولات متتقدمة.</p>
             <a href="privacy-policy.html" target="_blank" class="btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 15px; width: 100%;">عرض سياسة الخصوصية الكاملة 📄</a>
             <button id="close-policy-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">فهمت وإغلاق</button>
         </div>
@@ -512,6 +554,42 @@
                 <div class="setting-row clickable-row" id="open-photonic-btn">
                     <span>📸 المفاعل الضوئي المكراني ضد كاميرات التصوير (Anti-CCTV Engine)</span>
                     <span class="accent-link" style="color: #ec4899; font-weight: bold;">اختراع حصري 📸</span>
+                </div>
+
+                <!-- الإضافات المتقدمة الجديدة [جديد] -->
+                <div class="setting-row clickable-row" id="open-app-firewall-btn">
+                    <span>📱 جدار حماية التطبيقات (App Traffic Inspector)</span>
+                    <span class="accent-link" style="color: #38bdf8; font-weight: bold;">مراقب 🔒</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-stalkerware-btn">
+                    <span>🕵️ كاشف برمجيات التجسس (Stalkerware Detector)</span>
+                    <span class="accent-link" style="color: #ef4444; font-weight: bold;">فحص 🛡️</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-wifi-auditor-btn">
+                    <span>📶 تقييم أمان الواي فاي (Wi-Fi Auditor & Anti-MITM)</span>
+                    <span class="accent-link" style="color: #10b981; font-weight: bold;">تحليل 🌐</span>
+                </div>
+                <div class="setting-row clickable-row" id="open-insights-btn">
+                    <span>📊 تقرير الأمان اليومي (Security Insights & Dashboard)</span>
+                    <span class="accent-link" style="color: #f59e0b; font-weight: bold;">تقرير 📈</span>
+                </div>
+
+                <!-- مفاتيح التفعيل المباشرة الجديدة (Toggles) [جديد] -->
+                <div class="setting-row">
+                    <span>🧱 جدار حماية ترافيك التطبيقات (App Firewall)</span>
+                    <label class="switch"><input type="checkbox" id="app-firewall-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>🕵️ حماية خدمات الوصول وحجب التجسس (Anti-Stalkerware)</span>
+                    <label class="switch"><input type="checkbox" id="stalkerware-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>📡 مراقبة شبكات الواي فاي ومنع MITM</span>
+                    <label class="switch"><input type="checkbox" id="wifi-auditor-toggle" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <span>📋 درع الحافظة المتقدم والتشفير تلقائي (Clipboard Shield)</span>
+                    <label class="switch"><input type="checkbox" id="advanced-clipboard-toggle" checked><span class="slider"></span></label>
                 </div>
 
                 <!-- الإضافات الكمومية والعصبية -->

@@ -52,11 +52,18 @@ jobs:
           }
           EOF
 
-      - name: 2. Fresh Android Environment & Gradle Wrapper Generation
+      - name: 2. Generate Android & Ensure Gradle Wrapper Exists
         run: |
-          # حذف أي مجلد أندرويد قديم وتوليد بيئة جديدة بالكامل لضمان وجود gradlew سليمة
+          # تنظيف أي مجلد تالف وتوليد أندرويد نظيف مع إضافة حزمة الأندرويد صراحةً
           rm -rf android
           npx cap add android
+
+          # التأكد من وجود ملفات الـ gradlew، وإذا لم تكن موجودة يتم توليدها عبر gradle wrapper
+          cd android
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper --gradle-version 8.5
+          fi
+          cd ..
 
           # ضبط إصدارات SDK إلى 36
           if [ -f "android/variables.gradle" ]; then

@@ -17,11 +17,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java JDK 17
+      - name: Set up Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
@@ -116,7 +116,7 @@ jobs:
 
       - name: 3. Build Release Bundle (AAB) & APK
         run: |
-          echo "=== 3. بناء حزم التطبيق بدون توقيع خاطئ لتجنب أخطاء البناء ==="
+          echo "=== 3. بناء حزم التطبيق بنجاح ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"

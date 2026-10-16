@@ -49,11 +49,12 @@ public class ApexVpnService extends VpnService {
             String serverName = intent != null ? intent.getStringExtra("serverName") : "Cloudflare WARP";
             String warpClientIp = intent != null ? intent.getStringExtra("warpClientIp") : "172.16.0.2/32";
             String warpEndpoint = intent != null ? intent.getStringExtra("warpEndpoint") : "162.159.192.1:2408";
+            String warpPrivateKey = intent != null ? intent.getStringExtra("warpPrivateKey") : "";
 
             createNotificationChannel();
             startForeground(NOTIFICATION_ID, buildNotification(serverName));
 
-            startWireGuardTunnel(warpClientIp, warpEndpoint, serverName);
+            startWireGuardTunnel(warpClientIp, warpEndpoint, serverName, warpPrivateKey);
         } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
             stopWireGuardTunnel();
         }
@@ -61,16 +62,20 @@ public class ApexVpnService extends VpnService {
         return START_STICKY;
     }
 
-    private void startWireGuardTunnel(String clientIpStr, String endpointStr, String serverName) {
+    private void startWireGuardTunnel(String clientIpStr, String endpointStr, String serverName, String privateKeyBase64) {
         if (isTunnelRunning) return;
 
         new Thread(() -> {
             try {
-                // 1. توليد أو تهيئة المفاتيح التشفيرية
-                Key privateKey = Key.generate();
-
                 Interface.Builder interfaceBuilder = new Interface.Builder();
-                interfaceBuilder.parsePrivateKey(privateKey.toBase64());
+
+                // 1. استخدام المفتاح الخاص القادم من التسجيل عبر Intent أو توليد مفتاح جديد عند العدم
+                if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
+                    interfaceBuilder.parsePrivateKey(privateKeyBase64.trim());
+                } else {
+                    Key privateKey = Key.generate();
+                    interfaceBuilder.parsePrivateKey(privateKey.toBase64());
+                }
 
                 // تعيين IP العميل المُخصص من WARP
                 String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
@@ -86,7 +91,6 @@ public class ApexVpnService extends VpnService {
 
                 // 2. إعداد الخادم البعيد (Cloudflare WARP Peer)
                 Peer.Builder peerBuilder = new Peer.Builder();
-                // المفتاح العام الرسمي لشبكة Cloudflare WARP
                 peerBuilder.parsePublicKey("bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=");
                 
                 String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
@@ -148,7 +152,7 @@ public class ApexVpnService extends VpnService {
                     stopForeground(true);
                 }
                 stopSelf();
-                Log.d(TAG, "🔒 تم إيقاف خدمة הـ VPN وإعادة الـ IP الأصلي.");
+                Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN وإعادة الـ IP الأصلي.");
             }
         }).start();
     }

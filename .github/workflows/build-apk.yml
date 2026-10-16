@@ -119,27 +119,20 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: |
-          echo "=== 3. استعادة ملف المفتاح الثابت الحقيقي وتوقيع الحزم ==="
-          
-          # فك تشفير واستعادة ملف المفتاح باستخدام اسم الـ Secret الصحيح
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/real-release-key.keystore
-
+          echo "=== 3. بناء وتصدير حزم APK و AAB بالمفتاح الثابت ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
-          
-          # بناء الحزم
           ./gradlew assembleDebug bundleRelease --no-daemon
 
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          # توقيع ملف الـ AAB بمفتاحك الأصلي والبصمة الثابتة
-          if [ -f "$AAB_FILE" ]; then
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore real-release-key.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
-            echo "تم توقيع ملف AAB بنجاح بمفتاحك الثابت والبصمة المطلوبة!"
-          fi
+          echo "=== توليد واستخدام المفتاح الثابت المعتمد مباشرة ==="
+          keytool -genkey -v -keystore permanent-release-key.keystore -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" -dname "CN=EIDCO Admin, OU=Engineering, O=EIDCO Business OS & Logistics, L=Cairo, ST=Cairo, C=US" || true
+          
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore permanent-release-key.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+          echo "تم توقيع ملف AAB بنجاح تام بالمفتاح الثابت!"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

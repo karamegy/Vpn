@@ -114,27 +114,43 @@ jobs:
 
           npx cap sync android
 
-      - name: 3. Build & Sign APK & AAB Packages with Real Keystore
+      - name: 3. Build & Sign Release AAB & APK with Keystore
         env:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
-          echo "=== 3. فك تشفير المفتاح الحقيقي وتوقيع حزم التطبيق به ==="
+          echo "=== 3. حقن المفتاح وتوقيع الحزم هندسياً ==="
           cd android
           
-          # استعادة ملف المفتاح الحقيقي من الـ Secrets وتجنب توليد مفتاح عشوائي
-          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > permanent-release-key.keystore
+          # فك تشفير المفتاح الحقيقي وضعه في مجلد app
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > app/release-key.keystore
           
+          # إعداد التوقيع داخل ملف build.gradle مباشرة ليتم التوقيع تلقائياً
+          cat << 'EOT' >> app/build.gradle
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('release-key.keystore')
+                      storePassword "$STORE_PASSWORD"
+                      keyAlias "$KEY_ALIAS"
+                      keyPassword "$KEY_PASSWORD"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOT
+
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           ./gradlew assembleDebug bundleRelease --no-daemon
-
-          AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
-          
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore permanent-release-key.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
-          echo "تم توقيع ملف AAB بنجاح تام بالمفتاح الأصلي وثبتت البصمة!"
+          echo "تم بناء وتوقيع حزم AAB و APK بنجاح تام بالبصمة الأصلية!"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

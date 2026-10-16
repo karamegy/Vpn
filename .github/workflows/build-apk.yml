@@ -54,7 +54,7 @@ jobs:
 
       - name: 2. Sync and Update Existing Android Project
         run: |
-          # مزامنة المشروع الحالي مباشرة بدون إعادة إضافته لمنع تضارب المجلدات
+          # مزامنة المشروع مع المسار والنطاق الجديد الصحيح
           npx cap sync android
 
           # ضبط إصدارات SDK إلى 36

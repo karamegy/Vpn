@@ -28,9 +28,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 1. Setup Web Assets & Config
+      - name: 1. Setup Web Assets & Local Config
         run: |
-          echo "=== 1. تجهيز مجلد www وتثبيت النطاق الصحيح ==="
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -40,20 +39,13 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
+          # إزالة خادم الويب الخارجي لضمان قراءة الملفات من داخل APK وتفعيل جسر VPN الأصلي
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.Vpn",
             "appName": "Apex Shield AI",
             "webDir": "www",
             "bundledWebRuntime": false,
-            "server": {
-              "url": "https://karamegy.github.io/Vpn/",
-              "cleartext": true,
-              "allowNavigation": [
-                "karamegy.github.io",
-                "*.github.io"
-              ]
-            },
             "android": {
               "webContentsDebuggingEnabled": true,
               "allowMixedContent": true
@@ -61,10 +53,8 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Clean Capacitor Android Platform & Fix Java Paths
+      - name: 2. Initialize Clean Capacitor Android Platform & Fix Java Packages
         run: |
-          echo "=== 2. بناء بيئة أندرويد وتصحيح مسارات الجسر الأصلي ==="
-          
           mkdir -p /tmp/native_backup
           if [ -d "android/app/src/main/java" ]; then
             cp -r android/app/src/main/java /tmp/native_backup/
@@ -79,8 +69,8 @@ jobs:
           fi
 
           if [ -f "android/app/build.gradle" ]; then
-            sed -i -E 's/versionCode [0-9]+/versionCode 26/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.1"/' android/app/build.gradle
+            sed -i -E 's/versionCode [0-9]+/versionCode 27/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.2"/' android/app/build.gradle
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
             
             if grep -q "com.android.billingclient:billing" android/app/build.gradle; then
@@ -90,27 +80,22 @@ jobs:
             fi
           fi
 
-          # إنشاء مسار الحزمة المطابق لـ appId (io/github/karamegy/Vpn)
           TARGET_JAVA_DIR="android/app/src/main/java/io/github/karamegy/Vpn"
           mkdir -p "$TARGET_JAVA_DIR"
 
-          # نقل ملفات الجافا من النسخة الاحتياطية أو المجلد الأصلي
-          if [ -d "/tmp/native_backup/java" ]; then
-            find /tmp/native_backup/java -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
-          fi
+          # نقل كافة ملفات الجافا المباشرة
+          find /tmp/native_backup -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
 
-          # تصحيح الـ package في جميع ملفات الجافا لتصبح io.github.karamegy.Vpn
           find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/package com\.apex\.shield;/package io.github.karamegy.Vpn;/g' {} +
           find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
 
-          # حقن صلاحية الخدمة وصلاحيات الـ VPN داخل AndroidManifest.xml
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
             if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then
               sed -i '/<uses-permission android:name="android\.permission\.INTERNET"/a \    <uses-permission android:name="android.permission.BIND_VPN_SERVICE"/>' "$MANIFEST_PATH"
             fi
             if ! grep -q "ApexVpnService" "$MANIFEST_PATH"; then
-              sed -i '/<\/application>/i \    <service android:name="io.github.karamegy.Vpn.ApexVpnService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="true">\n        <intent-filter>\n            <action android:name="android.net.VpnService"/>\n        </intent-filter>\n    </service>' "$MANIFEST_PATH"
+              sed -i '/<\/application>/i \    <service android:name="io.github.karamegy.Vpn.ApexVpnService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="false">\n        <intent-filter>\n            <action android:name="android.net.VpnService"/>\n        </intent-filter>\n    </service>' "$MANIFEST_PATH"
             fi
           fi
 
@@ -118,11 +103,11 @@ jobs:
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <string name="app_name">Apex Shield</string>
-              <string name="appName">Apex Shield</string>
-              <string name="launcherName">Apex Shield</string>
+              <string name="app_name">Apex Shield AI</string>
+              <string name="appName">Apex Shield AI</string>
+              <string name="launcherName">Apex Shield AI</string>
               <string name="hostName">karamegy.github.io</string>
-              <string name="title_activity_main">Apex Shield</string>
+              <string name="title_activity_main">Apex Shield AI</string>
               <string name="package_name">io.github.karamegy.Vpn</string>
               <string name="custom_url_scheme">io.github.karamegy.Vpn</string>
           </resources>
@@ -137,9 +122,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "=== 3. فك تشفير المفتاح الأصلي وبناء وتوقيع الحزمة ==="
           cd android
-          
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
           chmod +x gradlew
@@ -148,11 +131,9 @@ jobs:
 
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          echo "=== توقيع الملف بمفتاح Release الأصلي ==="
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
           
           rm -f signing.keystore
-          echo "تم توقيع ملف AAB بنجاح بالمفتاح الأصلي المطابق لبصمة متجر جوجل بلاي!"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

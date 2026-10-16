@@ -52,9 +52,10 @@ jobs:
           }
           EOF
 
-      - name: 2. Sync and Update Existing Android Project
+      - name: 2. Force Generate Android Platform & Gradle Wrapper
         run: |
-          # مزامنة المشروع مع المسار والنطاق الجديد الصحيح
+          # توليد منصة الأندرويد وملفات الـ Gradle والـ Wrapper إجبارياً من الصفر لضمان وجود gradlew
+          npx cap add android || true
           npx cap sync android
 
           # ضبط إصدارات SDK إلى 36
@@ -70,7 +71,7 @@ jobs:
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
           fi
 
-          # حقن صلاحيات وخدمة الـ VPN في الـ Manifest إن لم تكن موجودة
+          # حقن صلاحيات وخدمة الـ VPN في الـ Manifest
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
             if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then

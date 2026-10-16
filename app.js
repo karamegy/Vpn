@@ -33,12 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
     let realServersList = [];
 
-    // مدة صلاحية التخزين المؤقت لقراءات الفايربيس (بالملي ثانية)
-    const SERVERS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 ساعة لسيرفرات الـ VPN
-    const VACCINE_CACHE_TTL = 60 * 60 * 1000;      // ساعة واحدة للإحصائيات السحابية
+    const SERVERS_CACHE_TTL = 24 * 60 * 60 * 1000;
+    const VACCINE_CACHE_TTL = 60 * 60 * 1000;
 
     // ========================================================================
-    // MODULE 00: نظام الاشتراكات المباشر عبر Google Play Billing (License Testing Ready)
+    // MODULE 00: نظام الاشتراكات المباشر عبر Google Play Billing
     // ========================================================================
     let isProUser = localStorage.getItem('apex_pro_status') === 'true';
     const proModal = document.getElementById('pro-subscription-modal');
@@ -75,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!plansContainer) return;
 
         if (isProUser) {
-            plansContainer.innerHTML = '<div style="color: #10b981; font-weight: bold; padding: 15px; text-align: center; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px;">💎 أنت مشترك بالفعل في باقة Apex Pro الحصرية! جميع الميزات فائقة الأمان مفعلة لديك.</div>';
+            plansContainer.innerHTML = '<div style="color: #10b981; font-weight: bold; padding: 15px; text-align: center; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px;">💎 أنت مشترك بالفعل في باقة Apex Pro الحصرية! جميع الميزات مفعلة لديك.</div>';
             return;
         }
 
@@ -86,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn-primary" id="buy-yearly-btn" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 15px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: #fff; border-radius: 8px; cursor: pointer;">
                 <span>الاشتراك السنوي Pro <span style="background:#fff; color:#d97706; padding:2px 6px; border-radius:4px; font-size:0.65rem; margin-right:5px;">وفر 45%</span></span><span>$24.99 / سنة</span>
             </button>
-            <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 10px; text-align: center;">⚡ المعاملة مرتبطة بمتجر Google Play الرسمي (اختبار الترخيص RESPOND_NORMALLY نشط).</div>
+            <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 10px; text-align: center;">⚡ المعاملة مرتبطة بمتجر Google Play الرسمي.</div>
         `;
 
         document.getElementById('buy-monthly-btn')?.addEventListener('click', () => purchaseProSubscription('apex_pro_monthly'));
@@ -337,7 +336,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 localStorage.removeItem('apex_offline_logs');
             }
-            console.log("☁️ تمت مزامنة السجلات المعلقة بنجاح تام!");
         } catch (e) {
             console.warn("تأجيل مزامنة السجلات للحفاظ على استقرار الخدمة:", e);
         }
@@ -354,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderServersList(realServersList);
                 currentServerIp = realServersList[0].ip || currentServerIp;
                 currentServerName = realServersList[0].name || currentServerName;
-                console.log(`⚡ تم استخدام الخوادم المحفوظة مؤقتاً لتوفير قراءات Firestore (${realServersList.length} خادم).`);
                 return;
             }
         }
@@ -435,15 +432,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchUserRealPublicIp() {
         try {
-            const res = await fetch('https://api.ipify.org?format=json');
+            const res = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
             const data = await res.json();
             realUserPublicIp = data.ip || 'غير معروف';
         } catch (e) {
             realUserPublicIp = 'غير معروف';
         }
         const ipDisplay = document.getElementById('ip-display');
-        if (ipDisplay && !isConnected) {
-            ipDisplay.textContent = `IP الحقيقي: ${realUserPublicIp}`;
+        if (ipDisplay) {
+            if (isConnected) {
+                ipDisplay.textContent = `IP WARP المشفر النشط: ${realUserPublicIp}`;
+            } else {
+                ipDisplay.textContent = `IP الحقيقي: ${realUserPublicIp}`;
+            }
         }
     }
 
@@ -451,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchRealServersFromDB();
 
     // ==========================================================================
-    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المجاني
+    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المجاني مع مفتاح التشفير
     // ==========================================================================
     async function generateCloudflareWarpConfig() {
         const cachedConfig = localStorage.getItem('apex_warp_config');
@@ -469,9 +470,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data && data.success && data.result) {
                 const warpConfig = {
-                    clientIp: data.result.config.interface.addresses.v4 || "172.16.0.2",
+                    clientIp: data.result.config.interface.addresses.v4 || "172.16.0.2/32",
                     peerPublicKey: data.result.config.peers[0].public_key || "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=",
-                    endpoint: "162.159.192.1:2408"
+                    endpoint: "162.159.192.1:2408",
+                    privateKey: data.result.config.interface.private_key || ""
                 };
                 localStorage.setItem('apex_warp_config', JSON.stringify(warpConfig));
                 return warpConfig;
@@ -480,11 +482,16 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn("استخدام التكوين التلقائي لشبكة Cloudflare WARP:", e);
         }
 
-        return { clientIp: "172.16.0.2/32", peerPublicKey: "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=", endpoint: "162.159.192.1:2408" };
+        return { 
+            clientIp: "172.16.0.2/32", 
+            peerPublicKey: "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=", 
+            endpoint: "162.159.192.1:2408",
+            privateKey: "" 
+        };
     }
 
     // ==========================================================================
-    // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات، البوب أب، والنقرات المخفية
+    // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات والبوب أب
     // ==========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'adnxs.com', 'unityads.unity3d.com', 
@@ -775,7 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startStalkerwareScanBtn?.addEventListener('click', async () => {
         startStalkerwareScanBtn.disabled = true;
-        startStalkerwareScanBtn.textContent = 'جاري الفحص العميق لصلاحيات الكاميرا والميكروفون وخدمات الوصول (Accessibility)...';
+        startStalkerwareScanBtn.textContent = 'جاري الفحص العميق لصلاحيات الكاميرا والميكروفون وخدمات الوصول...';
         
         await logSecurityEventToCloud("STALKERWARE_DEEP_AUDIT", "فحص شامل لصلاحيات التطبيقات الخلفية وأجهزة التنصت والتجسس التجارية.");
 
@@ -965,7 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 2.1: التواصل مع الجسر الأصلي ونفق WARP أندرويد (Native Bridge Integration)
+    // MODULE 2.1: التواصل مع الجسر الأصلي ونفق WireGuard WARP في أندرويد
     // ========================================================================
     async function triggerNativeVpnConnection(enable, serverIp, serverName) {
         let warpConfig = null;
@@ -980,7 +987,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     serverIp: serverIp || (warpConfig ? warpConfig.endpoint : '162.159.192.1'), 
                     serverName: serverName || 'Cloudflare WARP Global',
                     warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
-                    warpEndpoint: warpConfig ? warpConfig.endpoint : '162.159.192.1:2408'
+                    warpEndpoint: warpConfig ? warpConfig.endpoint : '162.159.192.1:2408',
+                    warpPrivateKey: warpConfig ? warpConfig.privateKey : ''
                 });
                 return res && res.success;
             } catch (e) {
@@ -1137,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ========================================================================
-    // MODULE 17: مفاعل التطور العصبي الذاتي والتحور الكمومي (Quantum Swarm v18)
+    // MODULE 17: مفاعل التطور العصبي الذاتي والتحور الكمومي
     // ========================================================================
     const quantumModal = document.getElementById('quantum-evolution-modal');
     const openQuantumBtn = document.getElementById('open-quantum-evolution-btn');
@@ -1183,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 7, 8, 9, 10, 11, 12: الوحدات الأمنية المختلفة
+    // MODULE 7 - 12: الوحدات الأمنية
     // ========================================================================
     const voiceDeepfakeToggle = document.getElementById('voice-deepfake-toggle');
     voiceDeepfakeToggle?.addEventListener('change', async () => {
@@ -1266,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 13 & 16: مصفوفة الحماية الذاتية ومفاعل اللقاحات المطور
+    // MODULE 13 & 16: مصفوفة الحماية الذاتية ومفاعل اللقاحات
     // ========================================================================
     const zeroDayModal = document.getElementById('zeroday-modal');
     const openZeroDayBtn = document.getElementById('open-zeroday-btn');
@@ -1372,7 +1380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { listenToGlobalSwarmVaccines(); }, 2000);
 
     // ========================================================================
-    // MODULE 14 & 15: تهيئة النوافذ، الأحداث، الخزنة، وإدارة الاتصال
+    // MODULE 14 & 15: النوافذ والخزنة
     // ========================================================================
     const disclosureModal = document.getElementById('disclosure-modal');
     const acceptBtn = document.getElementById('accept-btn');
@@ -1521,8 +1529,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         isConnected = true;
         statusOrb?.classList.add('connected');
-        if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر السحابة والمفاعل الضوئي';
-        if (ipDisplay) ipDisplay.textContent = `IP الحقيقي المُبدّل: ${currentServerIp} (${currentServerName})`;
+        if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر WireGuard WARP';
+        
+        fetchUserRealPublicIp();
+
         if (connectBtn) connectBtn.textContent = 'إيقاف درع الحماية';
         if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
         if (uploadSpeed) uploadSpeed.textContent = '9.2 MB/s';
@@ -1599,7 +1609,6 @@ document.addEventListener('DOMContentLoaded', () => {
             serversModal?.classList.add('hidden');
             showToast(`🌐 تم اختيار الخادم: ${currentServerName}`);
             if (isConnected) {
-                if (ipDisplay) ipDisplay.textContent = `IP الحقيقي الجديد: ${currentServerIp} (محمي)`;
                 localStorage.setItem('apex_server_ip', currentServerIp);
                 localStorage.setItem('apex_server_name', currentServerName);
             }
@@ -1632,7 +1641,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('📍 تم تحديث محاكي الـ GPS الوهمي ليطابق الدولة بنجاح');
     });
 
-    // تقييد التوجيه المزدوج للنسخة المدفوعة Pro
     openDoubleVpnBtn?.addEventListener('click', () => {
         enforceProLock('التوجيه المزدوج Double VPN', () => {
             doubleVpnModal?.classList.remove('hidden');
@@ -1702,7 +1710,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // تقييد الخزنة المشفرة للنسخة المدفوعة Pro
     openVaultBtn?.addEventListener('click', () => {
         enforceProLock('الخزنة المشفرة عسكرياً', () => {
             renderVaultItems();
@@ -1790,7 +1797,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closePredBtn?.addEventListener('click', () => predModal?.classList.add('hidden'));
 
     // ========================================================================
-    // رادار التهديدات مع التحسين التلقائي للقراءات
+    // رادار التهديدات
     // ========================================================================
     openRadarBtn?.addEventListener('click', () => { 
         radarModal?.classList.remove('hidden'); 
@@ -1940,7 +1947,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeWifiBtn?.addEventListener('click', () => wifiModal?.classList.add('hidden'));
 
     // ========================================================================
-    // قياس السرعة والبينغ الحقيقي عبر أداء الشبكة الحقيقي
+    // قياس السرعة والبينغ الحقيقي
     // ========================================================================
     closeSpeedBtn?.addEventListener('click', () => speedModal?.classList.add('hidden'));
     startSpeedTest?.addEventListener('click', async () => {
@@ -2038,7 +2045,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSessionTimerAndNotifications() {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
-        sendPhoneNotification("🛡️ Apex Chrono-Photonic AI نشط", `تم تفعيل الحماية وتوجيه نفق WARP المشفر (${currentServerName})`);
+        sendPhoneNotification("🛡️ Apex Chrono-Photonic AI نشط", `تم تفعيل الحماية وتوجيه نفق WireGuard المشفر (${currentServerName})`);
         timerInterval = setInterval(() => {
             sessionSeconds++;
             const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
@@ -2064,7 +2071,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isConnected = false;
         statusOrb?.classList.remove('connected');
         if (connectionStatus) connectionStatus.textContent = 'غير متصل بالدرع';
-        if (ipDisplay) ipDisplay.textContent = `IP الحقيقي: ${realUserPublicIp}`;
+        
+        fetchUserRealPublicIp();
+
         if (connectBtn) {
             connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
             connectBtn.disabled = false;
@@ -2085,7 +2094,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await requestDevicePermissions();
 
         if (!isConnected) {
-            connectBtn.textContent = 'جاري الاتصال بنفق Cloudflare WARP المشفر...';
+            connectBtn.textContent = 'جاري الاتصال بنفق WireGuard المشفر...';
             connectBtn.disabled = true;
 
             const bridgeSuccess = await triggerNativeVpnConnection(true, currentServerIp, currentServerName);
@@ -2094,9 +2103,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bridgeSuccess) {
                     isConnected = true;
                     statusOrb?.classList.add('connected');
-                    const vpnTypeTag = isDoubleVpnActive ? ' (WARP Double Tunnel)' : (stealthToggle?.checked ? ' (Stealth WARP)' : '');
-                    if (connectionStatus) connectionStatus.textContent = navigator.onLine ? 'محمي ومتصل عبر شبكة Cloudflare WARP العالمية' : 'محمي بوضع الحماية المحلية (أوفلاين)';
-                    if (ipDisplay) ipDisplay.textContent = `IP WARP المشفر: ${currentServerIp} (${currentServerName})${vpnTypeTag}`;
+                    if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر شبكة WireGuard WARP المشفرة';
+                    
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'إيقاف درع الحماية';
                     if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '28.4 MB/s' : '45.2 MB/s';
@@ -2110,14 +2118,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('apex_server_name', currentServerName);
 
                     startSessionTimerAndNotifications();
+
+                    // إعادة فحص وجلب الـ IP المشفر الجديد تلقائياً وعرضه بالواجهة
+                    await fetchUserRealPublicIp();
+
                     await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال الآمن ونفق Cloudflare WARP عبر ${currentServerName}.`);
-                    showToast('🚀 تم الاتصال بنجاح وتفعيل نفق Cloudflare WARP المشفر!');
+                    showToast('🚀 تم الاتصال بنجاح وتفعيل نفق WireGuard المشفر!');
                 } else {
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
                     showToast('❌ تعذر إنشاء نفق VPN، يرجى منح أذونات الشبكة بالتطبيق');
                 }
-            }, 1500);
+            }, 2000);
         } else {
             connectBtn.textContent = 'جاري قطع الاتصال وإعادة الـ IP الحقيقي...';
             connectBtn.disabled = true;

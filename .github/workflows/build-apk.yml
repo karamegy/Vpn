@@ -52,7 +52,7 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Capacitor Android Platform & Fix Packages
+      - name: 2. Initialize Capacitor Android Platform & Configurations
         run: |
           rm -rf android
           npx cap add android
@@ -98,12 +98,6 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
-          
-          # تعديل ملف التوزيع برمجياً لضمان استخدام إصدار متاح ومتوافق تماماً
-          PROP_FILE="gradle/wrapper/gradle-wrapper.properties"
-          if [ -f "$PROP_FILE" ]; then
-            sed -i 's/gradle-.*-bin\.zip/gradle-8.5-bin.zip/g' "$PROP_FILE"
-          fi
           
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           

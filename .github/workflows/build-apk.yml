@@ -52,11 +52,11 @@ jobs:
           }
           EOF
 
-      - name: 2. Force Generate Android Platform & Gradle Wrapper
+      - name: 2. Fresh Android Environment & Gradle Wrapper Generation
         run: |
-          # توليد منصة الأندرويد وملفات الـ Gradle والـ Wrapper إجبارياً من الصفر لضمان وجود gradlew
-          npx cap add android || true
-          npx cap sync android
+          # حذف أي مجلد أندرويد قديم وتوليد بيئة جديدة بالكامل لضمان وجود gradlew سليمة
+          rm -rf android
+          npx cap add android
 
           # ضبط إصدارات SDK إلى 36
           if [ -f "android/variables.gradle" ]; then
@@ -81,6 +81,8 @@ jobs:
               sed -i '/<\/application>/i \    <service android:name="io.github.karamegy.Vpn.ApexVpnService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="false">\n        <intent-filter>\n            <action android:name="android.net.VpnService"/>\n        </intent-filter>\n    </service>' "$MANIFEST_PATH"
             fi
           fi
+
+          npx cap sync android
 
       - name: 3. Build & Sign APK & AAB Packages
         env:

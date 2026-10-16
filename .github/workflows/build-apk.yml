@@ -39,7 +39,6 @@ jobs:
           
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-          # إزالة خادم الويب الخارجي لضمان قراءة الملفات من داخل APK وتفعيل جسر VPN الأصلي
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.Vpn",
@@ -73,6 +72,16 @@ jobs:
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.2"/' android/app/build.gradle
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
             
+            # إضافة مستودع المكتبات المفتوحة لضمان جلب مكتبة Tunnel بنجاح
+            if ! grep -q "maven { url 'https://jitpack.io' }" android/build.gradle; then
+              sed -i "/allprojects {/a \    repositories { maven { url 'https://jitpack.io' } }" android/build.gradle || true
+            fi
+
+            # إضافة مكتبة WireGuard Tunnel الرسمية لكي يتعرف عليها ApexVpnService.java
+            if ! grep -q "com.github.wireguard.android-tunnel" android/app/build.gradle; then
+              echo 'dependencies { implementation "com.github.wireguard.android-tunnel:tunnel:1.0.20230707" }' >> android/app/build.gradle
+            fi
+
             if grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i -E 's/com\.android\.billingclient:billing:[^"]+/com.android.billingclient:billing:8.0.0/g' android/app/build.gradle
             else
@@ -83,7 +92,6 @@ jobs:
           TARGET_JAVA_DIR="android/app/src/main/java/io/github/karamegy/Vpn"
           mkdir -p "$TARGET_JAVA_DIR"
 
-          # نقل كافة ملفات الجافا المباشرة
           find /tmp/native_backup -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
 
           find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/package com\.apex\.shield;/package io.github.karamegy.Vpn;/g' {} +

@@ -114,7 +114,7 @@ jobs:
 
           npx cap sync android
 
-       - name: 3. Build & Sign APK & AAB Packages
+      - name: 3. Build & Sign APK & AAB Packages
         env:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}

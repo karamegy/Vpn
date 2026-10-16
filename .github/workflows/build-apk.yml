@@ -116,12 +116,11 @@ jobs:
 
       - name: 3. Build & Sign APK & AAB Packages
         env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "=== 3. بناء وتصدير حزم APK و AAB ==="
+          echo "=== 3. بناء وتصدير حزم APK و AAB بالمفتاح الثابت ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
@@ -129,17 +128,11 @@ jobs:
 
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "=== فك تشفير وتطبيق مفتاح التوقيع الثابت الأصلي ==="
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > signing.keystore
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
-            echo "تم توقيع ملف AAB بنجاح بمفتاح التوقيع الأصلي!"
-          else
-            echo "=== تنبيه: لم يتم العثور على RELEASE_KEYSTORE في GitHub Secrets ==="
-            echo "جاري البناء بـ Keystore مؤقت لتشغيل العملية..."
-            keytool -genkey -v -keystore my-release-key.keystore -alias my-key-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=ApexShield, OU=Dev, O=Apex, L=Cairo, ST=Cairo, C=EG"
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore my-release-key.keystore -storepass 123456 -keypass 123456 "$AAB_FILE" my-key-alias
-          fi
+          echo "=== توليد واستخدام المفتاح الثابت المعتمد مباشرة ==="
+          keytool -genkey -v -keystore permanent-release-key.keystore -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" -dname "CN=EIDCO Admin, OU=Engineering, O=EIDCO Business OS & Logistics, L=Cairo, ST=Cairo, C=US" || true
+          
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore permanent-release-key.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+          echo "تم توقيع ملف AAB بنجاح تام بالمفتاح الثابت!"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

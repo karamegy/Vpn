@@ -99,8 +99,11 @@ jobs:
         run: |
           cd android
           
-          # تثبيت إصدار Gradle المحلي للمشروع ومنع أي تحميل خارجي معطل
-          ./gradlew wrapper --gradle-version 8.2 --distribution-type all || true
+          # تعديل ملف التوزيع برمجياً لضمان استخدام إصدار متاح ومتوافق تماماً
+          PROP_FILE="gradle/wrapper/gradle-wrapper.properties"
+          if [ -f "$PROP_FILE" ]; then
+            sed -i 's/gradle-.*-bin\.zip/gradle-8.5-bin.zip/g' "$PROP_FILE"
+          fi
           
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           

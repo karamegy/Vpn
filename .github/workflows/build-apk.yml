@@ -61,9 +61,17 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Clean Capacitor Android Platform, Target SDK 36 & Version Code 26
+      - name: 2. Initialize Clean Capacitor Android Platform & Fix Java Paths
         run: |
-          echo "=== 2. إعادة بناء بيئة أندرويد وحقن جسر وخدمة الـ VPN الأصلية ==="
+          echo "=== 2. بناء بيئة أندرويد وتصحيح مسارات الجسر الأصلي ==="
+          
+          # حفظ ملفات الجافا القديمة إن وجدت في مسارها الصحيح
+          mkdir -p /tmp/native_backup
+          if [ -d "android/app/src/main/java" ]; then
+            cp -r android/app/src/main/java /tmp/native_backup/
+          fi
+
+          rm -rf android
           npx cap add android
 
           if [ -f "android/variables.gradle" ]; then
@@ -83,132 +91,32 @@ jobs:
             fi
           fi
 
-          # إنشاء مسار الحزمة البرمجية لجسر أندرويد
+          # إنشاء مسار الحزمة الصحيح والمطابق لـ appId (io/github/karamegy/Vpn)
           TARGET_JAVA_DIR="android/app/src/main/java/io/github/karamegy/Vpn"
           mkdir -p "$TARGET_JAVA_DIR"
 
-          # حقن كود جسر الـ Capacitor الأصلي (AndroidVPNBridge.java)
-          cat << 'EOF' > "$TARGET_JAVA_DIR/AndroidVPNBridge.java"
-          package io.github.karamegy.Vpn;
+          # نقل واستعادة ملفات الجافا وتحديث حزمتها برمجياً لتتطابق تماماً
+          if [ -d "/tmp/native_backup/java" ]; then
+            find /tmp/native_backup/java -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
+          fi
 
-          import android.content.Intent;
-          import android.net.VpnService;
-          import com.getcapacitor.JSObject;
-          import com.getcapacitor.Plugin;
-          import com.getcapacitor.PluginCall;
-          import com.getcapacitor.PluginMethod;
-          import com.getcapacitor.annotation.CapacitorPlugin;
+          # تحديث محتوى ملفات الجافا لتستخدم الحزمة الصحيحة وتتعرف على كاباسيتور
+          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/package com\.apex\.shield;/package io.github.karamegy.Vpn;/g' {} +
+          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
 
-          @CapacitorPlugin(name = "AndroidVPNBridge")
-          public class AndroidVPNBridge extends Plugin {
+          # التأكد من وجود ملف AndroidVPNBridgePlugin.java وتحديث اسم الكلاس لو تطابق مع النداء
+          if [ -f "$TARGET_JAVA_DIR/AndroidVPNBridgePlugin.java" ]; then
+            sed -i 's/@CapacitorPlugin(name = "AndroidVPNBridge")/ /g' "$TARGET_JAVA_DIR/AndroidVPNBridgePlugin.java" || true
+          fi
 
-              @PluginMethod
-              public void toggleVpn(PluginCall call) {
-                  boolean enable = call.getBoolean("enable", false);
-                  String serverIp = call.getString("serverIp");
-                  
-                  if (enable) {
-                      Intent intent = VpnService.prepare(getContext());
-                      if (intent != null) {
-                          startActivityForResult(call, intent, "vpnPermissionResult");
-                      } else {
-                          startVpnService(serverIp);
-                          JSObject ret = new JSObject();
-                          ret.put("success", true);
-                          call.resolve(ret);
-                      }
-                  } else {
-                      stopVpnService();
-                      JSObject ret = new JSObject();
-                      ret.put("success", true);
-                      call.resolve(ret);
-                  }
-              }
-
-              @Override
-              protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
-                  super.handleOnActivityResult(requestCode, resultCode, data);
-                  PluginCall savedCall = getSavedCall();
-                  if (savedCall != null) {
-                      if (resultCode == android.app.Activity.RESULT_OK) {
-                          String serverIp = savedCall.getString("serverIp");
-                          startVpnService(serverIp);
-                          JSObject ret = new JSObject();
-                          ret.put("success", true);
-                          savedCall.resolve(ret);
-                      } else {
-                          JSObject ret = new JSObject();
-                          ret.put("success", false);
-                          savedCall.resolve(ret);
-                      }
-                  }
-              }
-
-              private void startVpnService(String serverIp) {
-                  Intent intent = new Intent(getContext(), ApexVpnService.class);
-                  intent.putExtra("serverIp", serverIp);
-                  getContext().startService(intent);
-              }
-
-              private void stopVpnService() {
-                  Intent intent = new Intent(getContext(), ApexVpnService.class);
-                  getContext().stopService(intent);
-              }
-          }
-          EOF
-
-          # حقن خدمة تشغيل النفق الحقيقي (ApexVpnService.java)
-          cat << 'EOF' > "$TARGET_JAVA_DIR/ApexVpnService.java"
-          package io.github.karamegy.Vpn;
-
-          import android.content.Intent;
-          import android.net.VpnService;
-          import android.os.ParcelFileDescriptor;
-          import java.io.IOException;
-
-          public class ApexVpnService extends VpnService {
-              private ParcelFileDescriptor mInterface;
-
-              @Override
-              public int onStartCommand(Intent intent, int flags, int startId) {
-                  try {
-                      Builder builder = new Builder();
-                      builder.addAddress("10.0.0.2", 24);
-                      builder.addRoute("0.0.0.0", 0);
-                      builder.addDnsServer("1.1.1.1");
-                      builder.setSession("Apex Shield WARP");
-                      mInterface = builder.establish();
-                  } catch (Exception e) {
-                      e.printStackTrace();
-                  }
-                  return START_STICKY;
-              }
-
-              @Override
-              public void onDestroy() {
-                  super.onDestroy();
-                  if (mInterface != null) {
-                      try {
-                          mInterface.close();
-                      } catch (IOException e) {
-                          e.printStackTrace();
-                      }
-                      mInterface = null;
-                  }
-              }
-          }
-          EOF
-
-          # تحديث ملف الـ AndroidManifest.xml لإضافة صلاحيات خدمة الـ VPN وتسجيل الخدمة
+          # حقن صلاحية الخدمة وصلاحيات الـ VPN داخل ملف الـ Manifest
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
-            # التأكد من وجود صلاحية BIND_VPN_SERVICE
             if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then
               sed -i '/<uses-permission android:name="android\.permission\.INTERNET"/a \    <uses-permission android:name="android.permission.BIND_VPN_SERVICE"/>' "$MANIFEST_PATH"
             fi
-            # حقن تعريف الخدمة داخل الـ application
             if ! grep -q "ApexVpnService" "$MANIFEST_PATH"; then
-              sed -i '/<\/application>/i \    <service android:name=".ApexVpnService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="true">\n        <intent-filter>\n            <action android:name="android.net.VpnService"/>\n        </intent-filter>\n    </service>' "$MANIFEST_PATH"
+              sed -i '/<\/application>/i \    <service android:name="io.github.karamegy.Vpn.ApexVpnService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="true">\n        <intent-filter>\n            <action android:name="android.net.VpnService"/>\n        </intent-filter>\n    </service>' "$MANIFEST_PATH"
             fi
           fi
 

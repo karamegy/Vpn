@@ -82,9 +82,10 @@ jobs:
 
           if [ -f "android/app/build.gradle" ]; then
             sed -i -E 's/versionCode [0-9]+/versionCode 24/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]+"/versionName "36"' android/app/build.gradle
-            # تحديث مكتبة Google Play Billing تلقائياً لتتجاوز خطأ المتجر
-            echo 'dependencies { implementation "com.android.billingclient:billing:7.1.1" }' >> android/app/build.gradle
+            sed -i -E 's/versionName "[^"]+"/versionName "36"/' android/app/build.gradle
+            if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
+              echo 'dependencies { implementation "com.android.billingclient:billing:7.1.1" }' >> android/app/build.gradle
+            fi
           fi
 
           TARGET_JAVA_DIR="android/app/src/main/java/io/github/karamegy/Vpn"

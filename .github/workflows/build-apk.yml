@@ -52,36 +52,31 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Capacitor Android Platform & Fix Versions & Java Packages
+      - name: 2. Initialize Capacitor Android Platform & Fix Packages
         run: |
-          mkdir -p /tmp/native_backup
-          if [ -d "android/app/src/main/java" ]; then
-            cp -r android/app/src/main/java /tmp/native_backup/
-          fi
-
           rm -rf android
           npx cap add android
 
-          # ضبط إصدارات الـ SDK إلى 36
+          TARGET_DIR="android/app/src/main/java/io/github/karamegy/Vpn"
+          mkdir -p "$TARGET_DIR"
+
+          if [ -d "android/app/src/main/java/com/apex/shield" ]; then
+            cp -r android/app/src/main/java/com/apex/shield/* "$TARGET_DIR/" 2>/dev/null || true
+          fi
+
+          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/package com\.apex\.shield;/package io.github.karamegy.Vpn;/g' {} +
+          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
+
           if [ -f "android/variables.gradle" ]; then
             sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
             sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
           fi
 
-          # ضبط رقم الإصدار versionCode 24 و versionName 8.0.0.3
           if [ -f "android/app/build.gradle" ]; then
             sed -i -E 's/versionCode [0-9]+/versionCode 24/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.3"/' android/app/build.gradle
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
           fi
-
-          TARGET_JAVA_DIR="android/app/src/main/java/io/github/karamegy/Vpn"
-          mkdir -p "$TARGET_JAVA_DIR"
-
-          find /tmp/native_backup -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
-
-          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/package com\.apex\.shield;/package io.github.karamegy.Vpn;/g' {} +
-          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
 
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
@@ -103,6 +98,10 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
+          
+          # تثبيت إصدار Gradle المحلي للمشروع ومنع أي تحميل خارجي معطل
+          ./gradlew wrapper --gradle-version 8.2 --distribution-type all || true
+          
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
           chmod +x gradlew

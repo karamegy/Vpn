@@ -124,8 +124,8 @@ jobs:
           echo "=== 3. فك تشفير المفتاح الأصلي وبناء وتوقيع الحزمة ==="
           cd android
           
-          # فك تشفير Base64 واسترجاع ملف signing.keystore الأصلي
-          echo "$RELEASE_KEY" | base64 --decode > signing.keystore
+          # فك تشفير Base64 بدقة باستخدام printf لتجنب الأسطر والمساحات الزائدة
+          printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"

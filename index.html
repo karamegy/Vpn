@@ -47,7 +47,7 @@
     <!-- حاوية التنبيهات الفورية العائمة (Toast Notifications) -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- نافذة الاشتراكات المتقدمة (Apex Shield Pro) [جديد] -->
+    <!-- نافذة الاشتراكات المتقدمة (Apex Shield Pro) -->
     <div id="pro-subscription-modal" class="modal hidden" style="z-index: 1000000;">
         <div class="modal-content glass-panel text-center" style="border: 1px solid #f59e0b; box-shadow: 0 0 25px rgba(245, 158, 11, 0.3);">
             <h2 style="color: #f59e0b; font-size: 1.6rem; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);">💎 Apex Shield Pro</h2>
@@ -330,7 +330,7 @@
             <p>إجبار نظام هاتفك وتطبيقات الخرائط على قراءة إحداثيات متوافقة مع دولة خادم الـ VPN:</p>
             <div class="wifi-stats-box">
                 <div class="wifi-row"><span>موقع الـ GPS الحالي:</span> <strong id="gps-current-loc" style="color: #38bdf8;">متطابق مع الخادم (فرنكفورت، ألمانيا)</strong></div>
-                <div class="wifi-row"><span>حالة التمويه المكاني:</span> <strong style="color: #10b981;">محصن تماماً ضد التتبع بالأقمار</strong></div>
+                <div class="wifi-row"><span>حالة التمويه المكانى:</span> <strong style="color: #10b981;">محصن تماماً ضد التتبع بالأقمار</strong></div>
             </div>
             <button id="toggle-gps-mock" class="btn-primary" style="margin-top: 15px; width: 100%;">تحديث الإحداثيات الوهمية</button>
             <button id="close-gps-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
@@ -521,7 +521,7 @@
     <div id="policy-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>سياسة الخصوصية والشفافية</h2>
-            <p>نحن نؤمن بأن الخصوصية حق أساسي. لا نقوم بجمع أو بيع بيانات التصفح، ويتم تشفير كافة البيانات عبر بروتوكولات متتقدمة.</p>
+            <p>نحن نؤمن بأن الخصوصية حق أساسي. لا نقوم بجمع أو بيع بيانات التصفح، ويتم تشفير كافة البيانات عبر بروتوكولات متقدمة.</p>
             <a href="privacy-policy.html" target="_blank" class="btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 15px; width: 100%;">عرض سياسة الخصوصية الكاملة 📄</a>
             <button id="close-policy-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">فهمت وإغلاق</button>
         </div>
@@ -578,7 +578,7 @@
             <!-- لوحة الميزات الفريدة والاختراعات المصرية -->
             <div class="advanced-panel glass-card">
 
-                <!-- زر الترقية لنسخة Pro [جديد] -->
+                <!-- زر الترقية لنسخة Pro -->
                 <div class="setting-row clickable-row" id="open-pro-subscription-btn" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%); border: 1px solid rgba(245, 158, 11, 0.3);">
                     <span style="color: #f59e0b; font-weight: bold;">💎 الترقية إلى Apex Shield Pro</span>
                     <span class="accent-link" style="color: #fcd34d; font-weight: bold;">ترقية الآن</span>
@@ -770,6 +770,8 @@
         </footer>
     </div>
 
+    <!-- ربط جسر كاباسيتور الأندرويد الأصلي لضمان الدفع والاتصال السريع -->
+    <script src="capacitor.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

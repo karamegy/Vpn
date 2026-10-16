@@ -52,11 +52,10 @@ jobs:
           }
           EOF
 
-      - name: 2. Clean Initialize Capacitor Android Platform & Configurations
+      - name: 2. Sync and Update Existing Android Project
         run: |
-          # مسح أي مجلد أندرويد قديم لضمان نظافة الملفات وعدم حدوث خطأ مفقود
-          rm -rf android
-          npx cap add android
+          # عدم حذف مجلد الأندرويد، بل تحديثه ومزامنته مباشرة مع الويب والتكوينات
+          npx cap sync android
 
           # ضبط إصدارات SDK إلى 36
           if [ -f "android/variables.gradle" ]; then
@@ -71,7 +70,7 @@ jobs:
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
           fi
 
-          # حقن صلاحيات وخدمة الـ VPN الحقيقية في الـ Manifest
+          # حقن صلاحيات وخدمة الـ VPN في الـ Manifest
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
             if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then
@@ -82,8 +81,6 @@ jobs:
             fi
           fi
 
-          npx cap sync android
-
       - name: 3. Build & Sign APK & AAB Packages
         env:
           RELEASE_KEY: ${{ secrets.RELEASE_KEY }}
@@ -93,17 +90,11 @@ jobs:
         run: |
           cd android
           
-          # ضبط رابط الـ Gradle ليكون مستقراً تماماً
-          PROP_FILE="gradle/wrapper/gradle-wrapper.properties"
-          if [ -f "$PROP_FILE" ]; then
-            sed -i 's/distributionUrl=.*$/distributionUrl\=https\:\/\/services.gradle.org\/distributions\/gradle-8.5-bin.zip/g' "$PROP_FILE"
-          fi
-
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
-          ./gradlew clean assembleDebug bundleRelease --no-daemon
+          ./gradlew assembleDebug bundleRelease --no-daemon
 
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 

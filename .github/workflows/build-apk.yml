@@ -121,7 +121,12 @@ jobs:
 
           npx cap sync android
 
-      - name: 3. Build & Sign APK & AAB Packages
+      - name: 3. Build & Sign APK & AAB Packages using Fixed Keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           echo "=== 3. بناء وتوقيع حزم APK و AAB ==="
           cd android
@@ -129,15 +134,21 @@ jobs:
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           ./gradlew assembleDebug bundleRelease --no-daemon
 
-          echo "=== 4. إنشاء مفتاح التوقيع وتوقيع ملف AAB تلقائياً ==="
-          keytool -genkey -v -keystore my-release-key.keystore -alias my-key-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=ApexShield, OU=Dev, O=Apex, L=Cairo, ST=Cairo, C=EG"
-          
-          AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
-          if [ -f "$AAB_FILE" ]; then
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore my-release-key.keystore -storepass 123456 -keypass 123456 "$AAB_FILE" my-key-alias
-            echo "تم توقيع ملف AAB بنجاح وجاهز للرفع!"
+          echo "=== 4. فك تشفير وتطبيق مفتاح التوقيع الثابت ==="
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
+            
+            AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
+            if [ -f "$AAB_FILE" ]; then
+              jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+              echo "تم توقيع ملف AAB بنجاح باستخدام المفتاح المعتمد!"
+            else
+              echo "خطأ: لم يتم العثور على ملف AAB!"
+              exit 1
+            fi
           else
-            echo "خطأ: لم يتم العثور على ملف AAB!"
+            echo "خطأ: لم يتم العثور على RELEASE_KEYSTORE في GitHub Secrets!"
+            echo "يرجى إضافة مفتاح التوقيع الثابت في أسرار المستودع."
             exit 1
           fi
 

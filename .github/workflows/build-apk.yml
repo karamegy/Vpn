@@ -52,11 +52,13 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Capacitor Android Platform & Configurations
+      - name: 2. Clean Initialize Capacitor Android Platform & Configurations
         run: |
-          npx cap add android || true
+          # مسح أي مجلد أندرويد قديم لضمان نظافة الملفات وعدم حدوث خطأ مفقود
+          rm -rf android
+          npx cap add android
 
-          # ضمان ضبط إصدارات SDK إلى 36
+          # ضبط إصدارات SDK إلى 36
           if [ -f "android/variables.gradle" ]; then
             sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
             sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
@@ -69,7 +71,7 @@ jobs:
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
           fi
 
-          # حقن صلاحيات وخدمة الـ VPN الحقيقية في الـ Manifest إن لم تكن موجودة
+          # حقن صلاحيات وخدمة الـ VPN الحقيقية في الـ Manifest
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
             if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then
@@ -91,7 +93,7 @@ jobs:
         run: |
           cd android
           
-          # تثبيت إصدار Gradle متوافق ومستقر لمنع أي خطأ في التحميل
+          # ضبط رابط الـ Gradle ليكون مستقراً تماماً
           PROP_FILE="gradle/wrapper/gradle-wrapper.properties"
           if [ -f "$PROP_FILE" ]; then
             sed -i 's/distributionUrl=.*$/distributionUrl\=https\:\/\/services.gradle.org\/distributions\/gradle-8.5-bin.zip/g' "$PROP_FILE"

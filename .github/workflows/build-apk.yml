@@ -61,9 +61,17 @@ jobs:
           }
           EOF
 
-      - name: 2. Initialize Clean Capacitor Android Platform & Set SDK 36
+      - name: 2. Initialize Capacitor Android Platform & Restore Java Source Files
         run: |
-          echo "=== 2. إعادة إنشاء بيئة أندرويد نظيفة تماماً وضبط SDK 36 ==="
+          echo "=== 2. الاحتفاظ بملفات الكود المصدري وإعادة بناء بيئة أندرويد بأمان ==="
+          mkdir -p /tmp/native_backup
+          if [ -d "android/app/src/main/java" ]; then
+            cp -r android/app/src/main/java /tmp/native_backup/
+          fi
+          if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+            cp android/app/src/main/AndroidManifest.xml /tmp/native_backup/
+          fi
+
           rm -rf android
           npx cap add android
 
@@ -77,8 +85,19 @@ jobs:
             sed -i -E 's/versionName "[^"]+"/versionName "36"/' android/app/build.gradle
           fi
 
-          # تعديل الحزمة داخل ملفات الجافا والـ Manifest تلقائياً
-          find android/app/src/main -type f -name "*.java" -o -name "AndroidManifest.xml" | xargs sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' 2>/dev/null || true
+          # استعادة مجلد الجافا ودمجه في المسار الصحيح للحزمة الجديدة
+          TARGET_JAVA_DIR="android/app/src/main/java/io/github/karamegy/Vpn"
+          mkdir -p "$TARGET_JAVA_DIR"
+          if [ -d "/tmp/native_backup/java" ]; then
+            find /tmp/native_backup/java -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
+          fi
+
+          if [ -f "/tmp/native_backup/AndroidManifest.xml" ]; then
+            cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+            sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' android/app/src/main/AndroidManifest.xml
+          fi
+
+          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
 
           mkdir -p android/app/src/main/res/values
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
@@ -98,11 +117,11 @@ jobs:
 
       - name: 3. Build Release Bundle (AAB) & APK
         run: |
-          echo "=== 3. بناء حزم التطبيق بنجاح بدون أخطاء ==="
+          echo "=== 3. بناء حزم التطبيق مع الحفاظ على كافة الملفات المصدرية ==="
           cd android
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
-          ./gradlew clean assembleDebug bundleRelease --no-daemon
+          ./gradlew assembleDebug bundleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

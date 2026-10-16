@@ -119,11 +119,11 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: |
           echo "=== 3. استعادة ملف المفتاح الثابت الحقيقي وتوقيع الحزم ==="
           
-          # فك تشفير واستعادة ملف المفتاح الأصلي الخاص بك حصراً
+          # فك تشفير واستعادة ملف المفتاح باستخدام اسم الـ Secret الصحيح
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/real-release-key.keystore
 
           cd android

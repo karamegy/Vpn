@@ -72,16 +72,6 @@ jobs:
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.2"/' android/app/build.gradle
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
             
-            # إضافة مستودع المكتبات المفتوحة لضمان جلب مكتبة Tunnel بنجاح
-            if ! grep -q "maven { url 'https://jitpack.io' }" android/build.gradle; then
-              sed -i "/allprojects {/a \    repositories { maven { url 'https://jitpack.io' } }" android/build.gradle || true
-            fi
-
-            # إضافة مكتبة WireGuard Tunnel الرسمية لكي يتعرف عليها ApexVpnService.java
-            if ! grep -q "com.github.wireguard.android-tunnel" android/app/build.gradle; then
-              echo 'dependencies { implementation "com.github.wireguard.android-tunnel:tunnel:1.0.20230707" }' >> android/app/build.gradle
-            fi
-
             if grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i -E 's/com\.android\.billingclient:billing:[^"]+/com.android.billingclient:billing:8.0.0/g' android/app/build.gradle
             else
@@ -94,8 +84,10 @@ jobs:
 
           find /tmp/native_backup -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
 
+          # تصحيح أي استيراد خاطئ لـ Tunnel داخل ملفات الجافا لضمان عدم وجود أخطاء تجميع
           find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/package com\.apex\.shield;/package io.github.karamegy.Vpn;/g' {} +
           find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
+          find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/import com\.wireguard.*//g' {} +
 
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then

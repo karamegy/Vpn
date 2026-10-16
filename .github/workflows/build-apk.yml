@@ -65,7 +65,6 @@ jobs:
         run: |
           echo "=== 2. بناء بيئة أندرويد وتصحيح مسارات الجسر الأصلي ==="
           
-          # حفظ ملفات الجافا القديمة إن وجدت في مسارها الصحيح
           mkdir -p /tmp/native_backup
           if [ -d "android/app/src/main/java" ]; then
             cp -r android/app/src/main/java /tmp/native_backup/
@@ -91,25 +90,20 @@ jobs:
             fi
           fi
 
-          # إنشاء مسار الحزمة الصحيح والمطابق لـ appId (io/github/karamegy/Vpn)
+          # إنشاء مسار الحزمة المطابق لـ appId (io/github/karamegy/Vpn)
           TARGET_JAVA_DIR="android/app/src/main/java/io/github/karamegy/Vpn"
           mkdir -p "$TARGET_JAVA_DIR"
 
-          # نقل واستعادة ملفات الجافا وتحديث حزمتها برمجياً لتتطابق تماماً
+          # نقل ملفات الجافا من النسخة الاحتياطية أو المجلد الأصلي
           if [ -d "/tmp/native_backup/java" ]; then
             find /tmp/native_backup/java -type f -name "*.java" -exec cp {} "$TARGET_JAVA_DIR/" \; 2>/dev/null || true
           fi
 
-          # تحديث محتوى ملفات الجافا لتستخدم الحزمة الصحيحة وتتعرف على كاباسيتور
+          # تصحيح الـ package في جميع ملفات الجافا لتصبح io.github.karamegy.Vpn
           find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/package com\.apex\.shield;/package io.github.karamegy.Vpn;/g' {} +
           find android/app/src/main/java -type f -name "*.java" -exec sed -i 's/com\.apex\.shield/io\.github\.karamegy\.Vpn/g' {} +
 
-          # التأكد من وجود ملف AndroidVPNBridgePlugin.java وتحديث اسم الكلاس لو تطابق مع النداء
-          if [ -f "$TARGET_JAVA_DIR/AndroidVPNBridgePlugin.java" ]; then
-            sed -i 's/@CapacitorPlugin(name = "AndroidVPNBridge")/ /g' "$TARGET_JAVA_DIR/AndroidVPNBridgePlugin.java" || true
-          fi
-
-          # حقن صلاحية الخدمة وصلاحيات الـ VPN داخل ملف الـ Manifest
+          # حقن صلاحية الخدمة وصلاحيات الـ VPN داخل AndroidManifest.xml
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
             if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then

@@ -114,25 +114,27 @@ jobs:
 
           npx cap sync android
 
-      - name: 3. Build & Sign APK & AAB Packages
+      - name: 3. Build & Sign APK & AAB Packages with Real Keystore
         env:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
-          echo "=== 3. بناء وتصدير حزم APK و AAB بالمفتاح الثابت ==="
+          echo "=== 3. فك تشفير المفتاح الحقيقي وتوقيع حزم التطبيق به ==="
           cd android
+          
+          # استعادة ملف المفتاح الحقيقي من الـ Secrets وتجنب توليد مفتاح عشوائي
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > permanent-release-key.keystore
+          
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           ./gradlew assembleDebug bundleRelease --no-daemon
 
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
-
-          echo "=== توليد واستخدام المفتاح الثابت المعتمد مباشرة ==="
-          keytool -genkey -v -keystore permanent-release-key.keystore -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" -dname "CN=EIDCO Admin, OU=Engineering, O=EIDCO Business OS & Logistics, L=Cairo, ST=Cairo, C=US" || true
           
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore permanent-release-key.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
-          echo "تم توقيع ملف AAB بنجاح تام بالمفتاح الثابت!"
+          echo "تم توقيع ملف AAB بنجاح تام بالمفتاح الأصلي وثبتت البصمة!"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

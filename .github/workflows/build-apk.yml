@@ -89,7 +89,7 @@ jobs:
               bg = bg.replace(/minifyEnabled\s+true/g, "minifyEnabled false");
               
               if (!bg.includes("com.wireguard.android:tunnel")) {
-                bg = bg.replace(/dependencies\s*\{/, "dependencies {\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
+                bg += "\n\ndependencies {\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"\n}\n";
               }
 
               if (!bg.includes("packagingOptions")) {

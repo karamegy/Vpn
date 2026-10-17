@@ -94,13 +94,17 @@ jobs:
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS"
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
           
+          # إنشاء مجلد مخصص للملفات الموقعة لتجنب الخلط مع ملف الـ unsigned
+          mkdir -p ../signed-output
+          cp "$APK_FILE" ../signed-output/ApexShield-Release-Signed.apk
+          
           rm -f signing.keystore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-APK-DirectInstall
-          path: android/app/build/outputs/apk/release/*.apk
+          path: signed-output/*.apk
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4

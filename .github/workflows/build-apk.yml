@@ -53,13 +53,7 @@ jobs:
         run: |
           export CI=true
           
-          # التحقق الذكي: لو مجلد android مش موجود نشئه، لو موجود نتخطاه تماماً عشان ميعملش إيرور
-          if [ ! -d "android" ]; then
-            npx cap add android
-          else
-            echo "مجلد الأندرويد موجود مسبقاً، جاري المزامنة فقط..."
-          fi
-          
+          # مزامنة الملفات مباشرة لأن مجلد android موجود بالفعل في المشروع
           npx cap sync android
 
           if [ -f "android/app/build.gradle" ]; then

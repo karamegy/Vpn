@@ -32,15 +32,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 1. Backup Native Java Code & Setup Web Assets
+      - name: 1. Setup Web Assets & Local Config
         run: |
-          # 1.1 عمل نسخة احتياطية لملفات الجافا الأصلية لمنع فقدانها
-          mkdir -p /tmp/java_backup
-          if [ -d "android/app/src/main/java" ]; then
-            cp -r android/app/src/main/java/* /tmp/java_backup/
-          fi
-
-          # 1.2 تجهيز مجلد www وملفات الويب
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           
@@ -48,7 +41,6 @@ jobs:
             npm init -y
           fi
           
-          # تثبيت إصدار مستقر من Capacitor
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
 
           cat << 'EOF' > capacitor.config.json
@@ -64,15 +56,11 @@ jobs:
           }
           EOF
 
-      - name: 2. Generate Android Project & Restore Custom Java Code
+      - name: 2. Preserve Native Java & Sync Capacitor
         run: |
-          rm -rf android
-          npx cap add android
-
-          # استرجاع ملفات الجافا الخاصة بنفق الـ VPN والجسر
-          if [ -d "/tmp/java_backup" ] && [ "$(ls -A /tmp/java_backup)" ]; then
-            mkdir -p android/app/src/main/java
-            cp -r /tmp/java_backup/* android/app/src/main/java/
+          # الحفاظ على مجلد android الأصلي وملفات الجافا الخاصة بالـ VPN وعدم مسحها
+          if [ ! -d "android" ]; then
+            npx cap add android
           fi
 
           cd android
@@ -81,14 +69,13 @@ jobs:
           fi
           cd ..
 
-          # ضبط مستويات Android SDK
           if [ -f "android/variables.gradle" ]; then
             sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
             sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 
-          # تحديث رقم الإصدار تلقائياً (versionCode 28 ليتفوق على 27 المقبول)
+          # تحديث رقم الإصدار إلى 28 و 8.0.0.4 ليتوافق مع متجر جوجل بلاي
           if [ -f "android/app/build.gradle" ]; then
             sed -i -E 's/versionCode [0-9]+/versionCode 28/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.4"/' android/app/build.gradle
@@ -97,7 +84,6 @@ jobs:
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
           fi
 
-          # التأكد من تكوين AndroidManifest.xml وخدمة الـ VPN
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
             if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then
@@ -124,27 +110,21 @@ jobs:
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           
-          # بناء نسخة الـ APK ونسخة الـ AAB المخصصة للمتجر
-          ./gradlew clean assembleRelease bundleRelease --no-daemon
+          # بناء APK التثبيت المباشر وحزمة AAB الخاصة بمتجر جوجل بلاي
+          ./gradlew clean assembleDebug bundleRelease --no-daemon
 
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
-          APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
 
-          # توقيع حزمة AAB المخصصة لمتجر Google Play
+          # توقيع حزمة AAB لمطبوعات Google Play
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
           
-          # توقيع حزمة APK للتثبيت المباشر
-          if [ -f "$APK_FILE" ]; then
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS"
-          fi
-
           rm -f signing.keystore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-v8.0.0.4-APK-DirectInstall
-          path: android/app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4

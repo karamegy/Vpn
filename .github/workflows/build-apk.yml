@@ -71,6 +71,7 @@ jobs:
           node -e '
             const fs = require("fs");
             
+            // Patch variables.gradle if exists
             const vgPath = "android/variables.gradle";
             if (fs.existsSync(vgPath)) {
               let vg = fs.readFileSync(vgPath, "utf8");
@@ -80,6 +81,7 @@ jobs:
               fs.writeFileSync(vgPath, vg);
             }
 
+            // Patch app/build.gradle
             const bgPath = "android/app/build.gradle";
             if (fs.existsSync(bgPath)) {
               let bg = fs.readFileSync(bgPath, "utf8");
@@ -97,6 +99,16 @@ jobs:
               }
 
               fs.writeFileSync(bgPath, bg);
+            }
+
+            // Ensure repositories in settings.gradle
+            const settingsPath = "android/settings.gradle";
+            if (fs.existsSync(settingsPath)) {
+              let settings = fs.readFileSync(settingsPath, "utf8");
+              if (!settings.includes("jitpack.io")) {
+                settings = settings.replace(/repositories\s*\{/, "repositories {\n        google()\n        mavenCentral()\n        maven { url \"https://jitpack.io\" }");
+                fs.writeFileSync(settingsPath, settings);
+              }
             }
           '
 

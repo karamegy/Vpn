@@ -101,13 +101,22 @@ jobs:
               fs.writeFileSync(bgPath, bg);
             }
 
-            // Ensure repositories in settings.gradle
+            // Ensure repositories in settings.gradle and root build.gradle
             const settingsPath = "android/settings.gradle";
             if (fs.existsSync(settingsPath)) {
               let settings = fs.readFileSync(settingsPath, "utf8");
               if (!settings.includes("jitpack.io")) {
                 settings = settings.replace(/repositories\s*\{/, "repositories {\n        google()\n        mavenCentral()\n        maven { url \"https://jitpack.io\" }");
                 fs.writeFileSync(settingsPath, settings);
+              }
+            }
+
+            const rootBuildPath = "android/build.gradle";
+            if (fs.existsSync(rootBuildPath)) {
+              let rootBuild = fs.readFileSync(rootBuildPath, "utf8");
+              if (!rootBuild.includes("jitpack.io")) {
+                rootBuild = rootBuild.replace(/allprojects\s*\{\s*repositories\s*\{/, "allprojects {\n    repositories {\n        google()\n        mavenCentral()\n        maven { url \"https://jitpack.io\" }");
+                fs.writeFileSync(rootBuildPath, rootBuild);
               }
             }
           '

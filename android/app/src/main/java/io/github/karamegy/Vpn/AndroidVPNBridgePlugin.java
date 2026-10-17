@@ -17,6 +17,26 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin {
 
+    /**
+     * فحص ما إذا كان إذن الـ VPN ممنوحاً مسبقاً من النظام
+     */
+    @PluginMethod
+    public void isPrepared(PluginCall call) {
+        Context context = getContext();
+        if (context == null) {
+            call.reject("السياق (Context) غير متوفر");
+            return;
+        }
+
+        Intent prepareIntent = VpnService.prepare(context);
+        JSObject ret = new JSObject();
+        ret.put("prepared", prepareIntent == null);
+        call.resolve(ret);
+    }
+
+    /**
+     * طلب إذن إعداد نفق الـ VPN من المستخدم عبر نافذة أندرويد الرسمية
+     */
     @PluginMethod
     public void prepareVpn(PluginCall call) {
         Context context = getContext();
@@ -31,6 +51,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
         } else {
             JSObject ret = new JSObject();
             ret.put("prepared", true);
+            ret.put("success", true);
             call.resolve(ret);
         }
     }
@@ -49,65 +70,9 @@ public class AndroidVPNBridgePlugin extends Plugin {
         }
     }
 
-    @PluginMethod
-    public void toggleVpn(PluginCall call) {
-        Context context = getContext();
-        if (context == null) {
-            call.reject("السياق (Context) غير متوفر");
-            return;
-        }
-
-        Boolean enable = call.getBoolean("enable", false);
-        String serverIp = call.getString("serverIp", "");
-        String serverName = call.getString("serverName", "");
-        String warpClientIp = call.getString("warpClientIp", "");
-        String warpEndpoint = call.getString("warpEndpoint", "");
-        String warpPrivateKey = call.getString("warpPrivateKey", "");
-
-        Intent intent = new Intent(context, ApexVpnService.class);
-
-        if (Boolean.TRUE.equals(enable)) {
-            Intent prepareIntent = VpnService.prepare(context);
-            if (prepareIntent != null) {
-                startActivityForResult(call, prepareIntent, "vpnPermissionResult");
-            } else {
-                try {
-                    intent.setAction(ApexVpnService.ACTION_CONNECT);
-                    intent.putExtra("serverIp", serverIp);
-                    intent.putExtra("serverName", serverName);
-                    intent.putExtra("warpClientIp", warpClientIp);
-                    intent.putExtra("warpEndpoint", warpEndpoint);
-                    intent.putExtra("warpPrivateKey", warpPrivateKey);
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(intent);
-                    } else {
-                        context.startService(intent);
-                    }
-
-                    JSObject ret = new JSObject();
-                    ret.put("success", true);
-                    ret.put("status", "connected");
-                    call.resolve(ret);
-                } catch (Exception e) {
-                    call.reject("فشل تشغيل خدمة الـ VPN: " + e.getMessage());
-                }
-            }
-        } else {
-            try {
-                intent.setAction(ApexVpnService.ACTION_DISCONNECT);
-                context.startService(intent);
-
-                JSObject ret = new JSObject();
-                ret.put("success", true);
-                ret.put("status", "disconnected");
-                call.resolve(ret);
-            } catch (Exception e) {
-                call.reject("فشل إيقاف خدمة الـ VPN: " + e.getMessage());
-            }
-        }
-    }
-
+    /**
+     * تشغيل خدمة الـ VPN وتمرير كافة بيانات السيرفر والتشفير
+     */
     @PluginMethod
     public void startVpn(PluginCall call) {
         Context context = getContext();
@@ -116,6 +81,14 @@ public class AndroidVPNBridgePlugin extends Plugin {
             return;
         }
 
+        // 1. التحقق الذاتي من الإذن؛ إذا لم يكن ممنوحاً يُطلب فوراً
+        Intent prepareIntent = VpnService.prepare(context);
+        if (prepareIntent != null) {
+            startActivityForResult(call, prepareIntent, "vpnPermissionResult");
+            return;
+        }
+
+        // 2. استخراج المعلمات من الواجهة الأمامية (JS)
         String serverIp = call.getString("serverIp", "");
         String serverName = call.getString("serverName", "");
         String warpClientIp = call.getString("warpClientIp", "");
@@ -131,6 +104,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
             intent.putExtra("warpEndpoint", warpEndpoint);
             intent.putExtra("warpPrivateKey", warpPrivateKey);
 
+            // 3. تشغيل الخدمة كـ Foreground Service لضمان عدم إغلاقها في الخلفية
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent);
             } else {
@@ -138,6 +112,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
             }
 
             JSObject ret = new JSObject();
+            ret.put("success", true);
             ret.put("status", "connected");
             call.resolve(ret);
         } catch (Exception e) {
@@ -145,6 +120,9 @@ public class AndroidVPNBridgePlugin extends Plugin {
         }
     }
 
+    /**
+     * إيقاف خدمة الـ VPN وإغلاق النفق
+     */
     @PluginMethod
     public void stopVpn(PluginCall call) {
         Context context = getContext();
@@ -156,13 +134,32 @@ public class AndroidVPNBridgePlugin extends Plugin {
         try {
             Intent intent = new Intent(context, ApexVpnService.class);
             intent.setAction(ApexVpnService.ACTION_DISCONNECT);
-            context.startService(intent);
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
 
             JSObject ret = new JSObject();
+            ret.put("success", true);
             ret.put("status", "disconnected");
             call.resolve(ret);
         } catch (Exception e) {
             call.reject("فشل إيقاف خدمة الـ VPN: " + e.getMessage());
+        }
+    }
+
+    /**
+     * تبديل حالة الخدمة (تشغيل / إيقاف) بشكل موحد
+     */
+    @PluginMethod
+    public void toggleVpn(PluginCall call) {
+        Boolean enable = call.getBoolean("enable", false);
+        if (Boolean.TRUE.equals(enable)) {
+            startVpn(call);
+        } else {
+            stopVpn(call);
         }
     }
 }

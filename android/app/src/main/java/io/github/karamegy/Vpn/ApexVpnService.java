@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.util.Base64;
 import android.util.Log;
 
 import com.wireguard.android.backend.GoBackend;
@@ -16,9 +17,9 @@ import com.wireguard.config.Config;
 import com.wireguard.config.InetNetwork;
 import com.wireguard.config.Interface;
 import com.wireguard.config.Peer;
-import com.wireguard.crypto.KeyPair;
 
 import java.net.InetAddress;
+import java.security.SecureRandom;
 
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
@@ -75,8 +76,10 @@ public class ApexVpnService extends VpnService {
                     if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
                         interfaceBuilder.parsePrivateKey(privateKeyBase64.trim());
                     } else {
-                        KeyPair keyPair = new KeyPair();
-                        interfaceBuilder.parsePrivateKey(keyPair.getPrivateKey().toBase64());
+                        byte[] randomBytes = new byte[32];
+                        new SecureRandom().nextBytes(randomBytes);
+                        String generatedKey = Base64.encodeToString(randomBytes, Base64.NO_WRAP);
+                        interfaceBuilder.parsePrivateKey(generatedKey);
                     }
 
                     String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
@@ -219,7 +222,7 @@ public class ApexVpnService extends VpnService {
     }
 
     @Override
-    public void onDestroy() {
+     me.onDestroy() {
         stopVpnConnection();
         super.onDestroy();
     }

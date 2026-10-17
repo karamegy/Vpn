@@ -99,17 +99,14 @@ jobs:
 
             const settingsPath = "android/settings.gradle";
             if (fs.existsSync(settingsPath)) {
-              let settings = "dependencyResolutionManagement {\n";
-              settings += "    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n";
-              settings += "    repositories {\n";
-              settings += "        google()\n";
-              settings += "        mavenCentral()\n";
-              settings += "        maven { url \"https://jitpack.io\" }\n";
-              settings += "    }\n";
-              settings += "}\n";
-              settings += "rootProject.name = \"Vpn\"\n";
-              settings += "include \":app\"\n";
-              fs.writeFileSync(settingsPath, settings);
+              let settings = fs.readFileSync(settingsPath, "utf8");
+              if (!settings.includes("jitpack.io")) {
+                settings = settings.replace(
+                  /repositories\s*\{/,
+                  "repositories {\n        google()\n        mavenCentral()\n        maven { url \"https://jitpack.io\" }"
+                );
+                fs.writeFileSync(settingsPath, settings);
+              }
             }
           '
 

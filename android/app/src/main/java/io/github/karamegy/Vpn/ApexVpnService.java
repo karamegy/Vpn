@@ -222,7 +222,7 @@ public class ApexVpnService extends VpnService {
     }
 
     @Override
-     me.onDestroy() {
+    public void onDestroy() {
         stopVpnConnection();
         super.onDestroy();
     }

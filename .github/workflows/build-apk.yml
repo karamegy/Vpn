@@ -42,7 +42,6 @@ jobs:
             "appId": "io.github.karamegy.Vpn",
             "appName": "Apex Shield AI",
             "webDir": "www",
-            "bundledWebRuntime": false,
             "android": {
               "webContentsDebuggingEnabled": true,
               "allowMixedContent": true
@@ -52,9 +51,15 @@ jobs:
 
       - name: 2. Prepare Android Platform & Inject Dependencies
         run: |
-          # وضع وضعية البيئة الصامتة للتنفيذ التلقائي
           export CI=true
-          npx cap add android || true
+          
+          # التحقق الذكي: لو مجلد android مش موجود نشئه، لو موجود نتخطاه تماماً عشان ميعملش إيرور
+          if [ ! -d "android" ]; then
+            npx cap add android
+          else
+            echo "مجلد الأندرويد موجود مسبقاً، جاري المزامنة فقط..."
+          fi
+          
           npx cap sync android
 
           if [ -f "android/app/build.gradle" ]; then

@@ -52,8 +52,9 @@ jobs:
 
       - name: 2. Prepare Android Platform & Inject Dependencies
         run: |
-          # استخدام npx مباشرة لتوليد منصة الأندرويد بدون أي تفاعل بشري
-          npx cap add android --no-prompt
+          # وضع وضعية البيئة الصامتة للتنفيذ التلقائي
+          export CI=true
+          npx cap add android || true
           npx cap sync android
 
           if [ -f "android/app/build.gradle" ]; then

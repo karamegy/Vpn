@@ -50,19 +50,11 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android & Inject WireGuard Dependencies
+      - name: 2. Prepare Android Platform & Inject Dependencies
         run: |
-          # استخدام مسار الـ npx المحلي مباشرة لضمان التنفيذ بدون أخطاء
-          ./node_modules/.bin/cap add android --force || true
-          ./node_modules/.bin/cap sync android
-
-          if [ -d "android" ]; then
-            cd android
-            if [ ! -f "gradlew" ]; then
-              gradle wrapper --gradle-version 8.5
-            fi
-            cd ..
-          fi
+          # استخدام npx مباشرة لتوليد منصة الأندرويد بدون أي تفاعل بشري
+          npx cap add android --no-prompt
+          npx cap sync android
 
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.wireguard.android:tunnel" android/app/build.gradle; then
@@ -80,6 +72,12 @@ jobs:
             sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 34/' android/variables.gradle
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
+
+          cd android
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper --gradle-version 8.5
+          fi
+          cd ..
 
       - name: 3. Build & Sign APK & AAB Packages
         env:

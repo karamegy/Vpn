@@ -21,14 +21,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: 1. Setup Web Assets & Local Config
+      - name: 1. Setup Node.js System Native & Web Assets
         run: |
+          sudo apt-get update -y
+          sudo apt-get install -y nodejs npm
+          node -v
+          npm -v
+
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
           

@@ -24,7 +24,8 @@ jobs:
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '20.x'
+          cache: 'npm'
 
       - name: 1. Setup Web Assets & Local Config
         run: |
@@ -50,7 +51,7 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android & Inject WireGuard Dependencies
+      - name: 2. Prepare Android & Inject JitPack & WireGuard
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
@@ -62,21 +63,44 @@ jobs:
           fi
           cd ..
 
+          # حقن مستودع jitpack.io في settings.gradle لضمان جلب مكتبة WireGuard
+          node -e '
+            const fs = require("fs");
+            const settingsPath = "android/settings.gradle";
+            if (fs.existsSync(settingsPath)) {
+              let settings = fs.readFileSync(settingsPath, "utf8");
+              if (!settings.includes("jitpack.io")) {
+                if (settings.includes("dependencyResolutionManagement")) {
+                  settings = settings.replace(
+                    /(dependencyResolutionManagement\s*\{[^}]*repositories\s*\{)/,
+                    "$1\n        maven { url '\''https://jitpack.io'\'' }"
+                  );
+                } else {
+                  settings = settings.replace(
+                    /repositories\s*\{/,
+                    "repositories {\n        google()\n        mavenCentral()\n        maven { url '\''https://jitpack.io'\'' }"
+                  );
+                }
+                fs.writeFileSync(settingsPath, settings);
+              }
+            }
+          '
+
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.wireguard.android:tunnel" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.wireguard.android:tunnel:1.0.20230707"' android/app/build.gradle
             fi
-            sed -i -E 's/versionCode [0-9]+/versionCode 27/' android/app/build.gradle
+            sed -i -E 's/versionCode [0-9]+/versionCode 28/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.4"/' android/app/build.gradle
-            sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
-            sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
+            sed -i 's/minSdk [0-9]+/minSdk 26/g' android/app/build.gradle
+            sed -i 's/minSdkVersion [0-9]+/minSdkVersion 26/g' android/app/build.gradle
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
           fi
 
           if [ -f "android/variables.gradle" ]; then
             sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 34/' android/variables.gradle
             sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 34/' android/variables.gradle
-            sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
+            sed -i -E 's/minSdkVersion = .*/minSdkVersion = 26/' android/variables.gradle
           fi
 
           npx cap sync android
@@ -90,19 +114,17 @@ jobs:
         run: |
           cd android
           
-          # استخراج المفتاح
+          # استخراج المفتاح والتوقيع
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           
-          # بناء كل من APK و AAB بصيغة Release
           ./gradlew clean assembleRelease bundleRelease --no-daemon
 
           APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          # توقيع الملفين بنفس المفتاح الرسمى
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS"
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
           

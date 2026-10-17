@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 1. Setup Web Assets & Local Config
+      - name: 1. Setup Web Assets & Dependencies
         run: |
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
@@ -56,44 +56,15 @@ jobs:
           }
           EOF
 
-      - name: 2. Preserve Native Java & Sync Capacitor
+      - name: 2. Sync Web Assets with Android Project
         run: |
-          # الحفاظ على مجلد android الأصلي وملفات الجافا الخاصة بالـ VPN وعدم مسحها
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-
-          cd android
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper --gradle-version 8.5
-          fi
-          cd ..
-
-          if [ -f "android/variables.gradle" ]; then
-            sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
-            sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
-            sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
-          fi
-
-          # تحديث رقم الإصدار إلى 28 و 8.0.0.4 ليتوافق مع متجر جوجل بلاي
+          # تحديث رقم الإصدار في build.gradle إلى 28 و 8.0.0.4 للقبول في جوجل بلاي
           if [ -f "android/app/build.gradle" ]; then
             sed -i -E 's/versionCode [0-9]+/versionCode 28/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.4"/' android/app/build.gradle
-            sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
-            sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
-            sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
           fi
 
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_PATH" ]; then
-            if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then
-              sed -i '/<uses-permission android:name="android\.permission\.INTERNET"/a \    <uses-permission android:name="android.permission.BIND_VPN_SERVICE"/>' "$MANIFEST_PATH"
-            fi
-            if ! grep -q "ApexVpnService" "$MANIFEST_PATH"; then
-              sed -i '/<\/application>/i \    <service android:name="io.github.karamegy.Vpn.ApexVpnService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="false">\n        <intent-filter>\n            <action android:name="android.net.VpnService"/>\n        </intent-filter>\n    </service>' "$MANIFEST_PATH"
-            fi
-          fi
-
+          # مزامنة ملفات الويب داخل مجلد android بدون مسح أو تعديل أكواد الجافا الحقيقية
           npx cap sync android
 
       - name: 3. Build & Sign APK & AAB Packages
@@ -104,18 +75,19 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
+          chmod +x gradlew
           
+          # استخراج مفتاح التوقيع
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
-          chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           
-          # بناء APK التثبيت المباشر وحزمة AAB الخاصة بمتجر جوجل بلاي
+          # البناء التجميعي باستخدام gradlew الخاص بالمشروع فقط
           ./gradlew clean assembleDebug bundleRelease --no-daemon
 
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          # توقيع حزمة AAB لمطبوعات Google Play
+          # توقيع حزمة AAB لرفعها مباشرة لمترج جوجل بلاي
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
           
           rm -f signing.keystore

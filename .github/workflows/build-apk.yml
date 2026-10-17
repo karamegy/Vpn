@@ -67,8 +67,8 @@ jobs:
           fi
 
           if [ -f "android/variables.gradle" ]; then
-            sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 34/' android/variables.gradle
-            sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 34/' android/variables.gradle
+            sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
+            sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 

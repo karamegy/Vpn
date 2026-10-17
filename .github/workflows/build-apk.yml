@@ -1,4 +1,4 @@
-name: Build Android Native APK & AAB (Apex Shield)
+name: Build Android Native APK & AAB (Apex Shield ai)
 
 on:
   workflow_dispatch:
@@ -76,7 +76,7 @@ jobs:
               let vg = fs.readFileSync(vgPath, "utf8");
               vg = vg.replace(/compileSdkVersion\s*=\s*\d+/g, "compileSdkVersion = 34");
               vg = vg.replace(/targetSdkVersion\s*=\s*\d+/g, "targetSdkVersion = 34");
-              vg = vg.replace(/minSdkVersion\s*=\s*\d+/g, "minSdkVersion = 24");
+              vg = vg.replace(/minSdkVersion\s*=\s*\d+/g, "minSdkVersion = 26");
               fs.writeFileSync(vgPath, vg);
             }
 
@@ -90,6 +90,10 @@ jobs:
               
               if (!bg.includes("com.wireguard.android:tunnel")) {
                 bg = bg.replace(/dependencies\s*\{/, "dependencies {\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
+              }
+
+              if (!bg.includes("packagingOptions")) {
+                bg = bg.replace(/android\s*\{/, "android {\n    packagingOptions {\n        resources {\n            excludes += [\"META-INF/INDEX.LIST\", \"META-INF/io.netty.versions.properties\", \"META-INF/DEPENDENCIES\"]\n        }\n    }");
               }
 
               fs.writeFileSync(bgPath, bg);

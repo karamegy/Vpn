@@ -27,7 +27,7 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
 
-      - name: 1. Setup Web Assets & Local Config
+      - name: 1. Setup Capacitor & Generate Android Platform Safely
         run: |
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
@@ -51,40 +51,25 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android & Inject JitPack & WireGuard
+          # توليد منصة أندرويد أولاً إذا لم تكن موجودة
+          npx cap add android
+
+      - name: 2. Inject JitPack, WireGuard & Fix Gradle Configs
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
+          # حقن مستودع JitPack في settings.gradle أو build.gradle الرئيسي
+          if [ -f "android/settings.gradle" ]; then
+            python3 -c '
+            with open("android/settings.gradle", "r") as f:
+                content = f.read()
+            if "jitpack.io" not in content:
+                if "dependencyResolutionManagement" in content:
+                    content = content.replace("repositories {", "repositories {\n        maven { url \"https://jitpack.io\" }", 1)
+                else:
+                    content += "\nallprojects { repositories { maven { url \"https://jitpack.io\" } } }\n"
+                with open("android/settings.gradle", "w") as f:
+                    f.write(content)
+            '
           fi
-
-          cd android
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper --gradle-version 8.5
-          fi
-          cd ..
-
-          # حقن مستودع jitpack.io في settings.gradle لضمان جلب مكتبة WireGuard
-          node -e '
-            const fs = require("fs");
-            const settingsPath = "android/settings.gradle";
-            if (fs.existsSync(settingsPath)) {
-              let settings = fs.readFileSync(settingsPath, "utf8");
-              if (!settings.includes("jitpack.io")) {
-                if (settings.includes("dependencyResolutionManagement")) {
-                  settings = settings.replace(
-                    /(dependencyResolutionManagement\s*\{[^}]*repositories\s*\{)/,
-                    "$1\n        maven { url '\''https://jitpack.io'\'' }"
-                  );
-                } else {
-                  settings = settings.replace(
-                    /repositories\s*\{/,
-                    "repositories {\n        google()\n        mavenCentral()\n        maven { url '\''https://jitpack.io'\'' }"
-                  );
-                }
-                fs.writeFileSync(settingsPath, settings);
-              }
-            }
-          '
 
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.wireguard.android:tunnel" android/app/build.gradle; then
@@ -114,7 +99,7 @@ jobs:
         run: |
           cd android
           
-          # استخراج المفتاح والتوقيع
+          # فك تشفير المفتاح وبناء الحزم
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
           chmod +x gradlew

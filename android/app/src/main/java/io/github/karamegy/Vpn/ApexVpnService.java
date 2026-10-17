@@ -13,9 +13,12 @@ import android.util.Log;
 import com.wireguard.android.backend.GoBackend;
 import com.wireguard.android.backend.Tunnel;
 import com.wireguard.config.Config;
+import com.wireguard.config.InetNetwork;
 import com.wireguard.config.Interface;
 import com.wireguard.config.Peer;
 import com.wireguard.crypto.KeyPair;
+
+import java.net.InetAddress;
 
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
@@ -80,12 +83,13 @@ public class ApexVpnService extends VpnService {
                     if (!formattedClientIp.contains("/")) {
                         formattedClientIp += "/32";
                     }
-                    interfaceBuilder.parseAddress(formattedClientIp);
-                    interfaceBuilder.parseAddress("fd00::2/128");
 
-                    interfaceBuilder.parseDnsServer("1.1.1.1");
-                    interfaceBuilder.parseDnsServer("1.0.0.1");
-                    interfaceBuilder.parseDnsServer("2606:4700:4700::1111");
+                    interfaceBuilder.addAddress(InetNetwork.parse(formattedClientIp));
+                    interfaceBuilder.addAddress(InetNetwork.parse("fd00::2/128"));
+
+                    interfaceBuilder.addDnsServer(InetAddress.getByName("1.1.1.1"));
+                    interfaceBuilder.addDnsServer(InetAddress.getByName("1.0.0.1"));
+                    interfaceBuilder.addDnsServer(InetAddress.getByName("2606:4700:4700::1111"));
                     interfaceBuilder.setMtu(1280);
 
                     Peer.Builder peerBuilder = new Peer.Builder();
@@ -94,8 +98,8 @@ public class ApexVpnService extends VpnService {
                     String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
                     peerBuilder.parseEndpoint(targetEndpoint);
 
-                    peerBuilder.parseAllowedIP("0.0.0.0/0");
-                    peerBuilder.parseAllowedIP("::/0");
+                    peerBuilder.addAllowedIP(InetNetwork.parse("0.0.0.0/0"));
+                    peerBuilder.addAllowedIP(InetNetwork.parse("::/0"));
 
                     Config config = new Config.Builder()
                             .setInterface(interfaceBuilder.build())

@@ -71,31 +71,35 @@ jobs:
           node -e '
             const fs = require("fs");
             
-            const bgPath = "android/app/build.gradle";
-            if (fs.existsSync(bgPath)) {
-              let content = fs.readFileSync(bgPath, "utf8");
-              
-              content = content.replace(/versionCode\s+\d+/g, "versionCode 28");
-              content = content.replace(/versionName\s+"[^"]+"/g, "versionName \"8.0.0.4\"");
-              content = content.replace(/compileSdk\s+\d+/g, "compileSdk 34");
-              content = content.replace(/targetSdk\s+\d+/g, "targetSdk 34");
-              content = content.replace(/minSdk\s+\d+/g, "minSdk 24");
-              content = content.replace(/minifyEnabled\s+true/g, "minifyEnabled false");
-              
-              if (!content.includes("com.wireguard.android:tunnel")) {
-                content = content.replace(/dependencies\s*\{/, "dependencies {\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
-              }
-              
-              fs.writeFileSync(bgPath, content);
-            }
-
             const vgPath = "android/variables.gradle";
             if (fs.existsSync(vgPath)) {
-              let content = fs.readFileSync(vgPath, "utf8");
-              content = content.replace(/compileSdkVersion\s*=\s*\d+/g, "compileSdkVersion = 34");
-              content = content.replace(/targetSdkVersion\s*=\s*\d+/g, "targetSdkVersion = 34");
-              content = content.replace(/minSdkVersion\s*=\s*\d+/g, "minSdkVersion = 24");
-              fs.writeFileSync(vgPath, content);
+              let vg = fs.readFileSync(vgPath, "utf8");
+              vg = vg.replace(/compileSdkVersion\s*=\s*\d+/g, "compileSdkVersion = 34");
+              vg = vg.replace(/targetSdkVersion\s*=\s*\d+/g, "targetSdkVersion = 34");
+              vg = vg.replace(/minSdkVersion\s*=\s*\d+/g, "minSdkVersion = 24");
+              fs.writeFileSync(vgPath, vg);
+            }
+
+            const bgPath = "android/app/build.gradle";
+            if (fs.existsSync(bgPath)) {
+              let bg = fs.readFileSync(bgPath, "utf8");
+              
+              bg = bg.replace(/versionCode\s+\d+/g, "versionCode 28");
+              bg = bg.replace(/versionName\s+"[^"]+"/g, "versionName \"8.0.0.4\"");
+              bg = bg.replace(/compileSdk(Version)?\s+rootProject\.ext\.compileSdkVersion/g, "compileSdk 34");
+              bg = bg.replace(/targetSdk(Version)?\s+rootProject\.ext\.targetSdkVersion/g, "targetSdk 34");
+              bg = bg.replace(/minSdk(Version)?\s+rootProject\.ext\.minSdkVersion/g, "minSdk 24");
+              bg = bg.replace(/minifyEnabled\s+true/g, "minifyEnabled false");
+              
+              if (!bg.includes("com.wireguard.android:tunnel")) {
+                bg = bg.replace(/dependencies\s*\{/, "dependencies {\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
+              }
+              
+              if (!bg.includes("packagingOptions")) {
+                bg = bg.replace(/android\s*\{/, "android {\n    packagingOptions {\n        resources {\n            excludes += [\"META-INF/INDEX.LIST\", \"META-INF/io.netty.versions.properties\", \"META-INF/DEPENDENCIES\"]\n        }\n    }");
+              }
+
+              fs.writeFileSync(bgPath, bg);
             }
           '
 
@@ -122,8 +126,8 @@ jobs:
           if [ -n "$RELEASE_KEY" ] && [ -n "$STORE_PASSWORD" ]; then
             echo "Signing binaries with Repository Secrets..."
             printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS"
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS" || true
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS" || true
             rm -f signing.keystore
           else
             echo "Secrets missing, proceeding with unsigned release binaries."

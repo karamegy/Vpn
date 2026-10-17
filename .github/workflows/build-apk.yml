@@ -91,12 +91,19 @@ jobs:
           APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS"
+          # العثور على أداة apksigner التابعة لـ Android SDK المضمنة في البيئة
+          APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "apksigner not found, trying fallback..."
+            APKSIGNER="apksigner"
+          fi
+
+          # محاذاة وتوقيع ملف الـ APK بأحدث معايير الأندرويد (v2/v3 signing) ليقبل التثبيت المباشر
+          $APKSIGNER sign --ks signing.keystore --ks-pass pass:"$STORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASSWORD" "$APK_FILE"
+
+          # توقيع ملف الـ AAB المخصص للمتجر بالطريقة القياسية
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
-          
-          # إنشاء مجلد مخصص للملفات الموقعة لتجنب الخلط مع ملف الـ unsigned
-          mkdir -p ../signed-output
-          cp "$APK_FILE" ../signed-output/ApexShield-Release-Signed.apk
           
           rm -f signing.keystore
 
@@ -104,7 +111,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-APK-DirectInstall
-          path: signed-output/*.apk
+          path: android/app/build/outputs/apk/release/*.apk
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4

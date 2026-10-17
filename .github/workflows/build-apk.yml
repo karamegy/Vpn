@@ -53,8 +53,55 @@ jobs:
           }
           EOF
 
-      - name: 2. Sync Web Assets with Existing Android Project
+      - name: 2. Generate Android & Restore Custom Java Files Safely
         run: |
+          # لو عندك مجلد جافا مرفوع نحتفظ بنسخة مؤقتة منه
+          mkdir -p /tmp/custom_java
+          if [ -d "android/app/src/main/java" ]; then
+            cp -r android/app/src/main/java/* /tmp/custom_java/
+          fi
+          
+          # إنتاج منصة الأندرويد رسمياً لضمان وجود gradlew وكل ملفات النظام
+          npx cap add android
+          
+          # استعادة ملفات الجافا الخاصة بك لو وُجدت
+          if [ -d "/tmp/custom_java" ] && [ "$(ls -A /tmp/custom_java)" ]; then
+            mkdir -p android/app/src/main/java
+            cp -r /tmp/custom_java/* android/app/src/main/java/
+          fi
+
+          # إضافة مستودع JitPack لـ Gradle 8 لجلب مكتبة الـ WireGuard بنجاح
+          node -e '
+            const fs = require("fs");
+            const settingsPath = "android/settings.gradle";
+            if (fs.existsSync(settingsPath)) {
+              let settings = fs.readFileSync(settingsPath, "utf8");
+              if (!settings.includes("jitpack.io")) {
+                if (settings.includes("dependencyResolutionManagement")) {
+                  settings = settings.replace(
+                    /(dependencyResolutionManagement\s*\{[^}]*repositories\s*\{)/,
+                    "$1\n        maven { url '\''https://jitpack.io'\'' }"
+                  );
+                } else {
+                  settings = settings.replace(
+                    /repositories\s*\{/,
+                    "repositories {\n        google()\n        mavenCentral()\n        maven { url '\''https://jitpack.io'\'' }"
+                  );
+                }
+                fs.writeFileSync(settingsPath, settings);
+              }
+            }
+
+            const bgPath = "android/app/build.gradle";
+            if (fs.existsSync(bgPath)) {
+              let bg = fs.readFileSync(bgPath, "utf8");
+              if (!bg.includes("com.wireguard.android:tunnel")) {
+                bg = bg.replace(/(dependencies\s*\{)/, "$1\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
+                fs.writeFileSync(bgPath, bg);
+              }
+            }
+          '
+
           npx cap sync android
 
       - name: 3. Build Native APK & AAB Packages

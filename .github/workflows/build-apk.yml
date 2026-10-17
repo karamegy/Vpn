@@ -55,7 +55,6 @@ jobs:
 
       - name: 2. Prepare Android Structure & Inject WireGuard Safely
         run: |
-          # 1. التأكد من وجود ملفات بناء أندرويد الأساسية مع الحفاظ الكامل على أكواد الـ VPN
           if [ ! -f "android/gradlew" ]; then
             mkdir -p /tmp/custom_src
             if [ -d "android/app/src/main" ]; then
@@ -71,7 +70,6 @@ jobs:
             fi
           fi
 
-          # 2. حقن مكتبة WireGuard وتحديث الإصدار إلى 28 عبر Node.js بدون أخطاء
           node -e '
             const fs = require("fs");
             
@@ -102,7 +100,6 @@ jobs:
             }
           '
 
-          # 3. مزامنة ملفات الويب فقط مع المشروع القائم
           npx cap sync android
 
       - name: 3. Build & Sign APK & AAB Packages

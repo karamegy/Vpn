@@ -37,23 +37,11 @@ jobs:
           
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
 
-          cat << 'EOF' > capacitor.config.json
-          {
-            "appId": "io.github.karamegy.Vpn",
-            "appName": "Apex Shield AI",
-            "webDir": "www",
-            "android": {
-              "webContentsDebuggingEnabled": true,
-              "allowMixedContent": true
-            }
-          }
-          EOF
-
       - name: 2. Prepare Android Platform & Inject Dependencies
         run: |
           export CI=true
           
-          # مزامنة الملفات مباشرة لأن مجلد android موجود بالفعل في المشروع
+          # مزامنة الملفات مباشرة لأن مجلد android موجود بالفعل في المستودع
           npx cap sync android
 
           if [ -f "android/app/build.gradle" ]; then

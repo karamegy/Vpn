@@ -17,9 +17,22 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin {
 
-    /**
-     * فحص ما إذا كان إذن الـ VPN ممنوحاً مسبقاً من النظام
-     */
+    @PluginMethod
+    public void checkSubscriptionStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("isPro", false);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void launchBilling(PluginCall call) {
+        String productId = call.getString("productId", "");
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        ret.put("productId", productId);
+        call.resolve(ret);
+    }
+
     @PluginMethod
     public void isPrepared(PluginCall call) {
         Context context = getContext();
@@ -34,9 +47,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
         call.resolve(ret);
     }
 
-    /**
-     * طلب إذن إعداد نفق الـ VPN من المستخدم عبر نافذة أندرويد الرسمية
-     */
     @PluginMethod
     public void prepareVpn(PluginCall call) {
         Context context = getContext();
@@ -70,9 +80,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
         }
     }
 
-    /**
-     * تشغيل خدمة الـ VPN وتمرير كافة بيانات السيرفر والتشفير
-     */
     @PluginMethod
     public void startVpn(PluginCall call) {
         Context context = getContext();
@@ -81,14 +88,12 @@ public class AndroidVPNBridgePlugin extends Plugin {
             return;
         }
 
-        // 1. التحقق الذاتي من الإذن؛ إذا لم يكن ممنوحاً يُطلب فوراً
         Intent prepareIntent = VpnService.prepare(context);
         if (prepareIntent != null) {
             startActivityForResult(call, prepareIntent, "vpnPermissionResult");
             return;
         }
 
-        // 2. استخراج المعلمات من الواجهة الأمامية (JS)
         String serverIp = call.getString("serverIp", "");
         String serverName = call.getString("serverName", "");
         String warpClientIp = call.getString("warpClientIp", "");
@@ -104,7 +109,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
             intent.putExtra("warpEndpoint", warpEndpoint);
             intent.putExtra("warpPrivateKey", warpPrivateKey);
 
-            // 3. تشغيل الخدمة كـ Foreground Service لضمان عدم إغلاقها في الخلفية
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent);
             } else {
@@ -120,9 +124,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
         }
     }
 
-    /**
-     * إيقاف خدمة الـ VPN وإغلاق النفق
-     */
     @PluginMethod
     public void stopVpn(PluginCall call) {
         Context context = getContext();
@@ -150,9 +151,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
         }
     }
 
-    /**
-     * تبديل حالة الخدمة (تشغيل / إيقاف) بشكل موحد
-     */
     @PluginMethod
     public void toggleVpn(PluginCall call) {
         Boolean enable = call.getBoolean("enable", false);

@@ -6,8 +6,9 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // تسجيل إضافة الجسر المباشر لربط الجافاسكريبت بالـ VPN
+        // تسجيل إضافة الجسر أولاً قبل إنشاء الجسر التابع لـ Capacitor
         registerPlugin(AndroidVPNBridgePlugin.class);
+        
+        super.onCreate(savedInstanceState);
     }
 }

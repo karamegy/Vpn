@@ -21,11 +21,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
-          cache: 'npm'
+          node-version: '20.11.0'
 
       - name: 1. Setup Capacitor & Generate Android Platform Safely
         run: |
@@ -51,12 +50,10 @@ jobs:
           }
           EOF
 
-          # توليد منصة أندرويد أولاً إذا لم تكن موجودة
           npx cap add android
 
       - name: 2. Inject JitPack, WireGuard & Fix Gradle Configs
         run: |
-          # حقن مستودع JitPack في settings.gradle أو build.gradle الرئيسي
           if [ -f "android/settings.gradle" ]; then
             python3 -c '
             with open("android/settings.gradle", "r") as f:
@@ -99,7 +96,6 @@ jobs:
         run: |
           cd android
           
-          # فك تشفير المفتاح وبناء الحزم
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
           chmod +x gradlew

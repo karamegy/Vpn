@@ -1,4 +1,4 @@
-name: Build Native APK & AAB (Apex Shield ai)
+name: Build Android Native APK & AAB (Apex Shield)
 
 on:
   workflow_dispatch:
@@ -26,10 +26,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Gradle Environment
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: 1. Setup Web Assets & Dependencies
+      - name: 1. Setup Web Assets & Local Config
         run: |
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
@@ -53,54 +50,38 @@ jobs:
           }
           EOF
 
-      - name: 2. Patch Gradle & Sync Existing Android Project
+      - name: 2. Prepare Android & Inject WireGuard Dependencies
         run: |
-          # إضافة مستودع JitPack ومكتبة WireGuard مباشرة على ملفاتك الموجودة
-          node -e '
-            const fs = require("fs");
-            
-            const settingsPath = "android/settings.gradle";
-            if (fs.existsSync(settingsPath)) {
-              let settings = fs.readFileSync(settingsPath, "utf8");
-              if (!settings.includes("jitpack.io")) {
-                if (settings.includes("dependencyResolutionManagement")) {
-                  settings = settings.replace(
-                    /(dependencyResolutionManagement\s*\{[^}]*repositories\s*\{)/,
-                    "$1\n        maven { url '\''https://jitpack.io'\'' }"
-                  );
-                } else {
-                  settings = settings.replace(
-                    /repositories\s*\{/,
-                    "repositories {\n        google()\n        mavenCentral()\n        maven { url '\''https://jitpack.io'\'' }"
-                  );
-                }
-                fs.writeFileSync(settingsPath, settings);
-              }
-            }
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
-            const bgPath = "android/app/build.gradle";
-            if (fs.existsSync(bgPath)) {
-              let bg = fs.readFileSync(bgPath, "utf8");
-              if (!bg.includes("com.wireguard.android:tunnel")) {
-                bg = bg.replace(/(dependencies\s*\{)/, "$1\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
-              }
-              if (!bg.includes("packagingOptions")) {
-                bg = bg.replace(/(android\s*\{)/, "$1\n    packagingOptions {\n        resources {\n            excludes += [\"META-INF/INDEX.LIST\", \"META-INF/io.netty.versions.properties\", \"META-INF/DEPENDENCIES\"]\n        }\n    }");
-              }
-              fs.writeFileSync(bgPath, bg);
-            }
-          '
+          cd android
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper --gradle-version 8.5
+          fi
+          cd ..
+
+          if [ -f "android/app/build.gradle" ]; then
+            if ! grep -q "com.wireguard.android:tunnel" android/app/build.gradle; then
+              sed -i '/dependencies {/a \    implementation "com.wireguard.android:tunnel:1.0.20230707"' android/app/build.gradle
+            fi
+            sed -i -E 's/versionCode [0-9]+/versionCode 28/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.4"/' android/app/build.gradle
+            sed -i 's/minSdk [0-9]+/minSdk 26/g' android/app/build.gradle
+            sed -i 's/minSdkVersion [0-9]+/minSdkVersion 26/g' android/app/build.gradle
+            sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
+          fi
+
+          if [ -f "android/variables.gradle" ]; then
+            sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 34/' android/variables.gradle
+            sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 34/' android/variables.gradle
+            sed -i -E 's/minSdkVersion = .*/minSdkVersion = 26/' android/variables.gradle
+          fi
 
           npx cap sync android
 
-      - name: 3. Build Native APK & AAB Packages
-        run: |
-          cd android
-          chmod +x gradlew
-          export GRADLE_OPTS="-Dfile.encoding=UTF-8"
-          ./gradlew clean assembleRelease bundleRelease --no-daemon --stacktrace
-
-      - name: 4. Sign APK & AAB Packages
+      - name: 3. Build & Sign APK & AAB Packages
         env:
           RELEASE_KEY: ${{ secrets.RELEASE_KEY }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
@@ -108,26 +89,32 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
+          
+          # استخراج المفتاح
+          printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
+          
+          chmod +x gradlew
+          export GRADLE_OPTS="-Dfile.encoding=UTF-8"
+          
+          # بناء كل من APK و AAB بصيغة Release
+          ./gradlew clean assembleRelease bundleRelease --no-daemon
+
           APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          if [ -n "$RELEASE_KEY" ] && [ -n "$STORE_PASSWORD" ]; then
-            echo "Signing binaries with Repository Secrets..."
-            printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS" || true
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS" || true
-            rm -f signing.keystore
-          else
-            echo "Secrets missing, proceeding with unsigned release binaries."
-          fi
+          # توقيع الملفين بنفس المفتاح الرسمى
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS"
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+          
+          rm -f signing.keystore
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-APK-DirectInstall
           path: android/app/build/outputs/apk/release/*.apk
 
-      - name: Upload AAB Artifact
+      - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-AAB-GooglePlay

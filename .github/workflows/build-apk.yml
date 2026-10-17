@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 1. Setup Web Assets & Capacitor
+      - name: 1. Setup Web Assets & Sync
         run: |
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
@@ -50,21 +50,10 @@ jobs:
           }
           EOF
 
-          npx cap add android
-
-      - name: 2. Configure Gradle & WireGuard Dependencies
-        run: |
-          if [ -f "android/settings.gradle" ]; then
-            echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral(); maven { url 'https://jitpack.io' } } }" >> android/settings.gradle
-          fi
-
-          if [ -f "android/app/build.gradle" ]; then
-            echo 'dependencies { implementation "com.wireguard.android:tunnel:1.0.20230707" }' >> android/app/build.gradle
-          fi
-
+          # التمكين المباشر بدون إعادة تهيئة مهدمة
           npx cap sync android
 
-      - name: 3. Build & Sign Release Packages
+      - name: 2. Build & Sign Release Packages
         env:
           RELEASE_KEY: ${{ secrets.RELEASE_KEY }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}

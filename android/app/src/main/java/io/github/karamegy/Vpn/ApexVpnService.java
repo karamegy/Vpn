@@ -8,18 +8,15 @@ import android.content.Intent;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
-import android.util.Base64;
 import android.util.Log;
 
 import com.wireguard.android.backend.GoBackend;
 import com.wireguard.android.backend.Tunnel;
 import com.wireguard.config.Config;
-import com.wireguard.config.InetNetwork;
-import com.wireguard.config.Interface;
-import com.wireguard.config.Peer;
+import com.wireguard.crypto.KeyPair;
 
-import java.net.InetAddress;
-import java.security.SecureRandom;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
@@ -71,15 +68,12 @@ public class ApexVpnService extends VpnService {
         new Thread(() -> {
             try {
                 if (backend != null) {
-                    Interface.Builder interfaceBuilder = new Interface.Builder();
-
+                    String privateKey;
                     if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
-                        interfaceBuilder.parsePrivateKey(privateKeyBase64.trim());
+                        privateKey = privateKeyBase64.trim();
                     } else {
-                        byte[] randomBytes = new byte[32];
-                        new SecureRandom().nextBytes(randomBytes);
-                        String generatedKey = Base64.encodeToString(randomBytes, Base64.NO_WRAP);
-                        interfaceBuilder.parsePrivateKey(generatedKey);
+                        KeyPair keyPair = new KeyPair();
+                        privateKey = keyPair.getPrivateKey().toBase64();
                     }
 
                     String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
@@ -87,27 +81,19 @@ public class ApexVpnService extends VpnService {
                         formattedClientIp += "/32";
                     }
 
-                    interfaceBuilder.addAddress(InetNetwork.parse(formattedClientIp));
-                    interfaceBuilder.addAddress(InetNetwork.parse("fd00::2/128"));
-
-                    interfaceBuilder.addDnsServer(InetAddress.getByName("1.1.1.1"));
-                    interfaceBuilder.addDnsServer(InetAddress.getByName("1.0.0.1"));
-                    interfaceBuilder.addDnsServer(InetAddress.getByName("2606:4700:4700::1111"));
-                    interfaceBuilder.setMtu(1280);
-
-                    Peer.Builder peerBuilder = new Peer.Builder();
-                    peerBuilder.parsePublicKey("bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=");
-
                     String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
-                    peerBuilder.parseEndpoint(targetEndpoint);
 
-                    peerBuilder.addAllowedIP(InetNetwork.parse("0.0.0.0/0"));
-                    peerBuilder.addAllowedIP(InetNetwork.parse("::/0"));
+                    String wgConfigStr = "[Interface]\n" +
+                            "PrivateKey = " + privateKey + "\n" +
+                            "Address = " + formattedClientIp + ", fd00::2/128\n" +
+                            "DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111\n" +
+                            "MTU = 1280\n\n" +
+                            "[Peer]\n" +
+                            "PublicKey = bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=\n" +
+                            "Endpoint = " + targetEndpoint + "\n" +
+                            "AllowedIPs = 0.0.0.0/0, ::/0\n";
 
-                    Config config = new Config.Builder()
-                            .setInterface(interfaceBuilder.build())
-                            .addPeer(peerBuilder.build())
-                            .build();
+                    Config config = Config.parse(new ByteArrayInputStream(wgConfigStr.getBytes(StandardCharsets.UTF_8)));
 
                     backend.setState(new Tunnel() {
                         @Override

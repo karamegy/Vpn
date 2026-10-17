@@ -69,47 +69,39 @@ public class ApexVpnService extends VpnService {
             try {
                 Interface.Builder interfaceBuilder = new Interface.Builder();
 
-                // 1. إعداد المفتاح الخاص
                 if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
                     interfaceBuilder.parsePrivateKey(privateKeyBase64.trim());
                 } else {
-                    Key privateKey = Key.generate();
+                    Key privateKey = Key.generatePrivateKey();
                     interfaceBuilder.parsePrivateKey(privateKey.toBase64());
                 }
 
-                // 2. تعيين IP العميل (IPv4 و IPv6) لمنع التسريب كلياً
                 String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
                 if (!formattedClientIp.contains("/")) {
                     formattedClientIp += "/32";
                 }
                 interfaceBuilder.addAddress(InetNetwork.parse(formattedClientIp));
-                
-                // إضافة عنوان IPv6 محلي لوأد تسريبات شبكات الموبايل
                 interfaceBuilder.addAddress(InetNetwork.parse("fd00::2/128"));
 
-                // 3. تعيين خوادم Cloudflare DNS المشفرة بصريحة
                 interfaceBuilder.addDnsServer(InetAddress.getByName("1.1.1.1"));
                 interfaceBuilder.addDnsServer(InetAddress.getByName("1.0.0.1"));
                 interfaceBuilder.addDnsServer(InetAddress.getByName("2606:4700:4700::1111"));
                 interfaceBuilder.setMtu(1280);
 
-                // 4. إعداد الخادم البعيد (Cloudflare WARP Peer)
                 Peer.Builder peerBuilder = new Peer.Builder();
                 peerBuilder.parsePublicKey("bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=");
 
                 String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
                 peerBuilder.parseEndpoint(targetEndpoint);
 
-                // توجيه كافة حزم بيانات الجهاز بالكامل (IPv4 و IPv6) داخل النفق
                 peerBuilder.addAllowedIP(InetNetwork.parse("0.0.0.0/0"));
-                peerBuilder.addAllowedIP(InetNetwork.parse("::/0")); // إغلاق ثغرة الـ DNS عبر IPv6
+                peerBuilder.addAllowedIP(InetNetwork.parse("::/0"));
 
                 Config config = new Config.Builder()
                         .setInterface(interfaceBuilder.build())
                         .addPeer(peerBuilder.build())
                         .build();
 
-                // 5. تشغيل النفق
                 if (backend != null) {
                     backend.setState(new Tunnel() {
                         @Override

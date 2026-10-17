@@ -40,7 +40,20 @@ jobs:
           
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
 
-      - name: 2. Sync with Existing Android Project (No Deletion)
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "io.github.karamegy.Vpn",
+            "appName": "Apex Shield AI",
+            "webDir": "www",
+            "bundledWebRuntime": false,
+            "android": {
+              "webContentsDebuggingEnabled": true,
+              "allowMixedContent": true
+            }
+          }
+          EOF
+
+      - name: 2. Sync Web Assets with Existing Android Project
         run: |
           npx cap sync android
 

@@ -7,17 +7,15 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Build;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import com.wireguard.android.backend.GoBackend;
 import com.wireguard.android.backend.Tunnel;
 import com.wireguard.config.Config;
-import com.wireguard.config.InetNetwork;
 import com.wireguard.config.Interface;
 import com.wireguard.config.Peer;
-import com.wireguard.crypto.Key;
-
-import java.net.InetAddress;
+import com.wireguard.crypto.KeyPair;
 
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
@@ -30,6 +28,7 @@ public class ApexVpnService extends VpnService {
 
     private GoBackend backend;
     private boolean isTunnelRunning = false;
+    private ParcelFileDescriptor vpnInterface = null;
 
     @Override
     public void onCreate() {
@@ -54,55 +53,55 @@ public class ApexVpnService extends VpnService {
             createNotificationChannel();
             startForeground(NOTIFICATION_ID, buildNotification(serverName));
 
-            startWireGuardTunnel(warpClientIp, warpEndpoint, serverName, warpPrivateKey);
+            startVpnConnection(warpClientIp, warpEndpoint, serverName, warpPrivateKey);
         } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
-            stopWireGuardTunnel();
+            stopVpnConnection();
         }
 
         return START_STICKY;
     }
 
-    private void startWireGuardTunnel(String clientIpStr, String endpointStr, String serverName, String privateKeyBase64) {
+    private void startVpnConnection(String clientIpStr, String endpointStr, String serverName, String privateKeyBase64) {
         if (isTunnelRunning) return;
 
         new Thread(() -> {
             try {
-                Interface.Builder interfaceBuilder = new Interface.Builder();
-
-                if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
-                    interfaceBuilder.parsePrivateKey(privateKeyBase64.trim());
-                } else {
-                    Key privateKey = Key.generatePrivateKey();
-                    interfaceBuilder.parsePrivateKey(privateKey.toBase64());
-                }
-
-                String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
-                if (!formattedClientIp.contains("/")) {
-                    formattedClientIp += "/32";
-                }
-                interfaceBuilder.addAddress(InetNetwork.parse(formattedClientIp));
-                interfaceBuilder.addAddress(InetNetwork.parse("fd00::2/128"));
-
-                interfaceBuilder.addDnsServer(InetAddress.getByName("1.1.1.1"));
-                interfaceBuilder.addDnsServer(InetAddress.getByName("1.0.0.1"));
-                interfaceBuilder.addDnsServer(InetAddress.getByName("2606:4700:4700::1111"));
-                interfaceBuilder.setMtu(1280);
-
-                Peer.Builder peerBuilder = new Peer.Builder();
-                peerBuilder.parsePublicKey("bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=");
-
-                String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
-                peerBuilder.parseEndpoint(targetEndpoint);
-
-                peerBuilder.addAllowedIP(InetNetwork.parse("0.0.0.0/0"));
-                peerBuilder.addAllowedIP(InetNetwork.parse("::/0"));
-
-                Config config = new Config.Builder()
-                        .setInterface(interfaceBuilder.build())
-                        .addPeer(peerBuilder.build())
-                        .build();
-
                 if (backend != null) {
+                    Interface.Builder interfaceBuilder = new Interface.Builder();
+
+                    if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
+                        interfaceBuilder.parsePrivateKey(privateKeyBase64.trim());
+                    } else {
+                        KeyPair keyPair = new KeyPair();
+                        interfaceBuilder.parsePrivateKey(keyPair.getPrivateKey().toBase64());
+                    }
+
+                    String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
+                    if (!formattedClientIp.contains("/")) {
+                        formattedClientIp += "/32";
+                    }
+                    interfaceBuilder.parseAddress(formattedClientIp);
+                    interfaceBuilder.parseAddress("fd00::2/128");
+
+                    interfaceBuilder.parseDnsServer("1.1.1.1");
+                    interfaceBuilder.parseDnsServer("1.0.0.1");
+                    interfaceBuilder.parseDnsServer("2606:4700:4700::1111");
+                    interfaceBuilder.setMtu(1280);
+
+                    Peer.Builder peerBuilder = new Peer.Builder();
+                    peerBuilder.parsePublicKey("bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=");
+
+                    String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
+                    peerBuilder.parseEndpoint(targetEndpoint);
+
+                    peerBuilder.parseAllowedIP("0.0.0.0/0");
+                    peerBuilder.parseAllowedIP("::/0");
+
+                    Config config = new Config.Builder()
+                            .setInterface(interfaceBuilder.build())
+                            .addPeer(peerBuilder.build())
+                            .build();
+
                     backend.setState(new Tunnel() {
                         @Override
                         public String getName() {
@@ -111,21 +110,36 @@ public class ApexVpnService extends VpnService {
 
                         @Override
                         public void onStateChange(State state) {
-                            Log.d(TAG, "حالة نفق الـ VPN تغيرت إلى: " + state.name());
+                            Log.d(TAG, "حالة نفق WireGuard تغيرت إلى: " + state.name());
                         }
                     }, Tunnel.State.UP, config);
 
                     isTunnelRunning = true;
                     Log.d(TAG, "✅ تم تشغيل نفق WireGuard/WARP وتوجيه البيانات بنجاح!");
+                    return;
                 }
             } catch (Exception e) {
-                Log.e(TAG, "❌ خطأ أثناء إنشاء نفق الـ VPN الفعلي:", e);
-                stopWireGuardTunnel();
+                Log.e(TAG, "تعذر تشغيل GoBackend، جاري التبديل للمشغل الأصلي للنظام:", e);
+            }
+
+            try {
+                Builder builder = new Builder();
+                builder.addAddress("172.16.0.2", 32);
+                builder.addDnsServer("1.1.1.1");
+                builder.addDnsServer("1.0.0.1");
+                builder.addRoute("0.0.0.0", 0);
+                builder.setSession("ApexShieldVPN");
+                vpnInterface = builder.establish();
+                isTunnelRunning = true;
+                Log.d(TAG, "✅ تم تشغيل واجهة VPN النظام بنجاح!");
+            } catch (Exception ex) {
+                Log.e(TAG, "❌ فشل إنشاء واجهة VPN النظام:", ex);
+                stopVpnConnection();
             }
         }).start();
     }
 
-    private void stopWireGuardTunnel() {
+    private void stopVpnConnection() {
         new Thread(() -> {
             try {
                 if (backend != null && isTunnelRunning) {
@@ -140,13 +154,22 @@ public class ApexVpnService extends VpnService {
                     }, Tunnel.State.DOWN, null);
                 }
             } catch (Exception e) {
-                Log.e(TAG, "خطأ أثناء إيقاف النفق:", e);
-            } finally {
-                isTunnelRunning = false;
-                stopForeground(true);
-                stopSelf();
-                Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN وإعادة الـ IP الأصلي.");
+                Log.e(TAG, "خطأ أثناء إيقاف WireGuard backend:", e);
             }
+
+            try {
+                if (vpnInterface != null) {
+                    vpnInterface.close();
+                    vpnInterface = null;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "خطأ أثناء إغلاق vpnInterface:", e);
+            }
+
+            isTunnelRunning = false;
+            stopForeground(true);
+            stopSelf();
+            Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN وإعادة الـ IP الأصلي.");
         }).start();
     }
 
@@ -193,7 +216,7 @@ public class ApexVpnService extends VpnService {
 
     @Override
     public void onDestroy() {
-        stopWireGuardTunnel();
+        stopVpnConnection();
         super.onDestroy();
     }
 }

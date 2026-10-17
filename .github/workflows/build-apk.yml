@@ -71,7 +71,6 @@ jobs:
           node -e '
             const fs = require("fs");
             
-            // Patch variables.gradle if exists
             const vgPath = "android/variables.gradle";
             if (fs.existsSync(vgPath)) {
               let vg = fs.readFileSync(vgPath, "utf8");
@@ -81,11 +80,9 @@ jobs:
               fs.writeFileSync(vgPath, vg);
             }
 
-            // Patch app/build.gradle
             const bgPath = "android/app/build.gradle";
             if (fs.existsSync(bgPath)) {
               let bg = fs.readFileSync(bgPath, "utf8");
-              
               bg = bg.replace(/versionCode\s+\d+/g, "versionCode 28");
               bg = bg.replace(/versionName\s+"[^"]+"/g, "versionName \"8.0.0.4\"");
               bg = bg.replace(/minifyEnabled\s+true/g, "minifyEnabled false");
@@ -97,27 +94,22 @@ jobs:
               if (!bg.includes("packagingOptions")) {
                 bg = bg.replace(/(android\s*\{)/, "$1\n    packagingOptions {\n        resources {\n            excludes += [\"META-INF/INDEX.LIST\", \"META-INF/io.netty.versions.properties\", \"META-INF/DEPENDENCIES\"]\n        }\n    }");
               }
-
               fs.writeFileSync(bgPath, bg);
             }
 
-            // Ensure repositories in settings.gradle and root build.gradle
             const settingsPath = "android/settings.gradle";
             if (fs.existsSync(settingsPath)) {
-              let settings = fs.readFileSync(settingsPath, "utf8");
-              if (!settings.includes("jitpack.io")) {
-                settings = settings.replace(/repositories\s*\{/, "repositories {\n        google()\n        mavenCentral()\n        maven { url \"https://jitpack.io\" }");
-                fs.writeFileSync(settingsPath, settings);
-              }
-            }
-
-            const rootBuildPath = "android/build.gradle";
-            if (fs.existsSync(rootBuildPath)) {
-              let rootBuild = fs.readFileSync(rootBuildPath, "utf8");
-              if (!rootBuild.includes("jitpack.io")) {
-                rootBuild = rootBuild.replace(/allprojects\s*\{\s*repositories\s*\{/, "allprojects {\n    repositories {\n        google()\n        mavenCentral()\n        maven { url \"https://jitpack.io\" }");
-                fs.writeFileSync(rootBuildPath, rootBuild);
-              }
+              let settings = "dependencyResolutionManagement {\n";
+              settings += "    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n";
+              settings += "    repositories {\n";
+              settings += "        google()\n";
+              settings += "        mavenCentral()\n";
+              settings += "        maven { url \"https://jitpack.io\" }\n";
+              settings += "    }\n";
+              settings += "}\n";
+              settings += "rootProject.name = \"Vpn\"\n";
+              settings += "include \":app\"\n";
+              fs.writeFileSync(settingsPath, settings);
             }
           '
 

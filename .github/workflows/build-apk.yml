@@ -89,11 +89,11 @@ jobs:
               bg = bg.replace(/minifyEnabled\s+true/g, "minifyEnabled false");
               
               if (!bg.includes("com.wireguard.android:tunnel")) {
-                bg += "\n\ndependencies {\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"\n}\n";
+                bg = bg.replace(/(dependencies\s*\{)/, "$1\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
               }
 
               if (!bg.includes("packagingOptions")) {
-                bg = bg.replace(/android\s*\{/, "android {\n    packagingOptions {\n        resources {\n            excludes += [\"META-INF/INDEX.LIST\", \"META-INF/io.netty.versions.properties\", \"META-INF/DEPENDENCIES\"]\n        }\n    }");
+                bg = bg.replace(/(android\s*\{)/, "$1\n    packagingOptions {\n        resources {\n            excludes += [\"META-INF/INDEX.LIST\", \"META-INF/io.netty.versions.properties\", \"META-INF/DEPENDENCIES\"]\n        }\n    }");
               }
 
               fs.writeFileSync(bgPath, bg);

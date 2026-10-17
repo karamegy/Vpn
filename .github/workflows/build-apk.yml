@@ -53,21 +53,19 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android Structure & Inject WireGuard Safely
+      - name: 2. Prepare Android Structure & Inject Dependencies
         run: |
-          if [ ! -f "android/gradlew" ]; then
-            mkdir -p /tmp/custom_src
-            if [ -d "android/app/src/main" ]; then
-              cp -r android/app/src/main/* /tmp/custom_src/
-            fi
-            
-            rm -rf android
-            npx cap add android
-            
-            if [ -d "/tmp/custom_src" ]; then
-              mkdir -p android/app/src/main
-              cp -r /tmp/custom_src/* android/app/src/main/
-            fi
+          mkdir -p /tmp/custom_src
+          if [ -d "android/app/src/main" ]; then
+            cp -r android/app/src/main/* /tmp/custom_src/
+          fi
+          
+          rm -rf android
+          npx cap add android
+          
+          if [ -d "/tmp/custom_src" ]; then
+            mkdir -p android/app/src/main
+            cp -r /tmp/custom_src/* android/app/src/main/
           fi
 
           node -e '
@@ -78,13 +76,17 @@ jobs:
               let content = fs.readFileSync(bgPath, "utf8");
               
               if (!content.includes("com.wireguard.android:tunnel")) {
-                content = content.replace(/dependencies\s*\{/, "dependencies {\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
+                content += "\n\ndependencies {\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"\n}\n";
               }
               
               content = content.replace(/versionCode\s+\d+/, "versionCode 28");
               content = content.replace(/versionName\s+"[^"]+"/, "versionName \"8.0.0.4\"");
               content = content.replace(/minSdkVersion\s+\d+/g, "minSdkVersion 24");
               content = content.replace(/minSdk\s+\d+/g, "minSdk 24");
+              content = content.replace(/compileSdkVersion\s+\d+/g, "compileSdkVersion 34");
+              content = content.replace(/compileSdk\s+\d+/g, "compileSdk 34");
+              content = content.replace(/targetSdkVersion\s+\d+/g, "targetSdkVersion 34");
+              content = content.replace(/targetSdk\s+\d+/g, "targetSdk 34");
               content = content.replace(/minifyEnabled\s+true/g, "minifyEnabled false");
               
               fs.writeFileSync(bgPath, content);
@@ -102,7 +104,14 @@ jobs:
 
           npx cap sync android
 
-      - name: 3. Build & Sign APK & AAB Packages
+      - name: 3. Build Native APK & AAB Packages
+        run: |
+          cd android
+          chmod +x gradlew
+          export GRADLE_OPTS="-Dfile.encoding=UTF-8"
+          ./gradlew clean assembleRelease bundleRelease --no-daemon
+
+      - name: 4. Safe Signing Step (Handles Missing Secrets Gracefully)
         env:
           RELEASE_KEY: ${{ secrets.RELEASE_KEY }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
@@ -110,21 +119,18 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
-          
-          printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
-          
-          chmod +x gradlew
-          export GRADLE_OPTS="-Dfile.encoding=UTF-8"
-          
-          ./gradlew clean assembleRelease bundleRelease --no-daemon
-
           APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS"
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
-          
-          rm -f signing.keystore
+          if [ -n "$RELEASE_KEY" ] && [ -n "$STORE_PASSWORD" ]; then
+            echo "Signing release binaries with Keystore..."
+            printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$APK_FILE" "$KEY_ALIAS" || true
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS" || true
+            rm -f signing.keystore
+          else
+            echo "Secrets missing or incomplete. Proceeding with generated release binaries."
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

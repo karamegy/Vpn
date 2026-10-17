@@ -37,11 +37,26 @@ jobs:
           
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
 
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "io.github.karamegy.Vpn",
+            "appName": "Apex Shield AI",
+            "webDir": "www",
+            "bundledWebRuntime": false,
+            "android": {
+              "webContentsDebuggingEnabled": true,
+              "allowMixedContent": true
+            }
+          }
+          EOF
+
       - name: 2. Prepare Android Platform & Inject Dependencies
         run: |
           export CI=true
           
-          # مزامنة الملفات مباشرة لأن مجلد android موجود بالفعل في المستودع
+          # إزالة مجلد أندرويد القديم لو كان تالفاً، ثم إضافته من جديد بنظافة تامة
+          rm -rf android
+          npx cap add android
           npx cap sync android
 
           if [ -f "android/app/build.gradle" ]; then
@@ -60,12 +75,6 @@ jobs:
             sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 34/' android/variables.gradle
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
-
-          cd android
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper --gradle-version 8.5
-          fi
-          cd ..
 
       - name: 3. Build & Sign APK & AAB Packages
         env:

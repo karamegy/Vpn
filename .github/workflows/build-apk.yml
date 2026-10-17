@@ -1,4 +1,4 @@
-name: Build Android Native APK & AAB (Apex Shield ai)
+name: Build Native APK & AAB (Apex Shield ai)
 
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ jobs:
       - name: Setup Gradle Environment
         uses: gradle/actions/setup-gradle@v3
 
-      - name: 1. Setup Web Assets & Local Config
+      - name: 1. Setup Web Assets & Dependencies
         run: |
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
@@ -40,83 +40,8 @@ jobs:
           
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
 
-          cat << 'EOF' > capacitor.config.json
-          {
-            "appId": "io.github.karamegy.Vpn",
-            "appName": "Apex Shield AI",
-            "webDir": "www",
-            "bundledWebRuntime": false,
-            "android": {
-              "webContentsDebuggingEnabled": true,
-              "allowMixedContent": true
-            }
-          }
-          EOF
-
-      - name: 2. Prepare Android Structure & Patch Gradle Safely
+      - name: 2. Sync with Existing Android Project (No Deletion)
         run: |
-          mkdir -p /tmp/custom_src
-          if [ -d "android/app/src/main" ]; then
-            cp -r android/app/src/main/* /tmp/custom_src/
-          fi
-          
-          rm -rf android
-          npx cap add android
-          
-          if [ -d "/tmp/custom_src" ]; then
-            mkdir -p android/app/src/main
-            cp -r /tmp/custom_src/* android/app/src/main/
-          fi
-
-          node -e '
-            const fs = require("fs");
-            
-            const vgPath = "android/variables.gradle";
-            if (fs.existsSync(vgPath)) {
-              let vg = fs.readFileSync(vgPath, "utf8");
-              vg = vg.replace(/compileSdkVersion\s*=\s*\d+/g, "compileSdkVersion = 34");
-              vg = vg.replace(/targetSdkVersion\s*=\s*\d+/g, "targetSdkVersion = 34");
-              vg = vg.replace(/minSdkVersion\s*=\s*\d+/g, "minSdkVersion = 26");
-              fs.writeFileSync(vgPath, vg);
-            }
-
-            const bgPath = "android/app/build.gradle";
-            if (fs.existsSync(bgPath)) {
-              let bg = fs.readFileSync(bgPath, "utf8");
-              bg = bg.replace(/versionCode\s+\d+/g, "versionCode 28");
-              bg = bg.replace(/versionName\s+"[^"]+"/g, "versionName \"8.0.0.4\"");
-              bg = bg.replace(/minifyEnabled\s+true/g, "minifyEnabled false");
-              
-              if (!bg.includes("com.wireguard.android:tunnel")) {
-                bg = bg.replace(/(dependencies\s*\{)/, "$1\n    implementation \"com.wireguard.android:tunnel:1.0.20230707\"");
-              }
-
-              if (!bg.includes("packagingOptions")) {
-                bg = bg.replace(/(android\s*\{)/, "$1\n    packagingOptions {\n        resources {\n            excludes += [\"META-INF/INDEX.LIST\", \"META-INF/io.netty.versions.properties\", \"META-INF/DEPENDENCIES\"]\n        }\n    }");
-              }
-              fs.writeFileSync(bgPath, bg);
-            }
-
-            const settingsPath = "android/settings.gradle";
-            if (fs.existsSync(settingsPath)) {
-              let settings = fs.readFileSync(settingsPath, "utf8");
-              if (!settings.includes("jitpack.io")) {
-                if (settings.includes("dependencyResolutionManagement")) {
-                  settings = settings.replace(
-                    /(dependencyResolutionManagement\s*\{[\s\S]*?repositories\s*\{)/,
-                    "$1\n        maven { url '\''https://jitpack.io'\'' }"
-                  );
-                } else {
-                  settings = settings.replace(
-                    /repositories\s*\{/,
-                    "repositories {\n        google()\n        mavenCentral()\n        maven { url '\''https://jitpack.io'\'' }"
-                  );
-                }
-                fs.writeFileSync(settingsPath, settings);
-              }
-            }
-          '
-
           npx cap sync android
 
       - name: 3. Build Native APK & AAB Packages

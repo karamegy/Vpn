@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isGpsMockActive = true;
     let currentServerIp = '162.159.192.1';
     let currentServerName = 'Cloudflare WARP (شبكة الحماية العالمية)';
-    let realUserPublicIp = 'غير معروف';
+    let realUserPublicIp = 'جاري الفحص...';
     let sessionSeconds = 0;
     let timerInterval = null;
     let notificationInterval = null;
@@ -293,13 +293,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODULE 0.1: نظام إدارة الاتصال ومُحسّن استهلاك فايربيس (Firestore Cache Core)
     // ========================================================================
     window.addEventListener('online', () => {
-        showToast('🌐 عاد الاتصال بالإنترنت: جاري مزامنة السجلات المعلقة مع السحابة...');
+        showToast('🌐 عاد الاتصال بالإنترنت: جاري مزامنة السجلات المعلقة وتحديث الـ IP...');
         syncOfflineLogsToCloud();
         fetchUserRealPublicIp();
     });
 
     window.addEventListener('offline', () => {
-        showToast('⚠️ انقطع الاتصال بالإنترنت: يعمل التطبيق بوضع الحماية المحلية المكتفية ذاتياً (Offline Mode)');
+        showToast('⚠️ انقطع الاتصال بالإنترنت: يعمل التطبيق بوضع الحماية المحلية (Offline Mode)');
     });
 
     async function queueLogOffline(eventType, details) {
@@ -430,15 +430,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ========================================================================
+    // جلب وعرض رقم الـ IP الحقيقي والمشفر بمرونة ومصداقية كاملة للمستخدم
+    // ========================================================================
     async function fetchUserRealPublicIp() {
+        const ipDisplay = document.getElementById('ip-display');
+        if (ipDisplay) {
+            ipDisplay.textContent = isConnected ? 'جاري جلب IP WARP النشط...' : 'جاري جلب IP الحقيقي...';
+        }
+
         try {
             const res = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
             const data = await res.json();
             realUserPublicIp = data.ip || 'غير معروف';
         } catch (e) {
-            realUserPublicIp = 'غير معروف';
+            try {
+                const res2 = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
+                const data2 = await res2.json();
+                realUserPublicIp = data2.ip || 'غير معروف';
+            } catch (err) {
+                realUserPublicIp = 'غير معروف';
+            }
         }
-        const ipDisplay = document.getElementById('ip-display');
+
         if (ipDisplay) {
             if (isConnected) {
                 ipDisplay.textContent = `IP WARP المشفر النشط: ${realUserPublicIp}`;
@@ -980,26 +994,38 @@ document.addEventListener('DOMContentLoaded', () => {
             warpConfig = await generateCloudflareWarpConfig();
         }
 
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AndroidVPNBridge) {
+        const bridge = window.Capacitor?.Plugins?.AndroidVPNBridge;
+
+        if (bridge) {
             try {
-                const res = await window.Capacitor.Plugins.AndroidVPNBridge.toggleVpn({ 
-                    enable, 
+                if (enable && typeof bridge.isPrepared === 'function') {
+                    const prepRes = await bridge.isPrepared();
+                    if (!prepRes.prepared && typeof bridge.prepareVpn === 'function') {
+                        await bridge.prepareVpn();
+                    }
+                }
+
+                const res = await bridge.toggleVpn({ 
+                    enable: !!enable, 
                     serverIp: serverIp || (warpConfig ? warpConfig.endpoint : '162.159.192.1'), 
                     serverName: serverName || 'Cloudflare WARP Global',
                     warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
                     warpEndpoint: warpConfig ? warpConfig.endpoint : '162.159.192.1:2408',
                     warpPrivateKey: warpConfig ? warpConfig.privateKey : ''
                 });
-                return res && res.success;
+                return res && (res.success || res.status === 'connected' || res.status === 'disconnected');
             } catch (e) {
-                console.warn("جسر Capacitor VPN غير مثبت أو يعمل بمتصفح الـ PWA المباشر");
+                console.warn("جسر Capacitor VPN واجه تعذر أو يعمل بالمتصفح المباشر:", e);
+                return false;
             }
         }
+
         if (window.AndroidVPNBridge && typeof window.AndroidVPNBridge.toggleVpn === 'function') {
             try {
                 return window.AndroidVPNBridge.toggleVpn(enable, serverIp, serverName);
             } catch (e) {
                 console.error("خطأ في الاتصال بجسر أندرويد الأصلي:", e);
+                return false;
             }
         }
         return true; 
@@ -2072,7 +2098,7 @@ document.addEventListener('DOMContentLoaded', () => {
         statusOrb?.classList.remove('connected');
         if (connectionStatus) connectionStatus.textContent = 'غير متصل بالدرع';
         
-        fetchUserRealPublicIp();
+        setTimeout(() => { fetchUserRealPublicIp(); }, 1000);
 
         if (connectBtn) {
             connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
@@ -2119,8 +2145,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     startSessionTimerAndNotifications();
 
-                    // إعادة فحص وجلب الـ IP المشفر الجديد تلقائياً وعرضه بالواجهة
-                    await fetchUserRealPublicIp();
+                    // إعادة فحص وجلب الـ IP المشفر الجديد تلقائياً وعرضه بالواجهة فور اكتمال توجيه النفق
+                    setTimeout(() => { fetchUserRealPublicIp(); }, 1500);
 
                     await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال الآمن ونفق Cloudflare WARP عبر ${currentServerName}.`);
                     showToast('🚀 تم الاتصال بنجاح وتفعيل نفق WireGuard المشفر!');

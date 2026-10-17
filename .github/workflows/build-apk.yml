@@ -101,10 +101,17 @@ jobs:
             if (fs.existsSync(settingsPath)) {
               let settings = fs.readFileSync(settingsPath, "utf8");
               if (!settings.includes("jitpack.io")) {
-                settings = settings.replace(
-                  /repositories\s*\{/,
-                  "repositories {\n        google()\n        mavenCentral()\n        maven { url \"https://jitpack.io\" }"
-                );
+                if (settings.includes("dependencyResolutionManagement")) {
+                  settings = settings.replace(
+                    /(dependencyResolutionManagement\s*\{[\s\S]*?repositories\s*\{)/,
+                    "$1\n        maven { url '\''https://jitpack.io'\'' }"
+                  );
+                } else {
+                  settings = settings.replace(
+                    /repositories\s*\{/,
+                    "repositories {\n        google()\n        mavenCentral()\n        maven { url '\''https://jitpack.io'\'' }"
+                  );
+                }
                 fs.writeFileSync(settingsPath, settings);
               }
             }
@@ -150,4 +157,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-AAB-GooglePlay
-          path: android/app/build/outputs/bundle/release/*.aab`
+          path: android/app/build/outputs/bundle/release/*.aab

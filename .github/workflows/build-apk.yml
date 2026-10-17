@@ -8,10 +8,6 @@ on:
       - master
     paths:
       - '.github/workflows/build-apk.yml'
-      - 'app.js'
-      - 'index.html'
-      - 'style.css'
-      - 'android/**'
 
 jobs:
   build:
@@ -32,7 +28,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 1. Setup Web Assets & Dependencies
+      - name: 1. Setup Web Assets & Local Config
         run: |
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
@@ -41,6 +37,7 @@ jobs:
             npm init -y
           fi
           
+          # تثبيت إصدار مستقر ومتوافق تماماً من Capacitor لمنع مشاكل توافقية إصدارات الجافا الحديثة
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
 
           cat << 'EOF' > capacitor.config.json
@@ -56,15 +53,41 @@ jobs:
           }
           EOF
 
-      - name: 2. Sync Web Assets with Android Project
+      - name: 2. Generate Android & Ensure Gradle Wrapper Exists
         run: |
-          # تحديث رقم الإصدار في build.gradle إلى 28 و 8.0.0.4 للقبول في جوجل بلاي
-          if [ -f "android/app/build.gradle" ]; then
-            sed -i -E 's/versionCode [0-9]+/versionCode 28/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.4"/' android/app/build.gradle
+          rm -rf android
+          npx cap add android
+
+          cd android
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper --gradle-version 8.5
+          fi
+          cd ..
+
+          if [ -f "android/variables.gradle" ]; then
+            sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
+            sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
+            sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 
-          # مزامنة ملفات الويب داخل مجلد android بدون مسح أو تعديل أكواد الجافا الحقيقية
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i -E 's/versionCode [0-9]+/versionCode 27/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.3"/' android/app/build.gradle
+            sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
+            sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
+            sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
+          fi
+
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_PATH" ]; then
+            if ! grep -q "BIND_VPN_SERVICE" "$MANIFEST_PATH"; then
+              sed -i '/<uses-permission android:name="android\.permission\.INTERNET"/a \    <uses-permission android:name="android.permission.BIND_VPN_SERVICE"/>' "$MANIFEST_PATH"
+            fi
+            if ! grep -q "ApexVpnService" "$MANIFEST_PATH"; then
+              sed -i '/<\/application>/i \    <service android:name="io.github.karamegy.Vpn.ApexVpnService" android:permission="android.permission.BIND_VPN_SERVICE" android:exported="false">\n        <intent-filter>\n            <action android:name="android.net.VpnService"/>\n        </intent-filter>\n    </service>' "$MANIFEST_PATH"
+            fi
+          fi
+
           npx cap sync android
 
       - name: 3. Build & Sign APK & AAB Packages
@@ -75,19 +98,15 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
-          chmod +x gradlew
           
-          # استخراج مفتاح التوقيع
           printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           
+          chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
-          
-          # البناء التجميعي باستخدام gradlew الخاص بالمشروع فقط
           ./gradlew clean assembleDebug bundleRelease --no-daemon
 
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          # توقيع حزمة AAB لرفعها مباشرة لمترج جوجل بلاي
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
           
           rm -f signing.keystore
@@ -95,11 +114,11 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ApexShield-v8.0.0.4-APK-DirectInstall
+          name: ApexShield-APK-DirectInstall
           path: android/app/build/outputs/apk/debug/*.apk
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
-          name: ApexShield-v8.0.0.4-AAB-GooglePlay
+          name: ApexShield-AAB-GooglePlay
           path: android/app/build/outputs/bundle/release/*.aab

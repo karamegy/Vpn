@@ -58,7 +58,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-          # إنشاء ملفات الجافا النقيّة والمستقرة 100% لتجنب أي أخطاء ترجمة برمجية نهائياً
+          # إنشاء ملفات الجافا النقيّة والمستقرة مع تفعيل Google Play Billing الفعلي
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
@@ -102,6 +102,7 @@ jobs:
           import com.getcapacitor.annotation.CapacitorPlugin;
 
           import java.util.Collections;
+          import java.util.List;
 
           @CapacitorPlugin(name = "AndroidVPNBridge")
           public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedListener {
@@ -109,6 +110,7 @@ jobs:
               private PluginCall activeBillingCall = null;
               private static final int VPN_REQUEST_CODE = 0x9999;
               private PluginCall activeVpnCall = null;
+              private ProductDetails cachedProductDetails = null;
 
               @Override
               public void load() {
@@ -118,27 +120,123 @@ jobs:
                       billingClient = BillingClient.newBuilder(context).setListener(this).enablePendingPurchases().build();
                       billingClient.startConnection(new BillingClientStateListener() {
                           @Override
-                          public void onBillingSetupFinished(@NonNull BillingResult billingResult) {}
+                          public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+                              if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                                  queryAvailableProducts();
+                              }
+                          }
                           @Override
                           public void onBillingServiceDisconnected() {}
                       });
                   }
               }
 
+              private void queryAvailableProducts() {
+                  if (billingClient == null || !billingClient.isReady()) return;
+                  List<QueryProductDetailsParams.Product> productList = Collections.singletonList(
+                      QueryProductDetailsParams.Product.newBuilder()
+                          .setProductId("apex_pro_monthly")
+                          .setProductType(BillingClient.ProductType.SUBS)
+                          .build()
+                  );
+                  QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(productList).build();
+                  billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+                      if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
+                          cachedProductDetails = productDetailsList.get(0);
+                      }
+                  });
+              }
+
               @PluginMethod
               public void checkSubscriptionStatus(PluginCall call) {
                   JSObject ret = new JSObject();
-                  ret.put("isPro", false);
-                  call.resolve(ret);
+                  if (billingClient == null || !billingClient.isReady()) {
+                      ret.put("isPro", false);
+                      call.resolve(ret);
+                      return;
+                  }
+                  billingClient.queryPurchasesAsync(
+                      QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+                      (billingResult, purchases) -> {
+                          boolean isPro = false;
+                          if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                              for (Purchase purchase : purchases) {
+                                  if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                      for (String sku : purchase.getProducts()) {
+                                          if (sku.contains("apex_pro")) {
+                                              isPro = true;
+                                              break;
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          ret.put("isPro", isPro);
+                          call.resolve(ret);
+                      }
+                  );
               }
 
               @PluginMethod
               public void launchBilling(PluginCall call) {
-                  call.reject("Billing service ready");
+                  Activity activity = getActivity();
+                  if (activity == null) {
+                      call.reject("No active activity found");
+                      return;
+                  }
+                  if (billingClient == null || !billingClient.isReady()) {
+                      call.reject("Google Play Billing client is not ready");
+                      return;
+                  }
+                  if (cachedProductDetails == null) {
+                      call.reject("Product details not loaded yet from Google Play");
+                      return;
+                    }
+
+                  activeBillingCall = call;
+                  List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = Collections.singletonList(
+                      BillingFlowParams.ProductDetailsParams.newBuilder()
+                          .setProductDetails(cachedProductDetails)
+                          .setOfferToken(cachedProductDetails.getSubscriptionOfferDetails().get(0).getOfferToken())
+                          .build()
+                  );
+
+                  BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
+                      .setProductDetailsParamsList(productDetailsParamsList)
+                      .build();
+
+                  BillingResult billingResult = billingClient.launchBillingFlow(activity, billingFlowParams);
+                  if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                      call.reject("Failed to launch billing flow: " + billingResult.getDebugMessage());
+                  }
               }
 
               @Override
-              public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable java.util.List<Purchase> purchases) {}
+              public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
+                  if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                      for (Purchase purchase : purchases) {
+                          if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                              if (!purchase.isAcknowledged()) {
+                                  AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
+                                      .setPurchaseToken(purchase.getPurchaseToken())
+                                      .build();
+                                  billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult1 -> {});
+                              }
+                          }
+                      }
+                      if (activeBillingCall != null) {
+                          JSObject ret = new JSObject();
+                          ret.put("success", true);
+                          activeBillingCall.resolve(ret);
+                          activeBillingCall = null;
+                      }
+                  } else {
+                      if (activeBillingCall != null) {
+                          activeBillingCall.reject("Purchase cancelled or failed");
+                          activeBillingCall = null;
+                      }
+                  }
+              }
 
               @PluginMethod
               public void prepareVpn(PluginCall call) {

@@ -54,7 +54,7 @@ jobs:
         run: |
           export CI=true
           
-          # حفظ ملفات الـ Java الخاصة بك مؤقتاً
+          # حفظ ملفات الـ Java الخاصة بك مؤقتاً لكي لا يتم فقدانها عند إعادة بناء المنصة
           mkdir -p /tmp/custom_java
           cp -r android/app/src/main/java/io/github/karamegy/Vpn /tmp/custom_java/ 2>/dev/null || true
           cp android/app/src/main/AndroidManifest.xml /tmp/custom_java/ 2>/dev/null || true
@@ -63,12 +63,12 @@ jobs:
           npx cap add android
           npx cap sync android
 
-          # استعادة ملفات الـ Java والـ Manifest
+          # استعادة ملفات الـ Java والـ Manifest المخصصة
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
           cp -r /tmp/custom_java/Vpn/* android/app/src/main/java/io/github/karamegy/Vpn/ 2>/dev/null || true
           cp /tmp/custom_java/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
 
-          # إضافة مستودع JitPack ومكتبة WireGuard وفواتير جوجل إلى Gradle لتتطابق مع أكواد الجافا
+          # إضافة مستودع JitPack ومكتبة WireGuard وفواتير جوجل إلى Gradle تلقائياً
           if [ -f "android/build.gradle" ]; then
             if ! grep -q "jitpack.io" android/build.gradle; then
               sed -i '/allprojects {/,/}/ s/repositories {/repositories {\n        google()\n        mavenCentral()\n        maven { url "https:\/\/jitpack.io" }/' android/build.gradle || true

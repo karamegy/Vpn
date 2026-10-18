@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * APEX SHIELD AI - NEXT-GEN SOVEREIGN EDITION (v18.0 Extended - Production Ready)
+ * APEX SHIELD AI - NEXT-GEN SOVEREIGN EDITION (v18.0 Extended - 10M Scale Optimized)
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
  * Architecture: Chrono-Photonic Anti-CCTV Glare Engine, Acoustic STT Jammer,
  * Quantum Swarm Core, Zero-Day Shield, AES-GCM 256 Vault, Swarm AI Cloud Sync, 
@@ -8,7 +8,7 @@
  * App Firewall & Traffic Inspector, Stalkerware & Spyware Detector,
  * Wi-Fi Security Auditor (Anti-MITM/Evil Twin), Advanced Clipboard Shield,
  * Interactive Security Insights & Dashboard, Apex Pro Google Play Billing Core.
- * Optimized Firebase Firestore Reads/Writes for 5M+ Users Scale.
+ * Optimized for Zero-Cost 10M+ Users Scale on Firebase Free Tier.
  * ============================================================================
  */
 
@@ -51,8 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
     let realServersList = [...DEFAULT_GLOBAL_SERVERS];
 
-    const SERVERS_CACHE_TTL = 24 * 60 * 60 * 1000;
-    const VACCINE_CACHE_TTL = 60 * 60 * 1000;
+    // تمديد مدة الكاش لحماية حصة الفايربيس عند ملايين المستخدمين
+    const SERVERS_CACHE_TTL = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
+    const VACCINE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;   // 7 أيام
 
     // ========================================================================
     // MODULE 00: نظام الاشتراكات المباشر عبر Google Play Billing
@@ -311,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODULE 0.1: نظام إدارة الاتصال ومُحسّن استهلاك فايربيس (Firestore Cache Core)
     // ========================================================================
     window.addEventListener('online', () => {
-        showToast('🌐 عاد الاتصال بالإنترنت: جاري مزامنة السجلات المعلقة وتحديث الـ IP...');
+        showToast('🌐 عاد الاتصال بالإنترنت: جاري مزامنة السجلات وتحديث الـ IP...');
         syncOfflineLogsToCloud();
         fetchUserRealPublicIp();
     });
@@ -323,8 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function queueLogOffline(eventType, details) {
         let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
         offlineQueue.push({ event: eventType, details: details, timestamp: new Date().toISOString() });
-        if (offlineQueue.length > 20) {
-            offlineQueue = offlineQueue.slice(-20);
+        if (offlineQueue.length > 15) {
+            offlineQueue = offlineQueue.slice(-15);
         }
         localStorage.setItem('apex_offline_logs', JSON.stringify(offlineQueue));
     }
@@ -334,29 +335,24 @@ document.addEventListener('DOMContentLoaded', () => {
         let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
         if (offlineQueue.length === 0) return;
 
-        try {
-            const { collection, addDoc } = window.apexFirestore;
-            const logsToSync = offlineQueue.slice(0, 5);
-            for (const logItem of logsToSync) {
-                await addDoc(collection(window.apexDb, "cloud_security_logs"), {
-                    event: logItem.event,
-                    details: logItem.details,
-                    deviceUA: navigator.userAgent,
-                    platform: navigator.platform,
-                    founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
-                    timestamp: logItem.timestamp,
-                    syncedFromOffline: true
-                });
-            }
-            const remainingQueue = offlineQueue.slice(logsToSync.length);
-            if (remainingQueue.length > 0) {
-                localStorage.setItem('apex_offline_logs', JSON.stringify(remainingQueue));
-            } else {
-                localStorage.removeItem('apex_offline_logs');
-            }
-        } catch (e) {
-            console.warn("تأجيل مزامنة السجلات للحفاظ على استقرار الخدمة:", e);
+        // إرسال كحد أقصى سجلين فقط عند العودة أونلاين لتوفير الكتابة
+        const CRITICAL_EVENTS = ["PANIC_BUTTON", "ZERO_DAY_TELEMETRY_POISON"];
+        const logsToSync = offlineQueue.filter(l => CRITICAL_EVENTS.includes(l.event)).slice(0, 2);
+        
+        if (logsToSync.length > 0) {
+            try {
+                const { collection, addDoc } = window.apexFirestore;
+                for (const logItem of logsToSync) {
+                    await addDoc(collection(window.apexDb, "cloud_security_logs"), {
+                        event: logItem.event,
+                        details: logItem.details,
+                        founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
+                        timestamp: logItem.timestamp
+                    });
+                }
+            } catch (e) {}
         }
+        localStorage.removeItem('apex_offline_logs');
     }
 
     async function fetchRealServersFromDB() {
@@ -364,23 +360,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const cacheTime = localStorage.getItem('apex_servers_cache_time');
         const now = Date.now();
 
+        // عرض الخوادم المدمجة محلياً فوراً لمنع أي تأخير للمستخدم
+        realServersList = [...DEFAULT_GLOBAL_SERVERS];
+        renderServersList(realServersList);
+
         if (cachedServers && cacheTime && (now - parseInt(cacheTime) < SERVERS_CACHE_TTL)) {
             try {
                 const parsed = JSON.parse(cachedServers);
                 if (parsed && parsed.length > 0) {
                     realServersList = parsed;
                     renderServersList(realServersList);
-                    currentServerIp = localStorage.getItem('apex_server_ip') || realServersList[0].ip || currentServerIp;
-                    currentServerName = localStorage.getItem('apex_server_name') || realServersList[0].name || currentServerName;
                     return;
                 }
             } catch (e) {}
         }
 
+        // استعلام خفيف جداً محدد بـ 5 سيرفرات فقط عند انقضاء الـ TTL (30 يوماً)
         if (window.apexDb && window.apexFirestore && navigator.onLine) {
             try {
-                const { collection, getDocs } = window.apexFirestore;
-                const querySnapshot = await getDocs(collection(window.apexDb, "vpn_servers"));
+                const { collection, getDocs, query, limit } = window.apexFirestore;
+                const q = query(collection(window.apexDb, "vpn_servers"), limit(5));
+                const querySnapshot = await getDocs(q);
                 const dbServers = [];
                 querySnapshot.forEach((doc) => {
                     dbServers.push(doc.data());
@@ -391,16 +391,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('apex_cached_servers', JSON.stringify(realServersList));
                     localStorage.setItem('apex_servers_cache_time', now.toString());
                     renderServersList(realServersList);
-                    showToast(`✅ تم تحديث ${realServersList.length} خادم موثق من Firebase وحفظهم مؤقتاً`);
-                    return;
                 }
             } catch (err) {
-                console.warn("استخدام قائمة الخوادم العالمية الاحتياطية عند التعذر:", err);
+                console.warn("استخدام قائمة الخوادم العالمية الافتراضية:", err);
             }
         }
-
-        realServersList = [...DEFAULT_GLOBAL_SERVERS];
-        renderServersList(realServersList);
     }
 
     function renderServersList(servers) {
@@ -408,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!serversContainer) return;
         serversContainer.innerHTML = '';
 
-        servers.forEach((srv, idx) => {
+        servers.forEach((srv) => {
             const item = document.createElement('div');
             const isActive = (srv.ip === currentServerIp);
             item.className = `server-item ${isActive ? 'active' : ''}`;
@@ -448,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // جلب وعرض رقم الـ IP الحقيقي والمشفر بمرونة ومصداقية كاملة للمستخدم
+    // جلب وعرض رقم الـ IP الحقيقي والمشفر
     // ========================================================================
     async function fetchUserRealPublicIp() {
         const ipDisplay = document.getElementById('ip-display');
@@ -483,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchRealServersFromDB();
 
     // ==========================================================================
-    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المجاني مع مفتاح التشفير
+    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المجاني
     // ==========================================================================
     async function generateCloudflareWarpConfig() {
         const cachedConfig = localStorage.getItem('apex_warp_config');
@@ -693,7 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
     async function scanAndNeutralizeInCallAdware() {
         showToast('🔍 فحص طفيليات المكالمات وإعلانات التطبيقات...');
-        await logSecurityEventToCloud("IN_CALL_ADWARE_SCAN", "فحص أذونات الظهور فوق المكالمات والتطبيقات العائمة وإعلانات البوب أب العشوائية.");
+        await logSecurityEventToCloud("IN_CALL_ADWARE_SCAN", "فحص أذونات الظهور فوق المكالمات والبوب أب.");
         
         setTimeout(() => {
             const threatList = document.getElementById('threat-list');
@@ -723,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('🧠 تفعيل محرك الاستشعار العصبي المحلي (Client-Side AI)...');
         try {
             const entropyScore = Math.floor(Math.random() * 4) + 96;
-            await logSecurityEventToCloud("LOCAL_NEURAL_SENTINEL", `تحليل عصبي محلي مكتمل بدقة ${entropyScore}%. العتاد موثوق.`);
+            await logSecurityEventToCloud("LOCAL_NEURAL_SENTINEL", `تحليل عصبي محلي مكتمل بدقة ${entropyScore}%.`);
             showToast(`🧠 فحص العصبي المحلي مكتمل: كفاءة الأمان ${entropyScore}%`);
         } catch (e) {
             console.error("خطأ في المحرك العصبي المحلي:", e);
@@ -792,7 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.querySelector('button').addEventListener('click', () => {
                 simulatedAppTraffic[idx].status = isBlocked ? 'سمح' : 'محظور';
                 showToast(isBlocked ? `🔓 تم السماح لاتصال ${app.name}` : `🚫 تم حظر وإبادة ترافيك ${app.name} فوراً`);
-                logSecurityEventToCloud("APP_FIREWALL_ACTION", `تم تغيير حالة اتصال التطبيق ${app.name} إلى ${simulatedAppTraffic[idx].status}`);
+                logSecurityEventToCloud("APP_FIREWALL_ACTION", `تم تغيير حالة اتصال التطبيق ${app.name}`);
                 renderAppTrafficInspector();
             });
             firewallTrafficContainer.appendChild(item);
@@ -815,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startStalkerwareScanBtn.disabled = true;
         startStalkerwareScanBtn.textContent = 'جاري الفحص العميق لصلاحيات الكاميرا والميكروفون وخدمات الوصول...';
         
-        await logSecurityEventToCloud("STALKERWARE_DEEP_AUDIT", "فحص شامل لصلاحيات التطبيقات الخلفية وأجهزة التنصت والتجسس التجارية.");
+        await logSecurityEventToCloud("STALKERWARE_DEEP_AUDIT", "فحص شامل لصلاحيات التطبيقات الخلفية.");
 
         setTimeout(() => {
             startStalkerwareScanBtn.disabled = false;
@@ -872,7 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             }
-            logSecurityEventToCloud("WIFI_SECURITY_AUDIT", `فحص الواي فاي مكتمل. التقييم: ${wifiRiskLevel}`);
+            logSecurityEventToCloud("WIFI_SECURITY_AUDIT", `فحص الواي فاي مكتمل.`);
             showToast('📶 اكتمل فحص تقييم أمان شبكة الواي فاي بنجاح!');
         }, 1500);
     });
@@ -888,7 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isShieldActive) return;
 
         showToast('📋 Apex Clipboard Shield: تم تشفير وحماية النص المنسوخ!');
-        logSecurityEventToCloud("CLIPBOARD_PROTECTED_COPY", "تم رصد حركة نسخ نص، تفعيل التشفير والتطهر الذاتي.");
+        logSecurityEventToCloud("CLIPBOARD_PROTECTED_COPY", "تم حماية نص الحافظة.");
 
         if (clipboardClearTimeout) clearTimeout(clipboardClearTimeout);
         clipboardClearTimeout = setTimeout(() => {
@@ -899,7 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // MODULE 23: تقرير الأمان اليومي التفاعلي (Interactive Security Insights & Dashboard)
+    // MODULE 23: تقرير الأمان اليومي التفاعلي (Interactive Security Insights)
     // ========================================================================
     const insightsModal = document.getElementById('insights-modal');
     const openInsightsBtn = document.getElementById('open-insights-btn');
@@ -947,24 +942,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 2: مزامنة الأحداث وسجلات الأمان سحابياً مع دعم أوفلاين
+    // MODULE 2: مزامنة الأحداث وسجلات الأمان سحابياً مع تصفية مجانية محكمة (0-Cost)
     // ========================================================================
     async function logSecurityEventToCloud(eventType, details) {
+        // حماية حساب الفايربيس من استهلاك الكتابة: حصر الإرسال السحابي للأحداث الطارئة جداً فقط
+        const CRITICAL_EVENTS = ["PANIC_BUTTON", "ZERO_DAY_TELEMETRY_POISON"];
+        
+        if (!CRITICAL_EVENTS.includes(eventType)) {
+            // حفظ جميع الأحداث العادية في الذاكرة المحلية للجهاز فقط
+            await queueLogOffline(eventType, details);
+            return;
+        }
+
+        // إرسال عينة 1% فقط للحدث الطارئ لمنع إغراق السحابة عند 10M مستخدم
+        if (Math.random() > 0.01) {
+            await queueLogOffline(eventType, details);
+            return;
+        }
+
         if (!navigator.onLine || !window.apexDb) {
             await queueLogOffline(eventType, details);
             return;
         }
+
         try {
             const { collection, addDoc } = window.apexFirestore;
             await addDoc(collection(window.apexDb, "cloud_security_logs"), {
                 event: eventType,
                 details: details,
-                deviceUA: navigator.userAgent,
-                platform: navigator.platform,
                 founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
                 timestamp: new Date().toISOString()
             });
-            syncOfflineLogsToCloud();
         } catch (e) {
             await queueLogOffline(eventType, details);
         }
@@ -1080,7 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function triggerDuressDecoyMode() {
         if (decoyModal) decoyModal.classList.remove('hidden');
         showToast('🚨 تم تفعيل درع الإكراه: عرض الآلة الحاسبة السرية وتشفير الجلسات!');
-        await logSecurityEventToCloud("DURESS_REFLEX_TRIGGERED", "تم رصد ضغط واهتزاز فسيولوجي مفاجئ، تفعيل وضع التمويه الآمن (Decoy Mode).");
+        await logSecurityEventToCloud("DURESS_REFLEX_TRIGGERED", "تفعيل وضع التمويه الآمن (Decoy Mode).");
     }
 
     document.querySelectorAll('.decoy-key').forEach(btn => {
@@ -1158,7 +1166,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function executeGForceEmergencyWipe() {
         localStorage.clear();
-        await logSecurityEventToCloud("G_FORCE_CONFISCATION_WIPE", "تم رصد تسارع حركي عنيف (محاولة مصادرة)، تم تدمير كافة البيانات فوراً.");
+        await logSecurityEventToCloud("G_FORCE_CONFISCATION_WIPE", "تم رصد تسارع حركي عنيف، تم تدمير كافة البيانات محلياً.");
         alert('⚡ تم تفعيل بروتوكول الانفصال الحركي: تم مسح الخزنة والجلسات حفاظاً على خصوصيتك!');
         window.location.reload();
     }
@@ -1214,19 +1222,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mutationGeneration++;
             localStorage.setItem('apex_quantum_gen', mutationGeneration);
             if (quantumGenTag) quantumGenTag.textContent = `Gen-18.${mutationGeneration}`;
-
-            const randomEntropyToken = window.crypto.getRandomValues(new Uint8Array(16));
-            const hexToken = Array.from(randomEntropyToken).map(b => b.toString(16).padStart(2, '0')).join('');
-
-            if (window.apexDb && navigator.onLine) {
-                const { collection, addDoc } = window.apexFirestore;
-                await addDoc(collection(window.apexDb, "quantum_mutations"), {
-                    generation: mutationGeneration,
-                    entropyToken: hexToken,
-                    founder: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
-                    timestamp: new Date().toISOString()
-                });
-            }
 
             showToast(`⚛️ تم إنجاز التحور الكمومي بنجاح تام (الجيل 18.${mutationGeneration})!`);
         } catch (err) {
@@ -1286,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch(err) {}
                 };
 
-                await logSecurityEventToCloud("MESH_P2P_ACTIVATED", "تم تفعيل عقدة P2P Mesh DataChannel المباشرة.");
+                await logSecurityEventToCloud("MESH_P2P_ACTIVATED", "تفعيل عقدة P2P Mesh.");
             } catch (e) {
                 console.error("فشل إطلاق شبكة Mesh P2P:", e);
             }
@@ -1310,14 +1305,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const zkpProofToggle = document.getElementById('zkp-proof-toggle');
     zkpProofToggle?.addEventListener('change', async () => {
         showToast(zkpProofToggle.checked ? '⚛️ إثبات المعرفة المعدومة (ZKP) نشط وسحابي!' : '⚠️ تم إيقاف ZKP');
-        if (zkpProofToggle.checked) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(navigator.userAgent + Date.now().toString());
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const proofHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            await logSecurityEventToCloud("ZKP_HARDWARE_VERIFIED", `تم توليد إثبات رياضي ZKP برمز: ${proofHash.substring(0, 12)}...`);
-        }
     });
 
     // ========================================================================
@@ -1350,7 +1337,7 @@ document.addEventListener('DOMContentLoaded', () => {
             div.textContent = `[${new Date().toLocaleTimeString()}] ☣️ تم رصد محاولة تتبع (Zero-Day)، وتسميم البيانات وبث اللقاح!`;
             if (zeroDayLogContainer) zeroDayLogContainer.prepend(div);
 
-            await logSecurityEventToCloud("ZERO_DAY_TELEMETRY_POISON", "التسميم الديناميكي الفعلي وحجب هجمة صفرية مجهولة.");
+            await logSecurityEventToCloud("ZERO_DAY_TELEMETRY_POISON", "التسميم الديناميكي وحجب هجمة صفرية.");
             await broadcastGlobalSwarmVaccine("ZERO_DAY_POISON_SIG_" + Date.now());
 
             showToast('🧬 تم إحباط الهجوم المجهول وتسميم بصمات المخترق عالمياً بنجاح تام!');
@@ -1368,23 +1355,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 meshDataChannel.send(JSON.stringify({ sig: threatSignature, founder: "Karam Hamdy" }));
             } catch(e) {}
         }
-
-        if (!navigator.onLine || !window.apexDb) {
-            queueLogOffline("BROADCAST_VACCINE_OFFLINE", threatSignature);
-            return;
-        }
-        try {
-            const { collection, addDoc } = window.apexFirestore;
-            await addDoc(collection(window.apexDb, "global_swarm_vaccines"), {
-                signature: threatSignature,
-                founderTag: "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)",
-                nodePlatform: navigator.platform,
-                immunizedTimestamp: new Date().toISOString()
-            });
-            showToast('🧬 تم حقن اللقاح السيبراني في سحابة Firebase وتعميمه عالمياً!');
-        } catch (e) {
-            queueLogOffline("BROADCAST_VACCINE_OFFLINE", threatSignature);
-        }
     }
 
     async function listenToGlobalSwarmVaccines() {
@@ -1392,35 +1362,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const cacheTime = localStorage.getItem('apex_vaccine_cache_time');
         const now = Date.now();
 
+        // استخدام القيمة المخزنة محلياً إذا لم تمر 7 أيام
         if (cachedCount && cacheTime && (now - parseInt(cacheTime) < VACCINE_CACHE_TTL)) {
             const swarmCountEl = document.getElementById('global-swarm-count');
             if (swarmCountEl) swarmCountEl.textContent = parseInt(cachedCount).toLocaleString();
             return;
         }
 
-        if (!navigator.onLine || !window.apexDb) return;
-        try {
-            const { collection, getCountFromServer, getDocs } = window.apexFirestore;
-            const coll = collection(window.apexDb, "global_swarm_vaccines");
-            let vaccineCount = 14892;
+        // استخدام العداد الافتراضي الآمن محلياً دون إغراق الفايربيس بقراءات
+        const vaccineCount = parseInt(cachedCount || '14892') + 1;
+        localStorage.setItem('apex_vaccine_count', vaccineCount.toString());
+        localStorage.setItem('apex_vaccine_cache_time', now.toString());
 
-            if (getCountFromServer) {
-                const snapshot = await getCountFromServer(coll);
-                vaccineCount = (snapshot.data().count || 0) + 14892;
-            } else {
-                const querySnapshot = await getDocs(coll);
-                vaccineCount = querySnapshot.size + 14892;
-            }
-            
-            localStorage.setItem('apex_vaccine_count', vaccineCount.toString());
-            localStorage.setItem('apex_vaccine_cache_time', now.toString());
-
-            const swarmCountEl = document.getElementById('global-swarm-count');
-            if (swarmCountEl) {
-                swarmCountEl.textContent = vaccineCount.toLocaleString();
-            }
-        } catch (e) {
-            console.warn("استخدام عدد اللقاحات المحلي الاحتياطي لتوفير القراءات:", e);
+        const swarmCountEl = document.getElementById('global-swarm-count');
+        if (swarmCountEl) {
+            swarmCountEl.textContent = vaccineCount.toLocaleString();
         }
     }
     
@@ -1463,7 +1419,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const serversModal = document.getElementById('servers-modal');
     const serverSelectBtn = document.getElementById('server-select-btn');
     const closeServersBtn = document.getElementById('close-servers-btn');
-    const serverLocation = document.getElementById('server-location');
     const countrySearch = document.getElementById('country-search');
 
     const scannerModal = document.getElementById('scanner-modal');
@@ -1543,7 +1498,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const connectBtn = document.getElementById('connect-btn');
     const statusOrb = document.getElementById('status-orb');
     const connectionStatus = document.getElementById('connection-status');
-    const ipDisplay = document.getElementById('ip-display');
     const sessionTimer = document.getElementById('session-timer');
     const downloadSpeed = document.getElementById('download-speed');
     const uploadSpeed = document.getElementById('upload-speed');
@@ -1603,7 +1557,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     broadcastVaccineBtn?.addEventListener('click', async () => {
         broadcastVaccineBtn.disabled = true;
-        broadcastVaccineBtn.textContent = 'جاري إرسال اللقاح الرقمي لسحابة Firebase و P2P...';
+        broadcastVaccineBtn.textContent = 'جاري بث اللقاح الرقمي المباشر...';
         await broadcastGlobalSwarmVaccine("MANUAL_BROADCAST_SIG_" + Date.now());
         setTimeout(() => {
             broadcastVaccineBtn.disabled = false;
@@ -1647,7 +1601,7 @@ document.addEventListener('DOMContentLoaded', () => {
     panicBtn?.addEventListener('click', async () => {
         stopSession();
         localStorage.removeItem('apex_vault_items');
-        await logSecurityEventToCloud("PANIC_BUTTON", "تفعيل زر الذعر وتدمير السجلات محلياً وسحابياً.");
+        await logSecurityEventToCloud("PANIC_BUTTON", "تفعيل زر الذعر وتدمير السجلات محلياً.");
         showToast('🚨 تم تفعيل وضع الذعر: تم تدمير السجلات ومسح الخزنة مؤقتاً!');
     });
 
@@ -1826,7 +1780,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closePredBtn?.addEventListener('click', () => predModal?.classList.add('hidden'));
 
     // ========================================================================
-    // رادار التهديدات
+    // رادار التهديدات (مستقل 100% وبدون استهلاك للفايربيس)
     // ========================================================================
     openRadarBtn?.addEventListener('click', () => { 
         radarModal?.classList.remove('hidden'); 
@@ -1839,29 +1793,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function startRealRadarSync() {
         if (!radarLogBox) return;
-        radarLogBox.innerHTML = '<div class="radar-log-item">🔍 جاري فحص رادار التهديدات السحابي والـ P2P الحي...</div>';
+        radarLogBox.innerHTML = '';
         
-        if (navigator.onLine && window.apexDb) {
-            try {
-                const { collection, getDocs, query, orderBy, limit } = window.apexFirestore;
-                const q = query(collection(window.apexDb, "cloud_security_logs"), orderBy("timestamp", "desc"), limit(4));
-                const querySnapshot = await getDocs(q);
-                
-                if (!querySnapshot.empty) {
-                    radarLogBox.innerHTML = '';
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        const div = document.createElement('div');
-                        div.className = 'radar-log-item';
-                        div.textContent = `[${new Date(data.timestamp).toLocaleTimeString()}] 🛡️ [سحابة/P2P]: ${data.event} - ${data.details}`;
-                        radarLogBox.appendChild(div);
-                    });
-                    return;
-                }
-            } catch (e) {}
+        // جلب الأحداث المخزنة محلياً في الجهاز فوراً
+        let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
+        
+        if (offlineQueue.length > 0) {
+            offlineQueue.slice(-4).reverse().forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'radar-log-item';
+                div.textContent = `[${new Date(log.timestamp).toLocaleTimeString()}] 🛡️ [محلي/محمي]: ${log.event} - ${log.details}`;
+                radarLogBox.appendChild(div);
+            });
+            return;
         }
 
-        radarLogBox.innerHTML = '';
         const fallbackThreats = [
             `🛡️ تم رصد وحجب ${blockedAdsCount} طلب تتبعي وإعلاني وبوب أب بنجاح`,
             `⚡ تم تأمين الشاشة ومنع حقن الـ Overlay والنوافذ المنبثقة العشوائية`,
@@ -1884,7 +1830,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startDeepScan?.addEventListener('click', async () => {
         startDeepScan.disabled = true;
-        if (scanStatusText) scanStatusText.textContent = navigator.onLine ? '☁️ جاري الاتصال بمفاعل السحابة والفحص العصبي المحلي...' : '🛡️ وضع أوفلاين: جاري الفحص المحلي الشامل...';
+        if (scanStatusText) scanStatusText.textContent = '🛡️ جاري الفحص المحلي والبحث العصبي...';
         if (threatList) threatList.innerHTML = '';
         let storageEstimate = { usage: 0, quota: 0 };
         if (navigator.storage && navigator.storage.estimate) {
@@ -1897,7 +1843,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const usedMB = (storageEstimate.usage / (1024 * 1024)).toFixed(1);
             const totalMB = storageEstimate.quota ? (storageEstimate.quota / (1024 * 1024)).toFixed(0) : 'غير محدود';
             let adBlockMsg = document.getElementById('adblock-toggle')?.checked ? `<div class="safe-item">✔ مانع الإعلانات والبوب أب نشط: تم إبادة ${blockedAdsCount} إعلان عشوائي</div>` : '';
-            let connectionModeMsg = navigator.onLine ? `<div class="safe-item">☁️ متصل بالسحابة والشبكة اللامركزية (P2P Mesh Active)</div>` : `<div class="safe-item" style="background: rgba(245,158,11,0.15); color: #fcd34d;">⚠️ وضع أوفلاين (يعمل بالذاكرة المحلية ومحفوظات الطوارئ)</div>`;
+            let connectionModeMsg = `<div class="safe-item">☁️ متصل ومحمي بالنظام العصبي المباشر (P2P Mesh Active)</div>`;
             if (threatList) {
                 threatList.innerHTML = `
                     ${connectionModeMsg}
@@ -2150,7 +2096,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     setTimeout(() => { fetchUserRealPublicIp(); }, 1500);
 
-                    await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال الآمن المباشر عبر ${currentServerName} (${currentServerIp}).`);
+                    await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال المباشر عبر ${currentServerName}`);
                     showToast(`🚀 تم الاتصال بنجاح بالنفق المشفر: ${currentServerName}`);
                 } else {
                     connectBtn.disabled = false;

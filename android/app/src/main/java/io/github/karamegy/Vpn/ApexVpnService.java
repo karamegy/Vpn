@@ -9,16 +9,15 @@ import android.content.pm.ServiceInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
-import android.util.Base64;
 import android.util.Log;
 
 import com.wireguard.android.backend.GoBackend;
 import com.wireguard.android.backend.Tunnel;
 import com.wireguard.config.Config;
+import com.wireguard.config.KeyPair;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
@@ -55,10 +54,19 @@ public class ApexVpnService extends VpnService {
 
             createNotificationChannel();
             
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, buildNotification(serverName), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
-            } else {
-                startForeground(NOTIFICATION_ID, buildNotification(serverName));
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(NOTIFICATION_ID, buildNotification(serverName), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+                } else {
+                    startForeground(NOTIFICATION_ID, buildNotification(serverName));
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "تراجُع تشغيل الخدمة الأمامية بالطريقة القياسية: ", e);
+                try {
+                    startForeground(NOTIFICATION_ID, buildNotification(serverName));
+                } catch (Exception ex) {
+                    Log.e(TAG, "فشل إطلاق الخدمة الأمامية: ", ex);
+                }
             }
 
             startVpnConnection(warpClientIp, warpEndpoint, serverName, warpPrivateKey);
@@ -79,9 +87,8 @@ public class ApexVpnService extends VpnService {
                     if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
                         privateKey = privateKeyBase64.trim();
                     } else {
-                        byte[] randomBytes = new byte[32];
-                        new SecureRandom().nextBytes(randomBytes);
-                        privateKey = Base64.encodeToString(randomBytes, Base64.NO_WRAP);
+                        KeyPair keyPair = new KeyPair();
+                        privateKey = keyPair.getPrivateKey().toBase64();
                     }
 
                     String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
@@ -93,8 +100,8 @@ public class ApexVpnService extends VpnService {
 
                     String wgConfigStr = "[Interface]\n" +
                             "PrivateKey = " + privateKey + "\n" +
-                            "Address = " + formattedClientIp + ", fd00::2/128\n" +
-                            "DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111\n" +
+                            "Address = " + formattedClientIp + "\n" +
+                            "DNS = 1.1.1.1, 1.0.0.1\n" +
                             "MTU = 1280\n\n" +
                             "[Peer]\n" +
                             "PublicKey = bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=\n" +
@@ -120,21 +127,7 @@ public class ApexVpnService extends VpnService {
                     return;
                 }
             } catch (Exception e) {
-                Log.e(TAG, "فشل WireGuard GoBackend، جاري المحاولة بواسطة واجهة VpnService النظام:", e);
-            }
-
-            try {
-                Builder builder = new Builder();
-                builder.addAddress("172.16.0.2", 32);
-                builder.addDnsServer("1.1.1.1");
-                builder.addDnsServer("1.0.0.1");
-                builder.addRoute("0.0.0.0", 0);
-                builder.setSession("ApexShieldVPN");
-                vpnInterface = builder.establish();
-                isTunnelRunning = true;
-                Log.d(TAG, "✅ تم تشغيل واجهة VPN النظام بنجاح!");
-            } catch (Exception ex) {
-                Log.e(TAG, "❌ فشل إنشاء واجهة VPN النظام:", ex);
+                Log.e(TAG, "فشل تشغيل نفق WireGuard GoBackend:", e);
                 stopVpnConnection();
             }
         }).start();
@@ -168,7 +161,12 @@ public class ApexVpnService extends VpnService {
             }
 
             isTunnelRunning = false;
-            stopForeground(true);
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
             stopSelf();
             Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN وإعادة الـ IP الأصلي.");
         }).start();
@@ -206,10 +204,12 @@ public class ApexVpnService extends VpnService {
                 ? "متصل بالدرع عبر: " + serverName
                 : "درع الحماية وخدمة Cloudflare WARP المشفرة نشطة الآن";
 
+        int appIcon = getApplicationInfo().icon != 0 ? getApplicationInfo().icon : android.R.drawable.sym_def_app_icon;
+
         return builder
                 .setContentTitle("Apex Shield AI")
                 .setContentText(contentText)
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setSmallIcon(appIcon)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .build();

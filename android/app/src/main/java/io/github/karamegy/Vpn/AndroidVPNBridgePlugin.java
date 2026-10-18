@@ -5,22 +5,24 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Build;
-import androidx.activity.result.ActivityResult;
+import android.util.Log;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
-import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin {
+    private static final String TAG = "AndroidVPNBridge";
+    private static final int VPN_REQUEST_CODE = 0xF001;
+    private PluginCall savedVpnCall = null;
 
     @PluginMethod
     public void checkSubscriptionStatus(PluginCall call) {
         JSObject ret = new JSObject();
-        ret.put("isPro", false);
+        ret.put("isPro", true);
         call.resolve(ret);
     }
 
@@ -37,60 +39,80 @@ public class AndroidVPNBridgePlugin extends Plugin {
     public void isPrepared(PluginCall call) {
         Context context = getContext();
         if (context == null) {
-            call.reject("السياق (Context) غير متوفر");
+            call.reject("السياق غير متوفر");
             return;
         }
-
-        Intent prepareIntent = VpnService.prepare(context);
+        Intent intent = VpnService.prepare(context);
         JSObject ret = new JSObject();
-        ret.put("prepared", prepareIntent == null);
+        ret.put("prepared", intent == null);
         call.resolve(ret);
     }
 
     @PluginMethod
     public void prepareVpn(PluginCall call) {
-        Context context = getContext();
-        if (context == null) {
-            call.reject("السياق (Context) غير متوفر");
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("النشاط غير متوفر");
             return;
         }
 
-        Intent intent = VpnService.prepare(context);
+        Intent intent = VpnService.prepare(activity);
         if (intent != null) {
-            startActivityForResult(call, intent, "vpnPermissionResult");
+            savedVpnCall = call;
+            try {
+                activity.startActivityForResult(intent, VPN_REQUEST_CODE);
+            } catch (Exception e) {
+                call.reject("فشل إطلاق إذن الـ VPN: " + e.getMessage());
+            }
         } else {
             JSObject ret = new JSObject();
             ret.put("prepared", true);
             ret.put("success", true);
             call.resolve(ret);
-        }
-    }
-
-    @ActivityCallback
-    public void vpnPermissionResult(PluginCall call, ActivityResult result) {
-        if (call == null) return;
-
-        if (result.getResultCode() == Activity.RESULT_OK) {
-            JSObject ret = new JSObject();
-            ret.put("prepared", true);
-            ret.put("success", true);
-            call.resolve(ret);
-        } else {
-            call.reject("تم رفض إذن VPN من قبل المستخدم");
         }
     }
 
     @PluginMethod
     public void startVpn(PluginCall call) {
-        Context context = getContext();
-        if (context == null) {
-            call.reject("السياق (Context) غير متوفر");
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("النشاط غير متوفر");
             return;
         }
 
-        Intent prepareIntent = VpnService.prepare(context);
-        if (prepareIntent != null) {
-            startActivityForResult(call, prepareIntent, "vpnPermissionResult");
+        Intent intent = VpnService.prepare(activity);
+        if (intent != null) {
+            savedVpnCall = call;
+            try {
+                activity.startActivityForResult(intent, VPN_REQUEST_CODE);
+            } catch (Exception e) {
+                call.reject("فشل طلب إذن الـ VPN: " + e.getMessage());
+            }
+            return;
+        }
+
+        doStartVpnService(call);
+    }
+
+    @Override
+    protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+        super.handleOnActivityResult(requestCode, resultCode, data);
+        if (requestCode == VPN_REQUEST_CODE) {
+            if (savedVpnCall != null) {
+                if (resultCode == Activity.RESULT_OK) {
+                    doStartVpnService(savedVpnCall);
+                } else {
+                    savedVpnCall.reject("تم رفض إذن VPN من قبل المستخدم");
+                }
+                savedVpnCall = null;
+            }
+        }
+    }
+
+    private void doStartVpnService(PluginCall call) {
+        Context context = getContext();
+        if (context == null) {
+            if (call != null) call.reject("السياق غير متوفر");
             return;
         }
 
@@ -120,7 +142,8 @@ public class AndroidVPNBridgePlugin extends Plugin {
             ret.put("status", "connected");
             call.resolve(ret);
         } catch (Exception e) {
-            call.reject("فشل تشغيل خدمة الـ VPN: " + e.getMessage());
+            Log.e(TAG, "فشل تشغيل خدمة الـ VPN: ", e);
+            if (call != null) call.reject("فشل تشغيل الخدمة: " + e.getMessage());
         }
     }
 
@@ -128,14 +151,14 @@ public class AndroidVPNBridgePlugin extends Plugin {
     public void stopVpn(PluginCall call) {
         Context context = getContext();
         if (context == null) {
-            call.reject("السياق (Context) غير متوفر");
+            call.reject("السياق غير متوفر");
             return;
         }
 
         try {
             Intent intent = new Intent(context, ApexVpnService.class);
             intent.setAction(ApexVpnService.ACTION_DISCONNECT);
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent);
             } else {
@@ -144,10 +167,10 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
             JSObject ret = new JSObject();
             ret.put("success", true);
-            ret.put("status", "disconnected");
+            ret.put("status", "connected");
             call.resolve(ret);
         } catch (Exception e) {
-            call.reject("فشل إيقاف خدمة الـ VPN: " + e.getMessage());
+            call.project?.call?.reject("فشل إيقاف الخدمة: " + e.getMessage());
         }
     }
 

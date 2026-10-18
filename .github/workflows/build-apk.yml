@@ -54,8 +54,20 @@ jobs:
         run: |
           export CI=true
           
-          # تم إزالة أوامر rm -rf android و cap add لتجنب مسح ملفات الجسر والـ Java الأصلية
+          # أخذ نسخة احتياطية مؤقتة لملفات الجسر والـ Java و Manifest الخاصة بك
+          mkdir -p /tmp/custom_java
+          cp -r android/app/src/main/java/io/github/karamegy/Vpn /tmp/custom_java/ 2>/dev/null || true
+          cp android/app/src/main/AndroidManifest.xml /tmp/custom_java/ 2>/dev/null || true
+
+          # إعادة بناء منصة أندرويد لضمان توفير ملف gradlew وكل ملفات النظام الأساسية
+          rm -rf android
+          npx cap add android
           npx cap sync android
+
+          # استعادة ودمج ملفات الجسر والـ Java و AndroidManifest الأصلية الخاصة بك
+          mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
+          cp -r /tmp/custom_java/Vpn/* android/app/src/main/java/io/github/karamegy/Vpn/ 2>/dev/null || true
+          cp /tmp/custom_java/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
 
           if [ -f "android/app/build.gradle" ]; then
             # التأكد من إضافة مستودعات جوجل لكي يتم تحميل مكتبة الفواتير الحقيقية من المتاجر الرسمية بسلاسة

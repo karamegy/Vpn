@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="io.github.karamegy.Vpn">
 
-    <!-- أذونات الشبكة والخدمة في الخلفية -->
+    <!-- أذونات الشبكة والخدمة في الخلفية (يدعم Android 14+) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -48,7 +48,7 @@
             </intent-filter>
         </activity>
 
-        <!-- خدمة الـ VPN الرئيسية (تمت إضافة foregroundServiceType للإنقاذ من أندرويد 14) -->
+        <!-- خدمة الـ VPN الرئيسية التفاعلية مع النظام -->
         <service
             android:name="io.github.karamegy.Vpn.ApexVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"

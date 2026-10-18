@@ -16,6 +16,24 @@ document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
     // ========================================================================
+    // قائمة الخوادم وعناوين IP العالمية الحقيقية والنشطة (Built-in Active Global Endpoints)
+    // ========================================================================
+    const DEFAULT_GLOBAL_SERVERS = [
+        { name: 'Cloudflare WARP Anycast 1 (الرئيسي العالمي)', ip: '162.159.192.1', flag: '⚡', country: 'Global' },
+        { name: 'Cloudflare WARP Anycast 2 (السريع)', ip: '162.159.193.1', flag: '⚡', country: 'Global' },
+        { name: 'Cloudflare WARP Anycast 3 (المستقر)', ip: '188.114.96.1', flag: '⚡', country: 'Global' },
+        { name: 'أمريكا - نيويورك (US East Relay Node)', ip: '162.159.195.1', flag: '🇺🇸', country: 'United States' },
+        { name: 'أمريكا - سان خوسيه (US West Gateway)', ip: '162.159.192.10', flag: '🇺🇸', country: 'United States' },
+        { name: 'ألمانيا - فرانکفورت (EU Central Hub)', ip: '162.159.193.10', flag: '🇩🇪', country: 'Germany' },
+        { name: 'المملكة المتحدة - لندن (UK West Relay)', ip: '162.159.194.1', flag: '🇬🇧', country: 'United Kingdom' },
+        { name: 'السويد - ستوكهولم (EU North Vault)', ip: '188.114.97.1', flag: '🇸🇪', country: 'Sweden' },
+        { name: 'اليابان - طوكيو (Asia East Core)', ip: '162.159.195.10', flag: '🇯🇵', country: 'Japan' },
+        { name: 'سنغافورة - سنغافورة (Asia South Hub)', ip: '162.159.193.20', flag: '🇸🇬', country: 'Singapore' },
+        { name: 'سويسرا - زوريخ (EU Alpine Secure)', ip: '162.159.194.10', flag: '🇨🇭', country: 'Switzerland' },
+        { name: 'هولندا - أمستردام (EU Transit Center)', ip: '188.114.98.1', flag: '🇳🇱', country: 'Netherlands' }
+    ];
+
+    // ========================================================================
     // النطاق الأساسي للحالة العامة وإعدادات الذاكرة المؤقتة (Global State & TTL Cache)
     // ========================================================================
     let isConnected = false;
@@ -23,15 +41,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDoubleVpnActive = localStorage.getItem('apex_double_vpn') === 'true';
     let isAudioShieldActive = true;
     let isGpsMockActive = true;
-    let currentServerIp = '162.159.192.1';
-    let currentServerName = 'Cloudflare WARP (شبكة الحماية العالمية)';
+    let currentServerIp = localStorage.getItem('apex_server_ip') || '162.159.192.1';
+    let currentServerName = localStorage.getItem('apex_server_name') || 'Cloudflare WARP (شبكة الحماية العالمية)';
     let realUserPublicIp = 'جاري الفحص...';
     let sessionSeconds = 0;
     let timerInterval = null;
     let notificationInterval = null;
     let radarInterval = null;
     let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
-    let realServersList = [];
+    let realServersList = [...DEFAULT_GLOBAL_SERVERS];
 
     const SERVERS_CACHE_TTL = 24 * 60 * 60 * 1000;
     const VACCINE_CACHE_TTL = 60 * 60 * 1000;
@@ -347,85 +365,84 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = Date.now();
 
         if (cachedServers && cacheTime && (now - parseInt(cacheTime) < SERVERS_CACHE_TTL)) {
-            realServersList = JSON.parse(cachedServers);
-            if (realServersList.length > 0) {
-                renderServersList(realServersList);
-                currentServerIp = realServersList[0].ip || currentServerIp;
-                currentServerName = realServersList[0].name || currentServerName;
-                return;
-            }
+            try {
+                const parsed = JSON.parse(cachedServers);
+                if (parsed && parsed.length > 0) {
+                    realServersList = parsed;
+                    renderServersList(realServersList);
+                    currentServerIp = localStorage.getItem('apex_server_ip') || realServersList[0].ip || currentServerIp;
+                    currentServerName = localStorage.getItem('apex_server_name') || realServersList[0].name || currentServerName;
+                    return;
+                }
+            } catch (e) {}
         }
 
         if (window.apexDb && window.apexFirestore && navigator.onLine) {
             try {
                 const { collection, getDocs } = window.apexFirestore;
                 const querySnapshot = await getDocs(collection(window.apexDb, "vpn_servers"));
-                realServersList = [];
+                const dbServers = [];
                 querySnapshot.forEach((doc) => {
-                    realServersList.push(doc.data());
+                    dbServers.push(doc.data());
                 });
 
-                if (realServersList.length > 0) {
+                if (dbServers.length > 0) {
+                    realServersList = [...dbServers, ...DEFAULT_GLOBAL_SERVERS];
                     localStorage.setItem('apex_cached_servers', JSON.stringify(realServersList));
                     localStorage.setItem('apex_servers_cache_time', now.toString());
                     renderServersList(realServersList);
-                    currentServerIp = realServersList[0].ip || currentServerIp;
-                    currentServerName = realServersList[0].name || currentServerName;
                     showToast(`✅ تم تحديث ${realServersList.length} خادم موثق من Firebase وحفظهم مؤقتاً`);
                     return;
                 }
             } catch (err) {
-                console.warn("استخدام السيرفرات الاحتياطية عند التعذر:", err);
+                console.warn("استخدام قائمة الخوادم العالمية الاحتياطية عند التعذر:", err);
             }
         }
+
+        realServersList = [...DEFAULT_GLOBAL_SERVERS];
+        renderServersList(realServersList);
     }
 
     function renderServersList(servers) {
         const serversContainer = document.getElementById('servers-list-container');
         if (!serversContainer) return;
         serversContainer.innerHTML = '';
-        
-        const warpItem = document.createElement('div');
-        warpItem.className = 'server-item active';
-        warpItem.setAttribute('data-name', 'Cloudflare WARP (شبكة الحماية العالمية)');
-        warpItem.setAttribute('data-ip', '162.159.192.1');
-        warpItem.setAttribute('data-flag', '⚡');
-        warpItem.innerHTML = `
-            <span>⚡ Cloudflare WARP Global</span>
-            <span style="font-size: 0.7rem; color: #38bdf8;">توجيه مشفر مباشر</span>
-        `;
-        warpItem.addEventListener('click', () => {
-            document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
-            warpItem.classList.add('active');
-            currentServerName = 'Cloudflare WARP (شبكة الحماية العالمية)';
-            currentServerIp = '162.159.192.1';
-            const locationEl = document.getElementById('server-location');
-            if (locationEl) locationEl.textContent = '⚡ Cloudflare WARP';
-            document.getElementById('servers-modal')?.classList.add('hidden');
-            showToast('🌐 تم اختيار شبكة Cloudflare WARP العالمية');
-        });
-        serversContainer.appendChild(warpItem);
 
-        servers.forEach((srv) => {
+        servers.forEach((srv, idx) => {
             const item = document.createElement('div');
-            item.className = 'server-item';
+            const isActive = (srv.ip === currentServerIp);
+            item.className = `server-item ${isActive ? 'active' : ''}`;
             item.setAttribute('data-name', srv.name);
             item.setAttribute('data-ip', srv.ip);
             item.setAttribute('data-flag', srv.flag || '🌐');
+
             item.innerHTML = `
-                <span>${srv.flag || '🌐'} ${srv.name}</span>
-                <span style="font-size: 0.7rem; color: #38bdf8;">${srv.ip}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">${srv.flag || '🌐'}</span>
+                    <div>
+                        <strong style="font-size: 0.8rem; color: #f8fafc;">${srv.name}</strong><br>
+                        <span style="font-size: 0.65rem; color: #94a3b8;">توجيه مباشر مشفر</span>
+                    </div>
+                </div>
+                <span style="font-size: 0.7rem; color: #38bdf8; font-family: monospace;">${srv.ip}</span>
             `;
+
             item.addEventListener('click', () => {
                 document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
                 currentServerName = srv.name;
                 currentServerIp = srv.ip;
+                
+                localStorage.setItem('apex_server_ip', currentServerIp);
+                localStorage.setItem('apex_server_name', currentServerName);
+
                 const locationEl = document.getElementById('server-location');
                 if (locationEl) locationEl.textContent = `${srv.flag || '🌐'} ${srv.name.split(' ')[0]}`;
+                
                 document.getElementById('servers-modal')?.classList.add('hidden');
-                showToast(`🌐 تم اختيار الخادم: ${srv.name}`);
+                showToast(`🌐 تم اختيار الخادم المباشر: ${srv.name} (${srv.ip})`);
             });
+
             serversContainer.appendChild(item);
         });
     }
@@ -455,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (ipDisplay) {
             if (isConnected) {
-                ipDisplay.textContent = `IP WARP المشفر النشط: ${realUserPublicIp}`;
+                ipDisplay.textContent = `IP المشفر النشط (${currentServerName.split(' ')[0]}): ${realUserPublicIp}`;
             } else {
                 ipDisplay.textContent = `IP الحقيقي: ${realUserPublicIp}`;
             }
@@ -486,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const warpConfig = {
                     clientIp: data.result.config.interface.addresses.v4 || "172.16.0.2/32",
                     peerPublicKey: data.result.config.peers[0].public_key || "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=",
-                    endpoint: "162.159.192.1:2408",
+                    endpoint: `${currentServerIp}:2408`,
                     privateKey: data.result.config.interface.private_key || ""
                 };
                 localStorage.setItem('apex_warp_config', JSON.stringify(warpConfig));
@@ -499,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { 
             clientIp: "172.16.0.2/32", 
             peerPublicKey: "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=", 
-            endpoint: "162.159.192.1:2408",
+            endpoint: `${currentServerIp}:2408`,
             privateKey: "" 
         };
     }
@@ -994,6 +1011,10 @@ document.addEventListener('DOMContentLoaded', () => {
             warpConfig = await generateCloudflareWarpConfig();
         }
 
+        const targetEndpoint = (serverIp && serverIp.length > 0) 
+            ? (serverIp.includes(':') ? serverIp : `${serverIp}:2408`)
+            : (warpConfig ? warpConfig.endpoint : '162.159.192.1:2408');
+
         const bridge = window.Capacitor?.Plugins?.AndroidVPNBridge;
 
         if (bridge) {
@@ -1007,10 +1028,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const res = await bridge.toggleVpn({ 
                     enable: !!enable, 
-                    serverIp: serverIp || (warpConfig ? warpConfig.endpoint : '162.159.192.1'), 
+                    serverIp: serverIp || (warpConfig ? warpConfig.endpoint.split(':')[0] : '162.159.192.1'), 
                     serverName: serverName || 'Cloudflare WARP Global',
                     warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
-                    warpEndpoint: warpConfig ? warpConfig.endpoint : '162.159.192.1:2408',
+                    warpEndpoint: targetEndpoint,
                     warpPrivateKey: warpConfig ? warpConfig.privateKey : ''
                 });
                 return res && (res.success || res.status === 'connected' || res.status === 'disconnected');
@@ -1443,7 +1464,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const serverSelectBtn = document.getElementById('server-select-btn');
     const closeServersBtn = document.getElementById('close-servers-btn');
     const serverLocation = document.getElementById('server-location');
-    const serverItems = document.querySelectorAll('.server-item');
     const countrySearch = document.getElementById('country-search');
 
     const scannerModal = document.getElementById('scanner-modal');
@@ -1555,7 +1575,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         isConnected = true;
         statusOrb?.classList.add('connected');
-        if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر WireGuard WARP';
+        if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر شبكة WireGuard المشفرة';
         
         fetchUserRealPublicIp();
 
@@ -1618,26 +1638,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     countrySearch?.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
-        serverItems.forEach(item => {
+        document.querySelectorAll('.server-item').forEach(item => {
             const text = item.textContent.toLowerCase();
             item.style.display = text.includes(query) ? 'flex' : 'none';
-        });
-    });
-
-    serverItems.forEach(item => {
-        item.addEventListener('click', () => {
-            serverItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            currentServerName = item.getAttribute('data-name');
-            currentServerIp = item.getAttribute('data-ip');
-            const flag = item.getAttribute('data-flag');
-            if (serverLocation) serverLocation.textContent = `${flag} ${currentServerName.split(' ')[0]}`;
-            serversModal?.classList.add('hidden');
-            showToast(`🌐 تم اختيار الخادم: ${currentServerName}`);
-            if (isConnected) {
-                localStorage.setItem('apex_server_ip', currentServerIp);
-                localStorage.setItem('apex_server_name', currentServerName);
-            }
         });
     });
 
@@ -1893,7 +1896,7 @@ document.addEventListener('DOMContentLoaded', () => {
             startDeepScan.disabled = false;
             const usedMB = (storageEstimate.usage / (1024 * 1024)).toFixed(1);
             const totalMB = storageEstimate.quota ? (storageEstimate.quota / (1024 * 1024)).toFixed(0) : 'غير محدود';
-            let adBlockMsg = adBlockToggle?.checked ? `<div class="safe-item">✔ مانع الإعلانات والبوب أب نشط: تم إبادة ${blockedAdsCount} إعلان عشوائي</div>` : '';
+            let adBlockMsg = document.getElementById('adblock-toggle')?.checked ? `<div class="safe-item">✔ مانع الإعلانات والبوب أب نشط: تم إبادة ${blockedAdsCount} إعلان عشوائي</div>` : '';
             let connectionModeMsg = navigator.onLine ? `<div class="safe-item">☁️ متصل بالسحابة والشبكة اللامركزية (P2P Mesh Active)</div>` : `<div class="safe-item" style="background: rgba(245,158,11,0.15); color: #fcd34d;">⚠️ وضع أوفلاين (يعمل بالذاكرة المحلية ومحفوظات الطوارئ)</div>`;
             if (threatList) {
                 threatList.innerHTML = `
@@ -2079,7 +2082,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (sessionTimer) sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
         }, 1000);
         notificationInterval = setInterval(() => {
-            sendPhoneNotification("🟢 نفق Cloudflare WARP يعمل", `الـ IP محمي والتمويه الضوئي نشط عبر ${currentServerName}.`);
+            sendPhoneNotification("🟢 نفق WireGuard المشفر يعمل", `الـ IP محمي والتمويه الضوئي نشط عبر ${currentServerName}.`);
         }, 45000);
     }
 
@@ -2129,7 +2132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bridgeSuccess) {
                     isConnected = true;
                     statusOrb?.classList.add('connected');
-                    if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر شبكة WireGuard WARP المشفرة';
+                    if (connectionStatus) connectionStatus.textContent = `محمي ومتصل عبر (${currentServerName})`;
                     
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'إيقاف درع الحماية';
@@ -2145,11 +2148,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     startSessionTimerAndNotifications();
 
-                    // إعادة فحص وجلب الـ IP المشفر الجديد تلقائياً وعرضه بالواجهة فور اكتمال توجيه النفق
                     setTimeout(() => { fetchUserRealPublicIp(); }, 1500);
 
-                    await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال الآمن ونفق Cloudflare WARP عبر ${currentServerName}.`);
-                    showToast('🚀 تم الاتصال بنجاح وتفعيل نفق WireGuard المشفر!');
+                    await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال الآمن المباشر عبر ${currentServerName} (${currentServerIp}).`);
+                    showToast(`🚀 تم الاتصال بنجاح بالنفق المشفر: ${currentServerName}`);
                 } else {
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';

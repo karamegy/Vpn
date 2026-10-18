@@ -339,7 +339,7 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
             }
 
             JSObject ret = new JSObject();
-            ret.put("success",`true`);
+            ret.put("success", true);
             ret.put("status", "disconnected");
             call.resolve(ret);
         } catch (Exception e) {

@@ -6,6 +6,19 @@ import android.content.Intent;
 import android.net.VpnService;
 import android.os.Build;
 import android.util.Log;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.billingclient.api.AcknowledgePurchaseParams;
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingFlowParams;
+import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.ProductDetails;
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesUpdatedListener;
+import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryPurchasesParams;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -13,26 +26,182 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.util.Collections;
+
 @CapacitorPlugin(name = "AndroidVPNBridge")
-public class AndroidVPNBridgePlugin extends Plugin {
+public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedListener {
     private static final String TAG = "AndroidVPNBridge";
     private static final int VPN_REQUEST_CODE = 0x9999;
     private PluginCall activeVpnCall = null;
+    private BillingClient billingClient;
+    private PluginCall activeBillingCall = null;
+
+    @Override
+    public void load() {
+        super.load();
+        Context context = getContext();
+        if (context != null) {
+            billingClient = BillingClient.newBuilder(context)
+                    .setListener(this)
+                    .enablePendingPurchases()
+                    .build();
+            startBillingConnection();
+        }
+    }
+
+    private void startBillingConnection() {
+        if (billingClient == null) return;
+        billingClient.startConnection(new BillingClientStateListener() {
+            @Override
+            public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                    Log.d(TAG, "Google Play Billing connected successfully.");
+                }
+            }
+
+            @Override
+            public void onBillingServiceDisconnected() {
+                Log.w(TAG, "Google Play Billing service disconnected. Retrying...");
+            }
+        });
+    }
 
     @PluginMethod
     public void checkSubscriptionStatus(PluginCall call) {
-        JSObject ret = new JSObject();
-        ret.put("isPro", true);
-        call.resolve(ret);
+        if (billingClient == null || !billingClient.isReady()) {
+            JSObject ret = new JSObject();
+            ret.put("isPro", false);
+            call.resolve(ret);
+            return;
+        }
+
+        billingClient.queryPurchasesAsync(
+                QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+                (billingResult, purchases) -> {
+                    boolean hasActiveSub = false;
+                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                        for (Purchase purchase : purchases) {
+                            if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                hasActiveSub = true;
+                                break;
+                            }
+                        }
+                    }
+                    JSObject ret = new JSObject();
+                    ret.put("isPro", hasActiveSub);
+                    call.resolve(ret);
+                }
+        );
     }
 
     @PluginMethod
     public void launchBilling(PluginCall call) {
+        Activity activity = getActivity();
         String productId = call.getString("productId", "");
-        JSObject ret = new JSObject();
-        ret.put("success", true);
-        ret.put("productId", productId);
-        call.resolve(ret);
+        if (activity == null || productId.isEmpty()) {
+            call.reject("النشاط غير متوفر أو معرف المنتج (productId) مفقود");
+            return;
+        }
+
+        if (billingClient == null || !billingClient.isReady()) {
+            call.reject("خدمة Google Play Billing غير جاهزة حالياً. تأكد من تثبيت التطبيق كـ APK رسمي من المتجر.");
+            return;
+        }
+
+        activeBillingCall = call;
+
+        QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(productId)
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build();
+
+        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
+                .setProductList(Collections.singletonList(product))
+                .build();
+
+        billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
+                ProductDetails productDetails = productDetailsList.get(0);
+                java.util.List<ProductDetails.SubscriptionOfferDetails> offerDetailsList = productDetails.getSubscriptionOfferDetails();
+                if (offerDetailsList == null || offerDetailsList.isEmpty()) {
+                    if (activeBillingCall != null) {
+                        activeBillingCall.reject("لا توجد عروض اشتراك متاحة لهذا المنتج.");
+                        activeBillingCall = null;
+                    }
+                    return;
+                }
+                String offerToken = offerDetailsList.get(0).getOfferToken();
+
+                BillingFlowParams.ProductDetailsParams productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+                        .setProductDetails(productDetails)
+                        .setOfferToken(offerToken)
+                        .build();
+
+                BillingFlowParams flowParams = BillingFlowParams.newBuilder()
+                        .setProductDetailsParamsList(Collections.singletonList(productDetailsParams))
+                        .build();
+
+                BillingResult result = billingClient.launchBillingFlow(activity, flowParams);
+                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                    if (activeBillingCall != null) {
+                        activeBillingCall.reject("فشل إطلاق نافذة دفع Google Play: " + result.getDebugMessage());
+                        activeBillingCall = null;
+                    }
+                }
+            } else {
+                if (activeBillingCall != null) {
+                    activeBillingCall.reject("تعذر العثور على تفاصيل المنتج في متجر جوجل بلاي.");
+                    activeBillingCall = null;
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable java.util.List<Purchase> purchases) {
+        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+            for (Purchase purchase : purchases) {
+                handlePurchase(purchase);
+            }
+        } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
+            if (activeBillingCall != null) {
+                activeBillingCall.reject("تم إلغاء عملية الشراء من قبل المستخدم.");
+                activeBillingCall = null;
+            }
+        } else {
+            if (activeBillingCall != null) {
+                activeBillingCall.reject("حدث خطأ في عملية الشراء: " + billingResult.getDebugMessage());
+                activeBillingCall = null;
+            }
+        }
+    }
+
+    private void handlePurchase(Purchase purchase) {
+        if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+            if (!purchase.isAcknowledged()) {
+                AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
+                        .setPurchaseToken(purchase.getPurchaseToken())
+                        .build();
+                billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult -> {
+                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                        if (activeBillingCall != null) {
+                            JSObject ret = new JSObject();
+                            ret.put("success", true);
+                            ret.put("orderId", purchase.getOrderId());
+                            activeBillingCall.resolve(ret);
+                            activeBillingCall = null;
+                        }
+                    }
+                });
+            } else {
+                if (activeBillingCall != null) {
+                    JSObject ret = new JSObject();
+                    ret.put("success", true);
+                    activeBillingCall.resolve(ret);
+                    activeBillingCall = null;
+                }
+            }
+        }
     }
 
     @PluginMethod
@@ -170,7 +339,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
             }
 
             JSObject ret = new JSObject();
-            ret.put("success", true);
+            ret.put("success",`true`);
             ret.put("status", "disconnected");
             call.resolve(ret);
         } catch (Exception e) {

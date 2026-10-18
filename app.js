@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('❌ تعذر إكمال الشراء عبر متجر Google Play.');
             }
         } else {
-            showToast('⚠️ يتطلب الشراء تشغيل التطبيق كحزمة أندرويد أصلية مثبة من المتجر.');
+            showToast('⚠️ يتطلب الشراء تشغيل التطبيق كحزمة أندرويد أصلية مثبتة من المتجر.');
         }
     }
 
@@ -1032,12 +1032,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            if (enable && typeof bridge.isPrepared === 'function') {
-                const prepRes = await bridge.isPrepared();
-                if (prepRes && !prepRes.prepared && typeof bridge.prepareVpn === 'function') {
+            // طلب إذن الـ VPN من أندرويد مباشرة وبدون إيقاف تدفق العملية
+            if (enable && typeof bridge.prepareVpn === 'function') {
+                try {
                     await bridge.prepareVpn();
-                    showToast('ℹ️ يرجى إعطاء إذن خدمة الـ VPN من نظام أندرويد عند الظهور.');
-                    return false;
+                } catch (err) {
+                    console.warn("إذن VPN:", err);
                 }
             }
 
@@ -1053,7 +1053,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return res && (res.success || res.status === 'connected' || res.status === 'disconnected');
         } catch (e) {
             console.error("فشل تنفيذ الاتصال بالنفق الأصلي في نظام أندرويد:", e);
-            showToast('❌ فشل إنشاء النفق عبر أندرويد. تأكد من تفعيل إذن ApexVpnService.');
+            showToast('❌ تعذر إطلاق النفق. تأكد من منح إذن الـ VPN لنظام أندرويد.');
             return false;
         }
     }
@@ -2070,7 +2070,7 @@ document.addEventListener('DOMContentLoaded', () => {
             connectBtn.textContent = 'جاري الاتصال بنفق WireGuard المشفر...';
             connectBtn.disabled = true;
 
-            // استدعاء الجسر الأصلي الحقيقي المباشر بدون محاكاة
+            // استدعاء الجسر الأصلي الحقيقي المباشر بدون إيقاف وبدء الإذن
             const bridgeSuccess = await triggerNativeVpnConnection(true, currentServerIp, currentServerName);
 
             if (bridgeSuccess) {

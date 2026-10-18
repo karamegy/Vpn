@@ -54,7 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // الحصول على الملحق الأصلي للاتصال بالنظام (Capacitor أو Android JS Interface)
     function getNativeBridge() {
-        return window.Capacitor?.Plugins?.AndroidVPNBridge || window.AndroidVPNBridge || null;
+        if (window.Capacitor?.Plugins?.AndroidVPNBridge) {
+            return window.Capacitor.Plugins.AndroidVPNBridge;
+        }
+        if (window.AndroidVPNBridge) {
+            return window.AndroidVPNBridge;
+        }
+        return null;
     }
 
     // ========================================================================
@@ -74,18 +80,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!("Notification" in window)) return;
         if (Notification.permission === "granted") {
             try {
-                navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification(title, { body: body, icon: 'favicon.ico', badge: 'favicon.ico', tag: 'apex-shield-active', renotify: true });
-                });
+                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.showNotification(title, { body: body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'apex-shield-active', renotify: true });
+                    }).catch(() => {
+                        try { new Notification(title, { body: body }); } catch (e) {}
+                    });
+                } else {
+                    new Notification(title, { body: body });
+                }
             } catch (e) {
-                new Notification(title, { body: body });
+                try { new Notification(title, { body: body }); } catch (err) {}
             }
         }
     }
 
     async function requestDevicePermissions() {
         if ("Notification" in window && Notification.permission !== "granted") {
-            await Notification.requestPermission();
+            try { await Notification.requestPermission(); } catch (e) {}
         }
         if ('wakeLock' in navigator) {
             try { await navigator.wakeLock.request('screen'); } catch (err) {}
@@ -217,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startPhotonicCamouflage() {
         if (!photonicCanvas) return;
         const ctx = photonicCanvas.getContext('2d');
+        if (!ctx) return;
         let frame = 0;
 
         function renderStrobe() {
@@ -295,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 noiseBufferSource = null;
             }
             if (acousticAudioCtx) { 
-                await acousticAudioCtx.close(); 
+                try { await acousticAudioCtx.close(); } catch(e){}
                 acousticAudioCtx = null; 
             }
             if (acousticJamStatus) {
@@ -362,7 +375,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function queueLogOffline(eventType, details) {
-        let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
+        let offlineQueue = [];
+        try {
+            offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
+        } catch(e) { offlineQueue = []; }
+
         offlineQueue.push({ event: eventType, details: details, timestamp: new Date().toISOString() });
         if (offlineQueue.length > 15) {
             offlineQueue = offlineQueue.slice(-15);
@@ -371,14 +388,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function syncOfflineLogsToCloud() {
-        if (!navigator.onLine || !window.apexDb) return;
-        let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
+        if (!navigator.onLine || !window.apexDb || !window.apexFirestore) return;
+        let offlineQueue = [];
+        try {
+            offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
+        } catch(e) { offlineQueue = []; }
+
         if (offlineQueue.length === 0) return;
 
         const CRITICAL_EVENTS = ["PANIC_BUTTON", "ZERO_DAY_TELEMETRY_POISON"];
         const logsToSync = offlineQueue.filter(l => CRITICAL_EVENTS.includes(l.event)).slice(0, 2);
         
-        if (logsToSync.length > 0) {
+        if (logsToSync.length > 0 && window.apexFirestore.collection && window.apexFirestore.addDoc) {
             try {
                 const { collection, addDoc } = window.apexFirestore;
                 for (const logItem of logsToSync) {
@@ -389,9 +410,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         timestamp: logItem.timestamp
                     });
                 }
-            } catch (e) {}
+                localStorage.removeItem('apex_offline_logs');
+            } catch (e) {
+                console.warn("خطأ في المزامنة السحابية:", e);
+            }
         }
-        localStorage.removeItem('apex_offline_logs');
     }
 
     async function fetchRealServersFromDB() {
@@ -413,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {}
         }
 
-        if (window.apexDb && window.apexFirestore && navigator.onLine) {
+        if (window.apexDb && window.apexFirestore && window.apexFirestore.collection && navigator.onLine) {
             try {
                 const { collection, getDocs, query, limit } = window.apexFirestore;
                 const q = query(collection(window.apexDb, "vpn_servers"), limit(5));
@@ -554,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================================================
-    // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات والبوب أب المباشرة
+    // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات والبوب أب (آمنة تماماً)
     // ==========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'adnxs.com', 'unityads.unity3d.com', 
@@ -563,13 +586,12 @@ document.addEventListener('DOMContentLoaded', () => {
         'securepubads.g.doubleclick.net', 'adcolony.com', 'vungle.com', 'tapjoy.com', 'chartboost.com',
         'adsrvr.org', 'criteo.com', 'outbrain.com', 'taboola.com', 'popads.net', 'popcash.net', 'propellerads.com', 
         'adsterra.com', 'clickadu.com', 'tsyndicate.com', 'juicyads.com', 'eroadvertising.com',
-        'ssp.adtarget.com', 'bidder.criteo.com', 'ad-delivery.net', 'track.voluum.com', 'wecima', 'akoam', 'egybest', 'mycima', 'shahid'
+        'ssp.adtarget.com', 'bidder.criteo.com', 'ad-delivery.net', 'track.voluum.com'
     ];
 
     const BLOCKED_KEYWORDS = [
-        '/ads/', '/popup/', '/popunder/', '/interstitial/', '/banner/', 'ad_container', 'adsbygoogle', 'sponsored_ad', 
-        'floating-ad', 'overlay-ad', 'clickthru', 'affiliate', 'tracker', 'pixel.gif?id=', 'conversion', 'track/', 
-        'adserver', 'install', 'popup-banner'
+        '/ads/', '/popup/', '/popunder/', '/interstitial/', 'adsbygoogle', 'sponsored_ad', 
+        'floating-ad', 'overlay-ad', 'adserver', 'popup-banner'
     ];
 
     const originalWindowOpen = window.open;
@@ -577,8 +599,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (adBlockEnabled) {
             blockedAdsCount++;
-            localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
-            showToast('🛡️ Apex Shield: تم حجب نافذة منبثقة أو توجيه إعلاني بنجاح');
+            localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+            showToast('🛡️ Apex Shield: تم حجب نافذة منبثقة إعلانية بنجاح');
             return null;
         }
         return originalWindowOpen.call(window, url, target, features);
@@ -595,8 +617,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.preventDefault();
                     e.stopPropagation();
                     blockedAdsCount++;
-                    localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
-                    showToast('🛡️ Apex Shield: تم حجب نقرة إعلانية خبيثة أو توجيه موجه!');
+                    localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+                    showToast('🛡️ Apex Shield: تم حجب توجيه إعلاني غير مصرح به');
                 }
             }
         }
@@ -613,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const isBlocked = BLOCKED_AD_DOMAINS.some(d => value.includes(d)) || BLOCKED_KEYWORDS.some(kw => value.includes(kw));
                     if (isBlocked) {
                         blockedAdsCount++;
-                        localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+                        localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
                         return;
                     }
                 }
@@ -631,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isBlocked = BLOCKED_AD_DOMAINS.some(d => url.includes(d)) || BLOCKED_KEYWORDS.some(kw => url.includes(kw));
                 if (isBlocked) {
                     blockedAdsCount++;
-                    localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+                    localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
                     return true;
                 }
             }
@@ -642,16 +664,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const adStyleTag = document.createElement('style');
     adStyleTag.id = 'apex-dynamic-adblocker';
     adStyleTag.innerHTML = `
-        iframe[src*="ads"], iframe[src*="doubleclick"], iframe[src*="banner"], iframe[src*="popup"],
-        div[id*="google_ads"], div[class*="ads-box"], div[id*="ad-container"], div[class*="floating-ad"],
-        div[class*="install"], div[id*="install-banner"], div[class*="popup-banner"], div[class*="interstitial"],
-        div[class*="overlay-ad"], div[id*="cookie-banner"], .adsbygoogle, ins.adsbygoogle {
+        iframe[src*="doubleclick"], iframe[src*="googlesyndication"],
+        .adsbygoogle, ins.adsbygoogle, div[id*="google_ads_iframe"] {
             display: none !important; visibility: hidden !important; opacity: 0 !important;
             pointer-events: none !important; max-height: 0 !important; max-width: 0 !important; z-index: -999999 !important;
         }
     `;
     document.head.appendChild(adStyleTag);
 
+    // مراقب التغيرات بالصفحة لمسح الإعلانات الخارجية فقط بدون المساس بواجهة التطبيق
     const adObserver = new MutationObserver((mutations) => {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (!adBlockEnabled) return;
@@ -660,20 +681,17 @@ document.addEventListener('DOMContentLoaded', () => {
             mutation.addedNodes.forEach((node) => {
                 if (node.nodeType === 1) {
                     const tag = node.tagName ? node.tagName.toLowerCase() : '';
-                    const id = node.id ? node.id.toLowerCase() : '';
                     const className = node.className && typeof node.className === 'string' ? node.className.toLowerCase() : '';
-                    const textContent = node.textContent ? node.textContent.toLowerCase() : '';
                     
-                    const isAdElement = tag === 'iframe' || (tag === 'script' && (node.src?.includes('ads') || node.src?.includes('track'))) ||
-                                        id.includes('ad') || className.includes('ad-') || className.includes('popup') || 
-                                        className.includes('banner') || className.includes('install') || textContent.includes('تثبيت') || 
-                                        textContent.includes('تحميل التطبيق') || textContent.includes('wecima');
+                    // استخدام فحص دقيق يتجنب عناصر التطبيق
+                    const isExternalAd = (tag === 'iframe' && (node.src?.includes('doubleclick') || node.src?.includes('googlesyndication'))) ||
+                                         className.includes('adsbygoogle');
                     
-                    if (isAdElement) {
+                    if (isExternalAd) {
                         if (!node.closest('.app-container') && !node.closest('.modal')) {
                             node.remove();
                             blockedAdsCount++;
-                            localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+                            localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
                         }
                     }
                 }
@@ -681,31 +699,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    adObserver.observe(document.body, { childList: true, subtree: true });
+    if (document.body) {
+        adObserver.observe(document.body, { childList: true, subtree: true });
+    }
 
     const originalFetch = window.fetch;
-    window.fetch = async function(...args) {
-        const url = args[0];
+    window.fetch = async function(input, init) {
+        const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         
-        if (adBlockEnabled && typeof url === 'string') {
+        if (adBlockEnabled && url) {
             const isBlockedDomain = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
             const isBlockedKeyword = BLOCKED_KEYWORDS.some(kw => url.includes(kw));
             
             if (isBlockedDomain || isBlockedKeyword) {
                 blockedAdsCount++;
-                localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
+                localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
                 return new Response(JSON.stringify({ blocked: true, source: 'Apex Quantum Swarm AdBlock Engine v18' }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
         }
-        return originalFetch.apply(this, args);
+        return originalFetch.apply(this, arguments);
     };
 
     const originalOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function(method, url) {
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (adBlockEnabled && typeof url === 'string') {
             const isBlockedDomain = BLOCKED_AD_DOMAINS.some(domain => url.includes(domain));
@@ -713,11 +733,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (isBlockedDomain || isBlockedKeyword) {
                 blockedAdsCount++;
-                localStorage.setItem('apex_blocked_ads_count', blockedAdsCount);
-                arguments[1] = 'data:text/plain;charset=utf-8,'; 
+                localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+                url = 'data:text/plain;charset=utf-8,'; 
             }
         }
-        return originalOpen.apply(this, arguments);
+        return originalOpen.call(this, method, url, ...rest);
     };
 
     // ========================================================================
@@ -775,12 +795,14 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.register('sw.js').then(reg => {
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showToast('🚀 يتوفر تحديث فوري جديد للنظام العصبي: جاري التثبيت الذاتي الفوري...');
-                        setTimeout(() => window.location.reload(), 2000);
-                    }
-                });
+                if (newWorker) {
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showToast('🚀 يتوفر تحديث فوري جديد للنظام العصبي: جاري التثبيت الذاتي الفوري...');
+                            setTimeout(() => window.location.reload(), 2000);
+                        }
+                    });
+                }
             });
         }).catch(() => {});
     }
@@ -825,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${isBlocked ? 'السماح بالترافيك 🔓' : 'حظر الترافيك 🚫'}
                 </button>
             `;
-            item.querySelector('button').addEventListener('click', () => {
+            item.querySelector('button')?.addEventListener('click', () => {
                 simulatedAppTraffic[idx].status = isBlocked ? 'سمح' : 'محظور';
                 showToast(isBlocked ? `🔓 تم السماح لاتصال ${app.name}` : `🚫 تم حظر وتحديد ترافيك ${app.name} فوراً`);
                 logSecurityEventToCloud("APP_FIREWALL_ACTION", `تم تغيير حالة اتصال التطبيق ${app.name}`);
@@ -998,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (!navigator.onLine || !window.apexDb) {
+        if (!navigator.onLine || !window.apexDb || !window.apexFirestore || !window.apexFirestore.collection) {
             await queueLogOffline(eventType, details);
             return;
         }
@@ -1032,8 +1054,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const bridge = getNativeBridge();
 
         if (!bridge) {
-            showToast('❌ خطأ: لم يتم العثور على جسر أندرويد الأصلي (AndroidVPNBridgePlugin/VpnService). التطبيق يحتاج للتثبيت كحزمة APK أصلية.');
-            console.error("AndroidVPNBridge غير متاح في المتصفح المباشر.");
+            showToast('⚠️ لا يوجد جسر أصلي (AndroidVPNBridge). يُرجى تشغيل التطبيق كحزمة أندرويد APK.');
+            console.warn("AndroidVPNBridge غير متاح في المتصفح المباشر.");
             return false;
         }
 
@@ -1046,16 +1068,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const res = await bridge.toggleVpn({ 
-                enable: !!enable, 
-                serverIp: serverIp || (warpConfig ? warpConfig.endpoint.split(':')[0] : '162.159.192.1'), 
-                serverName: serverName || 'Cloudflare WARP Global',
-                warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
-                warpEndpoint: targetEndpoint,
-                warpPrivateKey: warpConfig ? warpConfig.privateKey : ''
-            });
+            if (typeof bridge.toggleVpn === 'function') {
+                const res = await bridge.toggleVpn({ 
+                    enable: !!enable, 
+                    serverIp: serverIp || (warpConfig ? warpConfig.endpoint.split(':')[0] : '162.159.192.1'), 
+                    serverName: serverName || 'Cloudflare WARP Global',
+                    warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
+                    warpEndpoint: targetEndpoint,
+                    warpPrivateKey: warpConfig ? warpConfig.privateKey : ''
+                });
 
-            return res && (res.success || res.status === 'connected' || res.status === 'disconnected');
+                return res && (res.success || res.status === 'connected' || res.status === 'disconnected');
+            }
+            return false;
         } catch (e) {
             console.error("فشل تنفيذ الاتصال بالنفق الأصلي في نظام أندرويد:", e);
             showToast('❌ تعذر إطلاق النفق. تأكد من منح إذن الـ VPN لنظام أندرويد.');
@@ -1097,9 +1122,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.decoy-key').forEach(btn => {
         btn.addEventListener('click', () => {
             const val = btn.getAttribute('data-val');
-            if (val === 'C') { decoyExpr = ''; if (decoyScreen) decoyScreen.textContent = '0'; }
+            if (val === 'C') { 
+                decoyExpr = ''; 
+                if (decoyScreen) decoyScreen.textContent = '0'; 
+            }
             else if (val === '=') {
-                try { if (decoyScreen) decoyScreen.textContent = eval(decoyExpr); } catch (e) { if (decoyScreen) decoyScreen.textContent = 'خطأ'; }
+                try { 
+                    if (decoyScreen && decoyExpr) {
+                        // حساب دقيق آمن بدون eval مباشر
+                        const result = Function(`'use strict'; return (${decoyExpr.replace(/[^0-9+\-*/.]/g, '')})`)();
+                        decoyScreen.textContent = result !== undefined ? result : '0';
+                    }
+                } catch (e) { 
+                    if (decoyScreen) decoyScreen.textContent = 'خطأ'; 
+                }
             } else {
                 if (decoyExpr === '0') decoyExpr = val; else decoyExpr += val;
                 if (decoyScreen) decoyScreen.textContent = decoyExpr;
@@ -1139,8 +1175,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('🔊 مانع التتبع فوق الصوتي نشط: الميكروفون محصن تماماً!');
             } catch (e) {}
         } else {
-            if (noiseNode) { noiseNode.stop(); noiseNode = null; }
-            if (audioCtx) { await audioCtx.close(); audioCtx = null; }
+            if (noiseNode) { try { noiseNode.stop(); } catch(e){} noiseNode = null; }
+            if (audioCtx) { try { await audioCtx.close(); } catch(e){} audioCtx = null; }
             showToast('⚠️ تم إيقاف مانع التتبع فوق الصوتي');
         }
     }
@@ -1193,11 +1229,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const context = originalGetContext.call(this, type, contextAttributes);
         if (context && phantomToggle?.checked) {
             const originalFillText = context.fillText;
-            context.fillText = function(...args) {
-                args[1] += (Math.random() - 0.5) * 0.04;
-                args[2] += (Math.random() - 0.5) * 0.04;
-                return originalFillText.apply(this, args);
-            };
+            if (originalFillText) {
+                context.fillText = function(...args) {
+                    args[1] += (Math.random() - 0.5) * 0.04;
+                    args[2] += (Math.random() - 0.5) * 0.04;
+                    return originalFillText.apply(this, args);
+                };
+            }
         }
         return context;
     };
@@ -1223,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             mutationGeneration++;
-            localStorage.setItem('apex_quantum_gen', mutationGeneration);
+            localStorage.setItem('apex_quantum_gen', mutationGeneration.toString());
             if (quantumGenTag) quantumGenTag.textContent = `Gen-18.${mutationGeneration}`;
 
             showToast(`⚛️ تم إنجاز التحور الكمومي بنجاح تام (الجيل 18.${mutationGeneration})!`);
@@ -1332,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             zeroDayPoisonCount++;
-            localStorage.setItem('apex_zeroday_count', zeroDayPoisonCount);
+            localStorage.setItem('apex_zeroday_count', zeroDayPoisonCount.toString());
             if (zeroDayCounter) zeroDayCounter.textContent = `${zeroDayPoisonCount} هجمة`;
 
             const div = document.createElement('div');
@@ -1522,7 +1560,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const savedSessionActive = localStorage.getItem('apex_session_active') === 'true';
     if (savedSessionActive) {
-        const savedStartTime = parseInt(localStorage.getItem('apex_session_start_time') || Date.now());
+        const savedStartTime = parseInt(localStorage.getItem('apex_session_start_time') || Date.now().toString());
         sessionSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
         currentServerName = localStorage.getItem('apex_server_name') || currentServerName;
         currentServerIp = localStorage.getItem('apex_server_ip') || currentServerIp;
@@ -1550,7 +1588,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     denyBtn?.addEventListener('click', () => {
         alert('يتطلب تشغيل التطبيق الموافقة على شروط الأمان وسياسة جوجل بلاي.');
-        window.close();
     });
 
     openSwarmBtn?.addEventListener('click', () => swarmModal?.classList.remove('hidden'));
@@ -1581,10 +1618,12 @@ document.addEventListener('DOMContentLoaded', () => {
     themeButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const theme = btn.getAttribute('data-theme');
-            document.body.className = theme;
-            localStorage.setItem('apex_theme', theme);
-            themeModal?.classList.add('hidden');
-            showToast('🎨 تم تطبيق الثيم بنجاح');
+            if (theme) {
+                document.body.className = theme;
+                localStorage.setItem('apex_theme', theme);
+                themeModal?.classList.add('hidden');
+                showToast('🎨 تم تطبيق الثيم بنجاح');
+            }
         });
     });
 
@@ -1594,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', () => {
     countrySearch?.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         document.querySelectorAll('.server-item').forEach(item => {
-            const text = item.textContent.toLowerCase();
+            const text = item.textContent ? item.textContent.toLowerCase() : '';
             item.style.display = text.includes(query) ? 'flex' : 'none';
         });
     });
@@ -1634,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     toggleDoubleVpnBtn?.addEventListener('click', () => {
         isDoubleVpnActive = !isDoubleVpnActive;
-        localStorage.setItem('apex_double_vpn', isDoubleVpnActive);
+        localStorage.setItem('apex_double_vpn', isDoubleVpnActive.toString());
         if (isDoubleVpnActive) {
             if (doubleVpnStatus) {
                 doubleVpnStatus.textContent = 'مفعل بنجاح (ألمانيا ➔ سويسرا)';
@@ -1712,7 +1751,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             const encryptedObj = await encryptVaultItem(content, masterPass);
-            let vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
+            let vault = [];
+            try { vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]'); } catch(e) { vault = []; }
             vault.unshift({ title, encryptedObj, date: new Date().toLocaleDateString('ar-EG') });
             localStorage.setItem('apex_vault_items', JSON.stringify(vault));
             if (vaultTitle) vaultTitle.value = ''; 
@@ -1726,7 +1766,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function renderVaultItems() {
-        const vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
+        let vault = [];
+        try { vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]'); } catch(e) { vault = []; }
         if (!vaultListContainer) return;
         if (vault.length === 0) {
             vaultListContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد عناصر محفوظة في الخزنة.</p>';
@@ -1737,45 +1778,51 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = document.createElement('div');
             div.className = 'history-item';
             div.style.cssText = 'display: flex; flex-direction: column; gap: 8px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 12px; margin-bottom: 8px;';
-            div.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div><strong>🔒 ${item.title}</strong><br><span style="color: #94a3b8; font-size: 0.65rem;">محتوى مشفر (AES-GCM 256) • ${item.date}</span></div>
-                    <button class="btn-primary" style="padding: 6px 12px; font-size: 0.7rem; cursor: pointer;" onclick="window.decryptVaultEntry(${index})">فك التشفير 🔓</button>
-                </div>
-                <div id="decrypted-view-${index}" style="display: none; margin-top: 6px; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 6px; color: #34d399; font-size: 0.75rem; word-break: break-all;"></div>
-            `;
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+            headerDiv.innerHTML = `<div><strong>🔒 ${item.title}</strong><br><span style="color: #94a3b8; font-size: 0.65rem;">محتوى مشفر (AES-GCM 256) • ${item.date}</span></div>`;
+            
+            const decryptBtn = document.createElement('button');
+            decryptBtn.className = 'btn-primary';
+            decryptBtn.style.cssText = 'padding: 6px 12px; font-size: 0.7rem; cursor: pointer;';
+            decryptBtn.textContent = 'فك التشفير 🔓';
+            
+            const viewContainer = document.createElement('div');
+            viewContainer.id = `decrypted-view-${index}`;
+            viewContainer.style.cssText = 'display: none; margin-top: 6px; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 6px; color: #34d399; font-size: 0.75rem; word-break: break-all;';
+            
+            decryptBtn.addEventListener('click', async () => {
+                const masterPass = prompt('أدخل كلمة المرور الرئيسية لفك تشفير هذا العنصر الآمن:');
+                if (!masterPass) return;
+                
+                const decryptedText = await decryptVaultItem(item.encryptedObj, masterPass);
+                if (decryptedText === null) {
+                    showToast('❌ كلمة المرور غير صحيحة أو فشل فك التشفير!');
+                    viewContainer.style.display = 'none';
+                } else {
+                    viewContainer.style.display = 'block';
+                    viewContainer.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-weight: bold; color: #6ee7b7;">✨ المحتوى المفكوك (${item.title}):</span>
+                            <button id="copy-vault-${index}" style="background: #10b981; color: #fff; border: none; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;">📋 نسخ</button>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; font-family: monospace;">${decryptedText}</div>
+                    `;
+                    document.getElementById(`copy-vault-${index}`)?.addEventListener('click', () => {
+                        navigator.clipboard?.writeText(decryptedText);
+                        showToast('📋 تم نسخ المحتوى الحساس بنجاح!');
+                    });
+                    showToast('🔓 تم فك تشفير المحتوى وعرضه داخل التطبيق بأمان تام!');
+                }
+            });
+
+            headerDiv.appendChild(decryptBtn);
+            div.appendChild(headerDiv);
+            div.appendChild(viewContainer);
             vaultListContainer.appendChild(div);
         });
     }
-
-    window.decryptVaultEntry = async function(index) {
-        const masterPass = prompt('أدخل كلمة المرور الرئيسية لفك تشفير هذا العنصر الآمن:');
-        if (!masterPass) return;
-        
-        const vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]');
-        const item = vault[index];
-        if (!item) return;
-
-        const decryptedText = await decryptVaultItem(item.encryptedObj, masterPass);
-        const viewContainer = document.getElementById(`decrypted-view-${index}`);
-        
-        if (!viewContainer) return;
-
-        if (decryptedText === null) {
-            showToast('❌ كلمة المرور غير صحيحة أو فشل فك التشفير!');
-            viewContainer.style.display = 'none';
-        } else {
-            viewContainer.style.display = 'block';
-            viewContainer.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <span style="font-weight: bold; color: #6ee7b7;">✨ المحتوى المفكوك (${item.title}):</span>
-                    <button style="background: #10b981; color: #fff; border: none; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;" onclick="navigator.clipboard.writeText('${decryptedText.replace(/'/g, "\\'")}'); alert('تم نسخ المحتوى الحساس بنجاح!');">📋 نسخ</button>
-                </div>
-                <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; font-family: monospace;">${decryptedText}</div>
-            `;
-            showToast('🔓 تم فك تشفير المحتوى وعرضه داخل التطبيق بأمان تام!');
-        }
-    };
 
     openPredBtn?.addEventListener('click', () => predModal?.classList.remove('hidden'));
     closePredBtn?.addEventListener('click', () => predModal?.classList.add('hidden'));
@@ -1796,7 +1843,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!radarLogBox) return;
         radarLogBox.innerHTML = '';
         
-        let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
+        let offlineQueue = [];
+        try { offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]'); } catch(e) { offlineQueue = []; }
         
         if (offlineQueue.length > 0) {
             offlineQueue.slice(-4).reverse().forEach(log => {
@@ -1842,20 +1890,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalMB = "10240";
         let scannedAppsCount = 0;
 
-        // استدعاء الجسر الأصلي Native للوصول إلى ذاكرة أندرويد الفعلية
         if (bridge && typeof bridge.performNativeScan === 'function') {
             try {
                 const res = await bridge.performNativeScan();
                 if (res) {
-                    if (res.scannedMB && parseFloat(res.scannedMB) > 0) {
-                        scannedMB = res.scannedMB;
-                    }
-                    if (res.totalMB && parseFloat(res.totalMB) > 0) {
-                        totalMB = res.totalMB;
-                    }
-                    if (res.scannedApps) {
-                        scannedAppsCount = res.scannedApps;
-                    }
+                    if (res.scannedMB && parseFloat(res.scannedMB) > 0) scannedMB = res.scannedMB;
+                    if (res.totalMB && parseFloat(res.totalMB) > 0) totalMB = res.totalMB;
+                    if (res.scannedApps) scannedAppsCount = res.scannedApps;
                 }
             } catch (e) {
                 console.warn("فشل استدعاء الفحص الأصلي، استخدام القارئ الاحتياطي", e);
@@ -1863,12 +1904,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (navigator.storage && navigator.storage.estimate) {
             try {
                 const est = await navigator.storage.estimate();
-                if (est.usage && est.usage > 0) {
-                    scannedMB = (est.usage / (1024 * 1024)).toFixed(1);
-                }
-                if (est.quota && est.quota > 0) {
-                    totalMB = (est.quota / (1024 * 1024)).toFixed(0);
-                }
+                if (est.usage && est.usage > 0) scannedMB = (est.usage / (1024 * 1024)).toFixed(1);
+                if (est.quota && est.quota > 0) totalMB = (est.quota / (1024 * 1024)).toFixed(0);
             } catch (e) {}
         }
 
@@ -1918,14 +1955,16 @@ document.addEventListener('DOMContentLoaded', () => {
     closeSplitBtn?.addEventListener('click', () => { splitModal?.classList.add('hidden'); showToast('⚙️ تم حفظ إعدادات النفق المنفصل بنجاح'); });
 
     function saveSessionToHistory(duration, server, ip) {
-        let history = JSON.parse(localStorage.getItem('apex_session_history') || '[]');
+        let history = [];
+        try { history = JSON.parse(localStorage.getItem('apex_session_history') || '[]'); } catch(e) { history = []; }
         history.unshift({ date: new Date().toLocaleDateString('ar-EG', { hour: '2-digit', minute: '2-digit' }), duration, server, ip });
         if (history.length > 10) history.pop();
         localStorage.setItem('apex_session_history', JSON.stringify(history));
     }
 
     function renderSessionHistory() {
-        const history = JSON.parse(localStorage.getItem('apex_session_history') || '[]');
+        let history = [];
+        try { history = JSON.parse(localStorage.getItem('apex_session_history') || '[]'); } catch(e) { history = []; }
         if (!historyListContainer) return;
         if (history.length === 0) {
             historyListContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد جلسات مسجلة حتى الآن.</p>';
@@ -2079,8 +2118,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopSession() {
-        clearInterval(timerInterval);
-        clearInterval(notificationInterval);
+        if (timerInterval) clearInterval(timerInterval);
+        if (notificationInterval) clearInterval(notificationInterval);
         triggerNativeVpnConnection(false, '', '');
 
         localStorage.removeItem('apex_session_active');
@@ -2136,7 +2175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionTimer?.classList.remove('hidden');
 
                 localStorage.setItem('apex_session_active', 'true');
-                localStorage.setItem('apex_session_start_time', Date.now());
+                localStorage.setItem('apex_session_start_time', Date.now().toString());
                 localStorage.setItem('apex_server_ip', currentServerIp);
                 localStorage.setItem('apex_server_name', currentServerName);
 

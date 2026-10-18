@@ -54,16 +54,16 @@ jobs:
         run: |
           export CI=true
           
-          # التأكد من وجود ملفات مشروع أندرويد ووجود gradlew
+          # إجبار إنشاء مشروع أندرويد جديد وتوليد gradlew إذا لم يكن موجوداً
           if [ ! -f "android/gradlew" ]; then
-            echo "⚠️ ملف gradlew غير موجود! جاري إعادة إنشاء مجلد android باستخدام Capacitor..."
+            echo "⚠️ ملف gradlew غير موجود! جاري توليد مشروع أندرويد باستخدام Capacitor..."
             rm -rf android
             npx cap add android
           fi
 
           npx cap sync android
 
-          # 1. تحديث أيقونات التطبيق
+          # 1. تحويل وتوليد أيقونات التطبيق
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
             echo "🎨 جاري تحويل icon-512.png إلى أيقونات أندرويد..."
@@ -90,7 +90,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 432x432 $RES_DIR/mipmap-xxxhdpi/ic_launcher_foreground.png
           fi
 
-          # 2. كتابة AndroidManifest.xml المصلح بالكامل
+          # 2. كتابة AndroidManifest.xml المشترط لأندرويد 14+
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -154,7 +154,7 @@ jobs:
           </manifest>
           EOF
 
-          # 3. إنشاء مجلد Java وكتابة الملفات المصلحة
+          # 3. إنشاء دليل Java وحقن الكود المصلح
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
           # MainActivity.java
@@ -561,18 +561,12 @@ jobs:
 
                   String serverIp = call.getString("serverIp", "");
                   String serverName = call.getString("serverName", "");
-                  String warpClientIp = call.getString("warpClientIp", "");
-                  String warpEndpoint = call.getString("warpEndpoint", "");
-                  String warpPrivateKey = call.getString("warpPrivateKey", "");
 
                   try {
                       Intent intent = new Intent(context, ApexVpnService.class);
                       intent.setAction(ApexVpnService.ACTION_CONNECT);
                       intent.putExtra("serverIp", serverIp);
                       intent.putExtra("serverName", serverName);
-                      intent.putExtra("warpClientIp", warpClientIp);
-                      intent.putExtra("warpEndpoint", warpEndpoint);
-                      intent.putExtra("warpPrivateKey", warpPrivateKey);
 
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                           context.startForegroundService(intent);
@@ -699,7 +693,13 @@ jobs:
                           builder.addDnsServer("1.1.1.1");
                           builder.addDnsServer("1.0.0.1");
                           builder.addRoute("0.0.0.0", 0);
-                          builder.addDisallowedApplication(getPackageName());
+                          
+                          try {
+                              builder.addDisallowedApplication(getPackageName());
+                          } catch (Exception e) {
+                              Log.w(TAG, "تعذر إضافة التطبيق المستثنى: ", e);
+                          }
+
                           builder.setSession("ApexShieldVPN");
                           
                           vpnInterface = builder.establish();
@@ -806,7 +806,6 @@ jobs:
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 
-          # إعطاء صلاحيات التشغيل لملف gradlew بشكل موثوق
           chmod +x android/gradlew || true
 
       - name: 3. Build & Sign APK & AAB Packages

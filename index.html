@@ -247,14 +247,14 @@
     <div id="servers-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h2>🌍 شبكة الخوادم العالمية (تغيير حقيقي للـ IP)</h2>
-            <input type="text" id="country-search" placeholder="ابحث عن دولة..." class="search-input">
+            <input type="text" id="country-search" placeholder="ابحث عن دولة أو سيرفر..." class="search-input">
+            
+            <!-- الحاوية الديناميكية لعرض الخوادم والعناوين العالمية -->
             <div class="server-list" id="servers-list-container">
-                <div class="server-item active" data-name="Cloudflare WARP (شبكة الحماية العالمية)" data-ip="162.159.192.1" data-flag="⚡">
-                    <span>⚡ Cloudflare WARP Global</span>
-                    <span style="font-size: 0.7rem; color: #38bdf8;">توجيه مشفر مباشر</span>
-                </div>
+                <div style="color: #38bdf8; font-size: 0.8rem; text-align: center; padding: 15px;">⏳ جاري إعداد وتجهيز شبكة الخوادم العالمية النشطة...</div>
             </div>
-            <button id="close-servers-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+            
+            <button id="close-servers-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق القائمة</button>
         </div>
     </div>
 
@@ -451,7 +451,7 @@
     <!-- نافذة تخصيص الثيم والاختبارات -->
     <div id="theme-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🎨 تخصيص الإضاءة والثيم الفاخر</h2>
+            <h2>🎨 تخصيص الإضاءة وثيم التطبيق</h2>
             <div class="theme-options">
                 <button class="theme-btn cyan" data-theme="theme-cyan">سيبراني أزرق</button>
                 <button class="theme-btn emerald" data-theme="theme-emerald">زمردي أخضر</button>
@@ -507,7 +507,7 @@
                     <button id="theme-customizer-btn" class="icon-btn" title="تخصيص الثيم">🎨</button>
                     <button id="ai-copilot-btn" class="icon-btn" title="مساعد الذكاء الاصطناعي">🤖</button>
                     <button id="server-select-btn" class="badge-btn">
-                        <span id="server-location" class="badge">🌐 تلقائي (AI)</span>
+                        <span id="server-location" class="badge">🌐 اختيار الخادم</span>
                     </button>
                 </div>
             </header>
@@ -521,7 +521,7 @@
                     </div>
                 </div>
                 <h2 id="connection-status">غير متصل بالدرع السحابي</h2>
-                <p id="ip-display">IP الحقيقي: غير مشفر</p>
+                <p id="ip-display">IP الحقيقي: جاري الفحص...</p>
                 <p id="session-timer" class="session-timer hidden">وقت الجلسة: 00:00</p>
                 
                 <button id="connect-btn" class="connect-btn">تفعيل درع الحماية والمناعة الجماعية</button>
@@ -539,7 +539,7 @@
                 <div class="shield-status-indicator"></div>
             </div>
 
-            <!-- لوحة الميزات الفريدة والاختراعات المصرية -->
+            <!-- لوحة الميزات الفريدة والاختراعات -->
             <div class="advanced-panel glass-card">
 
                 <!-- زر الترقية لنسخة Pro -->

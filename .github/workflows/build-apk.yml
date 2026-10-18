@@ -54,30 +54,34 @@ jobs:
         run: |
           export CI=true
           
-          # أخذ نسخة احتياطية مؤقتة لملفات الجسر والـ Java و Manifest الخاصة بك
+          # أخذ نسخة احتياطية مؤقتة لملفات الجسر، الـ Java، الـ Manifest، ومجلد المكتبات المحلية libs (مثل WireGuard)
           mkdir -p /tmp/custom_java
           cp -r android/app/src/main/java/io/github/karamegy/Vpn /tmp/custom_java/ 2>/dev/null || true
           cp android/app/src/main/AndroidManifest.xml /tmp/custom_java/ 2>/dev/null || true
+          cp -r android/app/libs /tmp/custom_java/libs 2>/dev/null || true
 
           # إعادة بناء منصة أندرويد لضمان توفير ملف gradlew وكل ملفات النظام الأساسية
           rm -rf android
           npx cap add android
           npx cap sync android
 
-          # استعادة ودمج ملفات الجسر والـ Java و AndroidManifest الأصلية الخاصة بك
+          # استعادة ودمج ملفات الجسر، الـ Java، الـ AndroidManifest، ومكتبة WireGuard من النسخة الاحتياطية
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
           cp -r /tmp/custom_java/Vpn/* android/app/src/main/java/io/github/karamegy/Vpn/ 2>/dev/null || true
           cp /tmp/custom_java/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          
+          mkdir -p android/app/libs
+          cp -r /tmp/custom_java/libs/* android/app/libs/ 2>/dev/null || true
 
           if [ -f "android/app/build.gradle" ]; then
-            # التأكد من إضافة مستودعات جوجل ومافن و JitPack لتحميل كافة الاعتماديات بسلاسة
-            if ! grep -q "jitpack.io" android/build.gradle; then
-              sed -i '/repositories {/a \        maven { url "https://www.jitpack.io" }' android/build.gradle || true
+            # التأكد من دعم قراءة ملفات الـ libs المحلية (مثل مكتبة WireGuard)
+            if ! grep -q "fileTree" android/app/build.gradle; then
+              sed -i '/dependencies {/a \    implementation fileTree(dir: "libs", include: ["*.jar", "*.aar"])' android/app/build.gradle || true
             fi
 
-            # حقن مكتبة فواتير جوجل بلاي ومكتبة WireGuard الرسمية عبر Maven Central
+            # حقن مكتبة فواتير جوجل بلاي الرسمية
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
-              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"\n    implementation "com.wireguard.android:wireguard-android:1.0.20230701"' android/app/build.gradle
+              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
             fi
 
             sed -i -E 's/versionCode [0-9]+/versionCode 30/' android/app/build.gradle

@@ -50,7 +50,7 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android Platform & Custom Logo Icons
+      - name: 2. Prepare Android Platform, Custom Icons & Fix Dependencies
         run: |
           export CI=true
           
@@ -58,29 +58,26 @@ jobs:
           npx cap add android
           npx cap sync android
 
-          # توليد أيقونات أندرويد الرسمية من اللوجو الخاص بك (icon-512.png)
+          # توليد أيقونات أندرويد الرسمية من icon-512.png
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
-            echo "🎨 جاري تحويل icon-512.png إلى أيقونات أندرويد المطلوبة..."
+            echo "🎨 جاري تحويل icon-512.png إلى أيقونات أندرويد..."
             RES_DIR="android/app/src/main/res"
 
             mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
 
-            # أيقونات الشاشة الرئيسية (العادية)
             convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher.png
             convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher.png
             convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher.png
             convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher.png
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher.png
 
-            # الأيقونات الدائرية
             convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher_round.png
             convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher_round.png
             convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher_round.png
             convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher_round.png
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png
 
-            # الأيقونات الحديثة (Adaptive Icons - Foreground)
             convert "$ICON_SOURCE" -resize 108x108 $RES_DIR/mipmap-mdpi/ic_launcher_foreground.png
             convert "$ICON_SOURCE" -resize 162x162 $RES_DIR/mipmap-hdpi/ic_launcher_foreground.png
             convert "$ICON_SOURCE" -resize 216x216 $RES_DIR/mipmap-xhdpi/ic_launcher_foreground.png
@@ -88,7 +85,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 432x432 $RES_DIR/mipmap-xxxhdpi/ic_launcher_foreground.png
           fi
 
-          # إنشاء ملفات الجافا مع الفحص الأصلي ومعالج إذن الـ VPN الفوري
+          # إنشاء ملفات الجافا
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
@@ -362,7 +359,7 @@ jobs:
                                   .setPurchaseToken(purchase.getPurchaseToken())
                                   .build();
                           billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult -> {
-                              if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                              if (billingResult.getResponseCode() == BillingResult.BillingResponseCode.OK) {
                                   if (activeBillingCall != null) {
                                       JSObject ret = new JSObject();
                                       ret.put("success", true);
@@ -751,10 +748,14 @@ jobs:
           }
           EOF
 
-          # تعديل إعدادات Gradle وفواتير جوجل
+          # حقن مكتبات WireGuard وفواتير جوجل في android/app/build.gradle
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
+            fi
+
+            if ! grep -q "com.wireguard.android:tunnel" android/app/build.gradle; then
+              sed -i '/dependencies {/a \    implementation "com.wireguard.android:tunnel:1.0.20230707"' android/app/build.gradle
             fi
 
             sed -i -E 's/versionCode [0-9]+/versionCode 30/' android/app/build.gradle

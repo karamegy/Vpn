@@ -698,13 +698,10 @@ jobs:
           }
           EOF
 
-          # تعديل إعدادات Gradle وحقن المكتبات اللازمة
+          # تعديل إعدادات Gradle
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
-            fi
-            if ! grep -q "com.wireguard.android:tunnel" android/app/build.gradle; then
-              sed -i '/dependencies {/a \    implementation "com.wireguard.android:tunnel:1.0.20230707"' android/app/build.gradle
             fi
 
             sed -i -E 's/versionCode [0-9]+/versionCode 30/' android/app/build.gradle

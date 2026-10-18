@@ -58,7 +58,6 @@ jobs:
           npx cap add android
           npx cap sync android
 
-          # توليد أيقونات أندرويد الرسمية من icon-512.png
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
             echo "🎨 جاري تحويل icon-512.png إلى أيقونات أندرويد..."
@@ -85,7 +84,53 @@ jobs:
             convert "$ICON_SOURCE" -resize 432x432 $RES_DIR/mipmap-xxxhdpi/ic_launcher_foreground.png
           fi
 
-          # إنشاء ملفات الجافا بلغة أندرويد الرسمية النقيّة
+          # كتابة AndroidManifest.xml المكتمل بالأذونات وتصريح الخدمة
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="io.github.karamegy.Vpn">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="com.android.vending.BILLING" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="Apex Shield AI"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+
+                  <activity
+                      android:name="io.github.karamegy.Vpn.MainActivity"
+                      android:label="Apex Shield AI"
+                      android:exported="true"
+                      android:launchMode="singleTask"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+
+                  <service
+                      android:name="io.github.karamegy.Vpn.ApexVpnService"
+                      android:permission="android.permission.BIND_VPN_SERVICE"
+                      android:foregroundServiceType="connectedDevice"
+                      android:exported="false">
+                      <intent-filter>
+                          <action android:name="android.net.VpnService" />
+                      </intent-filter>
+                  </service>
+
+              </application>
+          </manifest>
+          EOF
+
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
@@ -359,7 +404,7 @@ jobs:
                                   .setPurchaseToken(purchase.getPurchaseToken())
                                   .build();
                           billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult -> {
-                              if (billingResult.getResponseCode() == BillingResult.BillingResponseCode.OK) {
+                              if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
                                   if (activeBillingCall != null) {
                                       JSObject ret = new JSObject();
                                       ret.put("success", true);

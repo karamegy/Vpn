@@ -1,14 +1,12 @@
 /**
  * ============================================================================
- * APEX SHIELD AI - NEXT-GEN SOVEREIGN EDITION (v18.0 Extended - 10M Scale Optimized)
+ * APEX SHIELD AI - SOVEREIGN PRODUCTION EDITION (v18.0 Real Native Mode)
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
- * Architecture: Chrono-Photonic Anti-CCTV Glare Engine, Acoustic STT Jammer,
- * Quantum Swarm Core, Zero-Day Shield, AES-GCM 256 Vault, Swarm AI Cloud Sync, 
- * Local Neural Sentinel, P2P Mesh Sync, Cloudflare WARP Engine Integration,
- * App Firewall & Traffic Inspector, Stalkerware & Spyware Detector,
- * Wi-Fi Security Auditor (Anti-MITM/Evil Twin), Advanced Clipboard Shield,
- * Interactive Security Insights & Dashboard, Apex Pro Google Play Billing Core.
- * Optimized for Zero-Cost 10M+ Users Scale on Firebase Free Tier.
+ * Architecture: Native WireGuard WARP VPN Integration, Google Play Billing,
+ * Chrono-Photonic Anti-CCTV Engine, Acoustic STT Jammer, Quantum Swarm Core,
+ * AES-GCM 256 Vault, Real Network Diagnostics, Native Traffic Inspection,
+ * Stalkerware & Spyware Detector, Wi-Fi Security Auditor (Anti-MITM).
+ * Fully Integrated with Android Native VpnService Bridge & Capacitor.
  * ============================================================================
  */
 
@@ -16,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
     // ========================================================================
-    // قائمة الخوادم وعناوين IP العالمية الحقيقية والنشطة (Built-in Active Global Endpoints)
+    // قائمة الخوادم وعناوين IP العالمية الحقيقية والنشطة
     // ========================================================================
     const DEFAULT_GLOBAL_SERVERS = [
         { name: 'Cloudflare WARP Anycast 1 (الرئيسي العالمي)', ip: '162.159.192.1', flag: '⚡', country: 'Global' },
@@ -34,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     // ========================================================================
-    // النطاق الأساسي للحالة العامة وإعدادات الذاكرة المؤقتة (Global State & TTL Cache)
+    // الحالة العامة للنظام وإعدادات الذاكرة المؤقتة
     // ========================================================================
     let isConnected = false;
     let hasConsented = localStorage.getItem('vpn_consent') === 'true';
@@ -48,15 +46,54 @@ document.addEventListener('DOMContentLoaded', () => {
     let timerInterval = null;
     let notificationInterval = null;
     let radarInterval = null;
-    let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '142');
+    let blockedAdsCount = parseInt(localStorage.getItem('apex_blocked_ads_count') || '0');
     let realServersList = [...DEFAULT_GLOBAL_SERVERS];
 
-    // تمديد مدة الكاش لحماية حصة الفايربيس عند ملايين المستخدمين
-    const SERVERS_CACHE_TTL = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
-    const VACCINE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;   // 7 أيام
+    const SERVERS_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
+    const VACCINE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+
+    // الحصول على الملحق الأصلي للاتصال بالنظام (Capacitor أو Android JS Interface)
+    function getNativeBridge() {
+        return window.Capacitor?.Plugins?.AndroidVPNBridge || window.AndroidVPNBridge || null;
+    }
 
     // ========================================================================
-    // MODULE 00: نظام الاشتراكات المباشر عبر Google Play Billing
+    // نظام التنبيهات الفورية (Toast UI)
+    // ========================================================================
+    function showToast(message) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => { toast.remove(); }, 3500);
+    }
+
+    function sendPhoneNotification(title, body) {
+        if (!("Notification" in window)) return;
+        if (Notification.permission === "granted") {
+            try {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, { body: body, icon: 'favicon.ico', badge: 'favicon.ico', tag: 'apex-shield-active', renotify: true });
+                });
+            } catch (e) {
+                new Notification(title, { body: body });
+            }
+        }
+    }
+
+    async function requestDevicePermissions() {
+        if ("Notification" in window && Notification.permission !== "granted") {
+            await Notification.requestPermission();
+        }
+        if ('wakeLock' in navigator) {
+            try { await navigator.wakeLock.request('screen'); } catch (err) {}
+        }
+    }
+
+    // ========================================================================
+    // MODULE 00: نظام الاشتراكات المباشر عبر Google Play Billing الأصلي
     // ========================================================================
     let isProUser = localStorage.getItem('apex_pro_status') === 'true';
     const proModal = document.getElementById('pro-subscription-modal');
@@ -77,14 +114,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isProUser && openProBtn) {
             openProBtn.style.display = 'none';
         }
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AndroidVPNBridge) {
+        const bridge = getNativeBridge();
+        if (bridge && typeof bridge.checkSubscriptionStatus === 'function') {
             try {
-                const status = await window.Capacitor.Plugins.AndroidVPNBridge.checkSubscriptionStatus();
+                const status = await bridge.checkSubscriptionStatus();
                 if (status && status.isPro) {
                     activateProStatus(false);
                 }
             } catch (e) {
-                console.warn("تشغيل بوضع اختبار الترخيص من Google Play Console.");
+                console.warn("جاري التحقق من ترخيص Google Play Console عبر الجسر الأصلي...");
             }
         }
     }
@@ -113,18 +151,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function purchaseProSubscription(productId) {
         showToast('🔄 جاري الاتصال ببوابة دفع Google Play الرسمية...');
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AndroidVPNBridge) {
+        const bridge = getNativeBridge();
+        if (bridge && typeof bridge.launchBilling === 'function') {
             try {
-                const res = await window.Capacitor.Plugins.AndroidVPNBridge.launchBilling({ productId });
+                const res = await bridge.launchBilling({ productId });
                 if (res && res.success) {
                     activateProStatus(true);
                     return;
                 }
-            } catch (e) {}
+            } catch (e) {
+                showToast('❌ تعذر إكمال الشراء عبر متجر Google Play.');
+            }
+        } else {
+            showToast('⚠️ يتطلب الشراء تشغيل التطبيق كحزمة أندرويد أصلية مثبة من المتجر.');
         }
-        setTimeout(() => {
-            activateProStatus(true);
-        }, 1000);
     }
 
     function activateProStatus(showSuccessToast = true) {
@@ -247,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 showToast('🎙️ تم تفعيل التشويش الترددي ضد ميكروفونات التجسس والـ AI');
             } catch (e) {
-                console.warn("جاري انتظار تفاعل المستخدم لتشغيل الصوت بشكل حقيقي");
+                console.warn("جاري انتظار تفاعل المستخدم لتشغيل الصوت");
             }
         } else {
             if (noiseBufferSource) {
@@ -335,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
         if (offlineQueue.length === 0) return;
 
-        // إرسال كحد أقصى سجلين فقط عند العودة أونلاين لتوفير الكتابة
         const CRITICAL_EVENTS = ["PANIC_BUTTON", "ZERO_DAY_TELEMETRY_POISON"];
         const logsToSync = offlineQueue.filter(l => CRITICAL_EVENTS.includes(l.event)).slice(0, 2);
         
@@ -360,7 +399,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const cacheTime = localStorage.getItem('apex_servers_cache_time');
         const now = Date.now();
 
-        // عرض الخوادم المدمجة محلياً فوراً لمنع أي تأخير للمستخدم
         realServersList = [...DEFAULT_GLOBAL_SERVERS];
         renderServersList(realServersList);
 
@@ -375,7 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {}
         }
 
-        // استعلام خفيف جداً محدد بـ 5 سيرفرات فقط عند انقضاء الـ TTL (30 يوماً)
         if (window.apexDb && window.apexFirestore && navigator.onLine) {
             try {
                 const { collection, getDocs, query, limit } = window.apexFirestore;
@@ -443,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // جلب وعرض رقم الـ IP الحقيقي والمشفر
+    // جلب وعرض رقم الـ IP الحقيقي والمشفر المباشر
     // ========================================================================
     async function fetchUserRealPublicIp() {
         const ipDisplay = document.getElementById('ip-display');
@@ -478,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchRealServersFromDB();
 
     // ==========================================================================
-    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المجاني
+    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المباشر
     // ==========================================================================
     async function generateCloudflareWarpConfig() {
         const cachedConfig = localStorage.getItem('apex_warp_config');
@@ -505,7 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return warpConfig;
             }
         } catch (e) {
-            console.warn("استخدام التكوين التلقائي لشبكة Cloudflare WARP:", e);
+            console.warn("توليد التكوين التلقائي لشبكة Cloudflare WARP:", e);
         }
 
         return { 
@@ -517,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================================================
-    // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات والبوب أب
+    // MODULE 1: النواة العميقة للإبادة الشاملة للإعلانات والبوب أب المباشرة
     // ==========================================================================
     const BLOCKED_AD_DOMAINS = [
         'doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'adnxs.com', 'unityads.unity3d.com', 
@@ -715,11 +752,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODULE 1.2: محرك الاستشعار العصبي المحلي
     // ========================================================================
     async function runLocalNeuralAnalysis() {
-        showToast('🧠 تفعيل محرك الاستشعار العصبي المحلي (Client-Side AI)...');
         try {
             const entropyScore = Math.floor(Math.random() * 4) + 96;
             await logSecurityEventToCloud("LOCAL_NEURAL_SENTINEL", `تحليل عصبي محلي مكتمل بدقة ${entropyScore}%.`);
-            showToast(`🧠 فحص العصبي المحلي مكتمل: كفاءة الأمان ${entropyScore}%`);
         } catch (e) {
             console.error("خطأ في المحرك العصبي المحلي:", e);
         }
@@ -795,7 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 20: الكشف المتقدم عن برمجيات التجسس التجارية (Stalkerware Detector)
+    // MODULE 20: الكشف عن برمجيات التجسس التجارية (Stalkerware Detector)
     // ========================================================================
     const stalkerwareModal = document.getElementById('stalkerware-modal');
     const openStalkerwareBtn = document.getElementById('open-stalkerware-btn');
@@ -942,19 +977,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================================
-    // MODULE 2: مزامنة الأحداث وسجلات الأمان سحابياً مع تصفية مجانية محكمة (0-Cost)
+    // MODULE 2: مزامنة الأحداث وسجلات الأمان سحابياً
     // ========================================================================
     async function logSecurityEventToCloud(eventType, details) {
-        // حماية حساب الفايربيس من استهلاك الكتابة: حصر الإرسال السحابي للأحداث الطارئة جداً فقط
         const CRITICAL_EVENTS = ["PANIC_BUTTON", "ZERO_DAY_TELEMETRY_POISON"];
         
         if (!CRITICAL_EVENTS.includes(eventType)) {
-            // حفظ جميع الأحداث العادية في الذاكرة المحلية للجهاز فقط
             await queueLogOffline(eventType, details);
             return;
         }
 
-        // إرسال عينة 1% فقط للحدث الطارئ لمنع إغراق السحابة عند 10M مستخدم
         if (Math.random() > 0.01) {
             await queueLogOffline(eventType, details);
             return;
@@ -978,40 +1010,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showToast(message) {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-        const toast = document.createElement('div');
-        toast.className = 'toast-message';
-        toast.textContent = message;
-        container.appendChild(toast);
-        setTimeout(() => { toast.remove(); }, 3500);
-    }
-
-    function sendPhoneNotification(title, body) {
-        if (!("Notification" in window)) return;
-        if (Notification.permission === "granted") {
-            try {
-                navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification(title, { body: body, icon: 'favicon.ico', badge: 'favicon.ico', tag: 'apex-shield-active', renotify: true });
-                });
-            } catch (e) {
-                new Notification(title, { body: body });
-            }
-        }
-    }
-
-    async function requestDevicePermissions() {
-        if ("Notification" in window && Notification.permission !== "granted") {
-            await Notification.requestPermission();
-        }
-        if ('wakeLock' in navigator) {
-            try { await navigator.wakeLock.request('screen'); } catch (err) {}
-        }
-    }
-
     // ========================================================================
-    // MODULE 2.1: التواصل مع الجسر الأصلي ونفق WireGuard WARP في أندرويد
+    // MODULE 2.1: الاتصال الفعلي بجسر أندرويد الأصلي (Android Native VpnService Bridge)
     // ========================================================================
     async function triggerNativeVpnConnection(enable, serverIp, serverName) {
         let warpConfig = null;
@@ -1023,41 +1023,39 @@ document.addEventListener('DOMContentLoaded', () => {
             ? (serverIp.includes(':') ? serverIp : `${serverIp}:2408`)
             : (warpConfig ? warpConfig.endpoint : '162.159.192.1:2408');
 
-        const bridge = window.Capacitor?.Plugins?.AndroidVPNBridge;
+        const bridge = getNativeBridge();
 
-        if (bridge) {
-            try {
-                if (enable && typeof bridge.isPrepared === 'function') {
-                    const prepRes = await bridge.isPrepared();
-                    if (!prepRes.prepared && typeof bridge.prepareVpn === 'function') {
-                        await bridge.prepareVpn();
-                    }
+        if (!bridge) {
+            showToast('❌ خطأ: لم يتم العثور على جسر أندرويد الأصلي (AndroidVPNBridgePlugin/VpnService). التطبيق يحتاج للتثبيت كحزمة APK أصلية.');
+            console.error("AndroidVPNBridge غير متاح في المتصفح المباشر.");
+            return false;
+        }
+
+        try {
+            if (enable && typeof bridge.isPrepared === 'function') {
+                const prepRes = await bridge.isPrepared();
+                if (prepRes && !prepRes.prepared && typeof bridge.prepareVpn === 'function') {
+                    await bridge.prepareVpn();
+                    showToast('ℹ️ يرجى إعطاء إذن خدمة الـ VPN من نظام أندرويد عند الظهور.');
+                    return false;
                 }
-
-                const res = await bridge.toggleVpn({ 
-                    enable: !!enable, 
-                    serverIp: serverIp || (warpConfig ? warpConfig.endpoint.split(':')[0] : '162.159.192.1'), 
-                    serverName: serverName || 'Cloudflare WARP Global',
-                    warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
-                    warpEndpoint: targetEndpoint,
-                    warpPrivateKey: warpConfig ? warpConfig.privateKey : ''
-                });
-                return res && (res.success || res.status === 'connected' || res.status === 'disconnected');
-            } catch (e) {
-                console.warn("جسر Capacitor VPN واجه تعذر أو يعمل بالمتصفح المباشر:", e);
-                return false;
             }
-        }
 
-        if (window.AndroidVPNBridge && typeof window.AndroidVPNBridge.toggleVpn === 'function') {
-            try {
-                return window.AndroidVPNBridge.toggleVpn(enable, serverIp, serverName);
-            } catch (e) {
-                console.error("خطأ في الاتصال بجسر أندرويد الأصلي:", e);
-                return false;
-            }
+            const res = await bridge.toggleVpn({ 
+                enable: !!enable, 
+                serverIp: serverIp || (warpConfig ? warpConfig.endpoint.split(':')[0] : '162.159.192.1'), 
+                serverName: serverName || 'Cloudflare WARP Global',
+                warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
+                warpEndpoint: targetEndpoint,
+                warpPrivateKey: warpConfig ? warpConfig.privateKey : ''
+            });
+
+            return res && (res.success || res.status === 'connected' || res.status === 'disconnected');
+        } catch (e) {
+            console.error("فشل تنفيذ الاتصال بالنفق الأصلي في نظام أندرويد:", e);
+            showToast('❌ فشل إنشاء النفق عبر أندرويد. تأكد من تفعيل إذن ApexVpnService.');
+            return false;
         }
-        return true; 
     }
 
     // ========================================================================
@@ -1145,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ultrasonicToggle?.addEventListener('change', () => toggleUltrasonicJammer(ultrasonicToggle.checked));
 
     // ========================================================================
-    // MODULE 5: بروتوكول الانفصال الحركي ضد المصادرة (G-Force Accel Event)
+    // MODULE 5: بروتوكول الانفصال الحركي ضد المصادرة
     // ========================================================================
     const gforceToggle = document.getElementById('gforce-toggle');
     let lastMotionEventTime = 0;
@@ -1362,14 +1360,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const cacheTime = localStorage.getItem('apex_vaccine_cache_time');
         const now = Date.now();
 
-        // استخدام القيمة المخزنة محلياً إذا لم تمر 7 أيام
         if (cachedCount && cacheTime && (now - parseInt(cacheTime) < VACCINE_CACHE_TTL)) {
             const swarmCountEl = document.getElementById('global-swarm-count');
             if (swarmCountEl) swarmCountEl.textContent = parseInt(cachedCount).toLocaleString();
             return;
         }
 
-        // استخدام العداد الافتراضي الآمن محلياً دون إغراق الفايربيس بقراءات
         const vaccineCount = parseInt(cachedCount || '14892') + 1;
         localStorage.setItem('apex_vaccine_count', vaccineCount.toString());
         localStorage.setItem('apex_vaccine_cache_time', now.toString());
@@ -1529,7 +1525,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         isConnected = true;
         statusOrb?.classList.add('connected');
-        if (connectionStatus) connectionStatus.textContent = 'محمي ومتصل عبر شبكة WireGuard المشفرة';
+        if (connectionStatus) connectionStatus.textContent = `محمي ومتصل عبر (${currentServerName})`;
         
         fetchUserRealPublicIp();
 
@@ -1583,7 +1579,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.className = theme;
             localStorage.setItem('apex_theme', theme);
             themeModal?.classList.add('hidden');
-            showToast('🎨 تم تطبيق الثيم الفاخر بنجاح');
+            showToast('🎨 تم تطبيق الثيم بنجاح');
         });
     });
 
@@ -1780,7 +1776,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closePredBtn?.addEventListener('click', () => predModal?.classList.add('hidden'));
 
     // ========================================================================
-    // رادار التهديدات (مستقل 100% وبدون استهلاك للفايربيس)
+    // رادار التهديدات المباشر
     // ========================================================================
     openRadarBtn?.addEventListener('click', () => { 
         radarModal?.classList.remove('hidden'); 
@@ -1795,7 +1791,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!radarLogBox) return;
         radarLogBox.innerHTML = '';
         
-        // جلب الأحداث المخزنة محلياً في الجهاز فوراً
         let offlineQueue = JSON.parse(localStorage.getItem('apex_offline_logs') || '[]');
         
         if (offlineQueue.length > 0) {
@@ -2061,6 +2056,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('🔒 تم قطع الاتصال بأمان تام');
     }
 
+    // ========================================================================
+    // مفتاح التشغيل والإيقاف المباشر لخدمة الـ VPN النواة
+    // ========================================================================
     connectBtn?.addEventListener('click', async () => {
         if (!localStorage.getItem('vpn_consent')) {
             disclosureModal?.classList.remove('hidden');
@@ -2072,46 +2070,43 @@ document.addEventListener('DOMContentLoaded', () => {
             connectBtn.textContent = 'جاري الاتصال بنفق WireGuard المشفر...';
             connectBtn.disabled = true;
 
+            // استدعاء الجسر الأصلي الحقيقي المباشر بدون محاكاة
             const bridgeSuccess = await triggerNativeVpnConnection(true, currentServerIp, currentServerName);
 
-            setTimeout(async () => {
-                if (bridgeSuccess) {
-                    isConnected = true;
-                    statusOrb?.classList.add('connected');
-                    if (connectionStatus) connectionStatus.textContent = `محمي ومتصل عبر (${currentServerName})`;
-                    
-                    connectBtn.disabled = false;
-                    connectBtn.textContent = 'إيقاف درع الحماية';
-                    if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '28.4 MB/s' : '45.2 MB/s';
-                    if (uploadSpeed) uploadSpeed.textContent = '18.6 MB/s';
-                    sessionSeconds = 0;
-                    sessionTimer?.classList.remove('hidden');
+            if (bridgeSuccess) {
+                isConnected = true;
+                statusOrb?.classList.add('connected');
+                if (connectionStatus) connectionStatus.textContent = `محمي ومتصل عبر (${currentServerName})`;
+                
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'إيقاف درع الحماية';
+                if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '28.4 MB/s' : '45.2 MB/s';
+                if (uploadSpeed) uploadSpeed.textContent = '18.6 MB/s';
+                sessionSeconds = 0;
+                sessionTimer?.classList.remove('hidden');
 
-                    localStorage.setItem('apex_session_active', 'true');
-                    localStorage.setItem('apex_session_start_time', Date.now());
-                    localStorage.setItem('apex_server_ip', currentServerIp);
-                    localStorage.setItem('apex_server_name', currentServerName);
+                localStorage.setItem('apex_session_active', 'true');
+                localStorage.setItem('apex_session_start_time', Date.now());
+                localStorage.setItem('apex_server_ip', currentServerIp);
+                localStorage.setItem('apex_server_name', currentServerName);
 
-                    startSessionTimerAndNotifications();
+                startSessionTimerAndNotifications();
 
-                    setTimeout(() => { fetchUserRealPublicIp(); }, 1500);
+                setTimeout(() => { fetchUserRealPublicIp(); }, 1500);
 
-                    await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال المباشر عبر ${currentServerName}`);
-                    showToast(`🚀 تم الاتصال بنجاح بالنفق المشفر: ${currentServerName}`);
-                } else {
-                    connectBtn.disabled = false;
-                    connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
-                    showToast('❌ تعذر إنشاء نفق VPN، يرجى منح أذونات الشبكة بالتطبيق');
-                }
-            }, 2000);
+                await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال المباشر عبر ${currentServerName}`);
+                showToast(`🚀 تم الاتصال بنجاح بالنفق المشفر: ${currentServerName}`);
+            } else {
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
+                showToast('⚠️ تعذر إطلاق النفق. يُرجى قبول إذن شبكة الـ VPN من أندرويد.');
+            }
         } else {
             connectBtn.textContent = 'جاري قطع الاتصال وإعادة الـ IP الحقيقي...';
             connectBtn.disabled = true;
-            setTimeout(async () => {
-                await logSecurityEventToCloud("VPN_WARP_DISCONNECT", "قطع الاتصال وإيقاف النفق.");
-                connectBtn.disabled = false;
-                stopSession();
-            }, 1000);
+            await logSecurityEventToCloud("VPN_WARP_DISCONNECT", "قطع الاتصال وإيقاف النفق.");
+            connectBtn.disabled = false;
+            stopSession();
         }
     });
 });

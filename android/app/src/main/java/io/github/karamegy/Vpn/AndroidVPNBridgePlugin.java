@@ -16,8 +16,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin {
     private static final String TAG = "AndroidVPNBridge";
-    private static final int VPN_REQUEST_CODE = 0xF001;
-    private PluginCall savedVpnCall = null;
+    private static final int VPN_REQUEST_CODE = 0x9999;
+    private PluginCall activeVpnCall = null;
 
     @PluginMethod
     public void checkSubscriptionStatus(PluginCall call) {
@@ -58,10 +58,11 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
         Intent intent = VpnService.prepare(activity);
         if (intent != null) {
-            savedVpnCall = call;
+            activeVpnCall = call;
             try {
                 activity.startActivityForResult(intent, VPN_REQUEST_CODE);
             } catch (Exception e) {
+                activeVpnCall = null;
                 call.reject("فشل إطلاق إذن الـ VPN: " + e.getMessage());
             }
         } else {
@@ -82,37 +83,40 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
         Intent intent = VpnService.prepare(activity);
         if (intent != null) {
-            savedVpnCall = call;
+            activeVpnCall = call;
             try {
                 activity.startActivityForResult(intent, VPN_REQUEST_CODE);
             } catch (Exception e) {
+                activeVpnCall = null;
                 call.reject("فشل طلب إذن الـ VPN: " + e.getMessage());
             }
             return;
         }
 
-        doStartVpnService(call);
+        executeVpnServiceStart(call);
     }
 
     @Override
     protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
         super.handleOnActivityResult(requestCode, resultCode, data);
         if (requestCode == VPN_REQUEST_CODE) {
-            if (savedVpnCall != null) {
+            PluginCall pendingCall = activeVpnCall;
+            activeVpnCall = null;
+
+            if (pendingCall != null) {
                 if (resultCode == Activity.RESULT_OK) {
-                    doStartVpnService(savedVpnCall);
+                    executeVpnServiceStart(pendingCall);
                 } else {
-                    savedVpnCall.reject("تم رفض إذن VPN من قبل المستخدم");
+                    pendingCall.reject("تم رفض إذن VPN من قبل المستخدم في نظام أندرويد");
                 }
-                savedVpnCall = null;
             }
         }
     }
 
-    private void doStartVpnService(PluginCall call) {
+    private void executeVpnServiceStart(PluginCall call) {
         Context context = getContext();
         if (context == null) {
-            if (call != null) call.reject("السياق غير متوفر");
+            if (call != null) call.reject("السياق غير متوفر لتشغيل الخدمة");
             return;
         }
 
@@ -167,10 +171,10 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
             JSObject ret = new JSObject();
             ret.put("success", true);
-            ret.put("status", "connected");
+            ret.put("status", "disconnected");
             call.resolve(ret);
         } catch (Exception e) {
-            call.project?.call?.reject("فشل إيقاف الخدمة: " + e.getMessage());
+            call.reject("فشل إيقاف الخدمة: " + e.getMessage());
         }
     }
 

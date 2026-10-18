@@ -70,16 +70,12 @@ jobs:
           cp /tmp/custom_java/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
 
           if [ -f "android/app/build.gradle" ]; then
-            # التأكد من إضافة مستودعات جوجل ومافن لكي يتم تحميل مكتبات فواتير جوجل و WireGuard بسلاسة
-            if ! grep -q "google()" android/build.gradle; then
-              sed -i '/allprojects {/,/}/ s/repositories {/repositories {\n        google()\n        mavenCentral()\n        maven { url "https://www.jitpack.io" }/' android/build.gradle || true
-            else
-              if ! grep -q "jitpack.io" android/build.gradle; then
-                sed -i '/repositories {/,/}/ s/mavenCentral()/mavenCentral()\n        maven { url "https://www.jitpack.io" }/' android/build.gradle || true
-              fi
+            # التأكد من إضافة مستودعات جوجل ومافن و JitPack لتحميل كافة الاعتماديات بسلاسة
+            if ! grep -q "jitpack.io" android/build.gradle; then
+              sed -i '/repositories {/a \        maven { url "https://www.jitpack.io" }' android/build.gradle || true
             fi
 
-            # حقن مكتبة فواتير جوجل بلاي ومكتبة WireGuard Android Backend الرسمية
+            # حقن مكتبة فواتير جوجل بلاي ومكتبة WireGuard الرسمية عبر Maven Central
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"\n    implementation "com.wireguard.android:wireguard-android:1.0.20230701"' android/app/build.gradle
             fi

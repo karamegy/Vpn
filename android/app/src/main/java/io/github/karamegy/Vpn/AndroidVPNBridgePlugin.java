@@ -3,8 +3,12 @@ package io.github.karamegy.Vpn;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.Build;
+import android.os.Environment;
+import android.os.StatFs;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -26,7 +30,10 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.io.File;
 import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedListener {
@@ -64,6 +71,45 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
                 Log.w(TAG, "Google Play Billing service disconnected. Retrying...");
             }
         });
+    }
+
+    @PluginMethod
+    public void performNativeScan(PluginCall call) {
+        try {
+            Context context = getContext();
+            if (context == null) {
+                call.reject("السياق غير متوفر");
+                return;
+            }
+
+            File path = Environment.getDataDirectory();
+            StatFs stat = new StatFs(path.getPath());
+            long blockSize = stat.getBlockSizeLong();
+            long totalBlocks = stat.getBlockCountLong();
+            long availableBlocks = stat.getAvailableBlocksLong();
+
+            long totalStorageBytes = totalBlocks * blockSize;
+            long freeStorageBytes = availableBlocks * blockSize;
+            long usedStorageBytes = totalStorageBytes - freeStorageBytes;
+
+            double totalMB = totalStorageBytes / (1024.0 * 1024.0);
+            double usedMB = usedStorageBytes / (1024.0 * 1024.0);
+
+            PackageManager pm = context.getPackageManager();
+            List<ApplicationInfo> apps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+            int scannedAppsCount = (apps != null) ? apps.size() : 0;
+
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            ret.put("scannedMB", String.format(Locale.US, "%.1f", usedMB));
+            ret.put("totalMB", String.format(Locale.US, "%.0f", totalMB));
+            ret.put("scannedApps", scannedAppsCount);
+
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "خطأ أثناء الفحص الأصلي: ", e);
+            call.reject("فشل الفحص الأصلي: " + e.getMessage());
+        }
     }
 
     @PluginMethod

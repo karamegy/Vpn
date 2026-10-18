@@ -54,8 +54,7 @@ jobs:
         run: |
           export CI=true
           
-          rm -rf android
-          npx cap add android
+          # تم إزالة أوامر rm -rf android و cap add لتجنب مسح ملفات الجسر والـ Java الأصلية
           npx cap sync android
 
           if [ -f "android/app/build.gradle" ]; then

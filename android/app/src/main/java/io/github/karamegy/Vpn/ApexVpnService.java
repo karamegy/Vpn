@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
@@ -53,7 +54,12 @@ public class ApexVpnService extends VpnService {
             String warpPrivateKey = intent != null ? intent.getStringExtra("warpPrivateKey") : "";
 
             createNotificationChannel();
-            startForeground(NOTIFICATION_ID, buildNotification(serverName));
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, buildNotification(serverName), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification(serverName));
+            }
 
             startVpnConnection(warpClientIp, warpEndpoint, serverName, warpPrivateKey);
         } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
@@ -114,7 +120,7 @@ public class ApexVpnService extends VpnService {
                     return;
                 }
             } catch (Exception e) {
-                Log.e(TAG, "تعذر تشغيل GoBackend، جاري التبديل للمشغل الأصلي للنظام:", e);
+                Log.e(TAG, "فشل WireGuard GoBackend، جاري المحاولة بواسطة واجهة VpnService النظام:", e);
             }
 
             try {

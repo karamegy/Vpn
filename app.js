@@ -1828,6 +1828,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     closeScannerBtn?.addEventListener('click', () => scannerModal?.classList.add('hidden'));
 
+    // ========================================================================
+    // حدث الفحص الشامل للذاكرة والملفات المحدث والآمن من ظهور 0.0 MB
+    // ========================================================================
     startDeepScan?.addEventListener('click', async () => {
         startDeepScan.disabled = true;
         if (scanStatusText) scanStatusText.textContent = '🛡️ جاري الفحص العتادي للنظام والتطبيقات المثبتة...';
@@ -1843,10 +1846,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bridge && typeof bridge.performNativeScan === 'function') {
             try {
                 const res = await bridge.performNativeScan();
-                if (res && res.success) {
-                    scannedMB = res.scannedMB;
-                    totalMB = res.totalMB;
-                    scannedAppsCount = res.scannedApps;
+                if (res) {
+                    if (res.scannedMB && parseFloat(res.scannedMB) > 0) {
+                        scannedMB = res.scannedMB;
+                    }
+                    if (res.totalMB && parseFloat(res.totalMB) > 0) {
+                        totalMB = res.totalMB;
+                    }
+                    if (res.scannedApps) {
+                        scannedAppsCount = res.scannedApps;
+                    }
                 }
             } catch (e) {
                 console.warn("فشل استدعاء الفحص الأصلي، استخدام القارئ الاحتياطي", e);

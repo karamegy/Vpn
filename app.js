@@ -1032,6 +1032,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            if (enable && typeof bridge.isPrepared === 'function') {
+                const prepRes = await bridge.isPrepared();
+                if (prepRes && !prepRes.prepared && typeof bridge.prepareVpn === 'function') {
+                    await bridge.prepareVpn();
+                    showToast('ℹ️ يرجى إعطاء إذن خدمة الـ VPN من نظام أندرويد عند الظهور.');
+                    return false;
+                }
+            }
+
             const res = await bridge.toggleVpn({ 
                 enable: !!enable, 
                 serverIp: serverIp || (warpConfig ? warpConfig.endpoint.split(':')[0] : '162.159.192.1'), 
@@ -1044,7 +1053,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return res && (res.success || res.status === 'connected' || res.status === 'disconnected');
         } catch (e) {
             console.error("فشل تنفيذ الاتصال بالنفق الأصلي في نظام أندرويد:", e);
-            showToast('❌ فشل إنشاء النفق عبر أندرويد: ' + (e.message || e));
+            showToast('❌ فشل إنشاء النفق عبر أندرويد. تأكد من تفعيل إذن ApexVpnService.');
             return false;
         }
     }

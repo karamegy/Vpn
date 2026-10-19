@@ -90,4 +90,14 @@ public class AndroidVPNBridgePlugin extends Plugin {
         ret.put("licenseKey", BASE64_LICENSE_KEY);
         call.resolve(ret);
     }
+
+    @PluginMethod
+    public void launchBilling(PluginCall call) {
+        String productId = call.getString("productId", "");
+        
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        ret.put("productId", productId);
+        call.resolve(ret);
+    }
 }

@@ -98,11 +98,15 @@ public class ApexVpnService extends VpnService {
 
                     String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
 
+                    // استثناء التطبيق ومتجر جوجل بلاي وخدمات جوجل لضمان نجاح الشراء وعزله عن انقطاع النفق
+                    String excludedApps = getPackageName() + ", com.android.vending, com.google.android.gms";
+
                     String wgConfigStr = "[Interface]\n" +
                             "PrivateKey = " + privateKey + "\n" +
                             "Address = " + formattedClientIp + "\n" +
                             "DNS = 1.1.1.1, 1.0.0.1\n" +
-                            "MTU = 1280\n\n" +
+                            "MTU = 1280\n" +
+                            "ExcludedApplications = " + excludedApps + "\n\n" +
                             "[Peer]\n" +
                             "PublicKey = bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=\n" +
                             "Endpoint = " + targetEndpoint + "\n" +

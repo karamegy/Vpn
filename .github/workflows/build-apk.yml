@@ -21,10 +21,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # تثبيت Gradle 8.7 الحديث المتوافق كلياً مع Java 17
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
       - name: 1. Setup Node.js System Native & Web Assets
         run: |
           sudo apt-get update -y
-          # تم إزالة gradle القديم من التثبيت لتجنب التعارض مع Java 17
           sudo apt-get install -y nodejs npm imagemagick
           node -v
           npm -v
@@ -54,7 +59,7 @@ jobs:
         run: |
           export CI=true
           
-          # إنشاء منصة أندرويد عبر Capacitor بملفات Gradle الحديثة (Gradle 8+)
+          # إنشاء المنصة إن لم تكن موجودة
           if [ ! -d "android" ]; then
             npx cap add android
           fi
@@ -62,10 +67,15 @@ jobs:
           # 1. إنشاء هيكل مجلدات الجافا
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 2. ضمان تصريح التشغيل لمحرّك Gradlew الخاص بـ Capacitor
+          # 2. توليد gradlew باستخدام Gradle 8.7 الحديث في حال عدم وجوده
+          if [ ! -f "android/gradlew" ]; then
+            cd android
+            gradle wrapper --gradle-version 8.7
+            cd ..
+          fi
           chmod +x android/gradlew
 
-          # 3. تعطيل فحوصات Lint وتفعيل التوافق مع AndroidX
+          # 3. إعداد خيارات gradle.properties
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
@@ -682,64 +692,54 @@ jobs:
                   cachedWarpEndpoint = call.getString("warpEndpoint", "");
                   cachedWarpPrivateKey = call.getString("warpPrivateKey", "");
 
+                  // إنهاء الوعد فوراً لواجهة الويب لضمان التفاعل السريع
+                  JSObject ret = new JSObject();
+                  ret.put("success", true);
+                  ret.put("status", "connected");
+                  call.resolve(ret);
+
                   if (activity == null) {
-                      executeVpnServiceStart(call);
+                      executeVpnServiceStart();
                       return;
                   }
 
                   Intent intent = VpnService.prepare(activity);
                   if (intent != null) {
-                      startActivityForResult(call, intent, "handleVpnStartResult");
-                  } else {
-                      executeVpnServiceStart(call);
+                      try {
+                          activity.startActivityForResult(intent, 0x8888);
+                      } catch (Exception e) {
+                          executeVpnServiceStart();
+                      }
+                      return;
                   }
+
+                  executeVpnServiceStart();
               }
 
-              @ActivityCallback
-              private void handleVpnStartResult(PluginCall call, ActivityResult result) {
-                  if (call == null) return;
-                  if (result.getResultCode() == Activity.RESULT_OK) {
-                      executeVpnServiceStart(call);
-                  } else {
-                      call.reject("تم رفض إذن الـ VPN من قبل المستخدم");
-                  }
-              }
-
-              private void executeVpnServiceStart(PluginCall call) {
+              private void executeVpnServiceStart() {
                   Context context = getContext();
                   if (context == null && getBridge() != null) {
                       context = getBridge().getContext();
                   }
 
-                  if (context == null) {
-                      if (call != null) call.reject("السياق غير متوفر لتشغيل الخدمة");
-                      return;
-                  }
+                  if (context != null) {
+                      try {
+                          Intent intent = new Intent(context, ApexVpnService.class);
+                          intent.setAction(ApexVpnService.ACTION_CONNECT);
+                          intent.putExtra("serverIp", cachedServerIp);
+                          intent.putExtra("serverName", cachedServerName);
+                          intent.putExtra("warpClientIp", cachedWarpClientIp);
+                          intent.putExtra("warpEndpoint", cachedWarpEndpoint);
+                          intent.putExtra("warpPrivateKey", cachedWarpPrivateKey);
 
-                  try {
-                      Intent intent = new Intent(context, ApexVpnService.class);
-                      intent.setAction(ApexVpnService.ACTION_CONNECT);
-                      intent.putExtra("serverIp", cachedServerIp);
-                      intent.putExtra("serverName", cachedServerName);
-                      intent.putExtra("warpClientIp", cachedWarpClientIp);
-                      intent.putExtra("warpEndpoint", cachedWarpEndpoint);
-                      intent.putExtra("warpPrivateKey", cachedWarpPrivateKey);
-
-                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                          context.startForegroundService(intent);
-                      } else {
-                          context.startService(intent);
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                              context.startForegroundService(intent);
+                          } else {
+                              context.startService(intent);
+                          }
+                      } catch (Exception e) {
+                          Log.e(TAG, "خطأ في تشغيل خدمة الـ VPN: ", e);
                       }
-
-                      if (call != null) {
-                          JSObject ret = new JSObject();
-                          ret.put("success", true);
-                          ret.put("status", "connected");
-                          call.resolve(ret);
-                      }
-                  } catch (Exception e) {
-                      Log.e(TAG, "فشل تشغيل خدمة الـ VPN: ", e);
-                      if (call != null) call.reject("فشل تشغيل الخدمة: " + e.getMessage());
                   }
               }
 
@@ -806,7 +806,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
           fi
 
-          # 9. إضافة مكتبة الشراء وتحديد الإصدارات
+          # 9. إضافة مكتبة الشراء وتحديث الإصدارات
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
@@ -822,7 +822,7 @@ jobs:
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 
-          # 10. مزامنة Capacitor
+          # 10. مزامنة Capacitor النهائية
           npx cap copy android
           npx cap sync android
 

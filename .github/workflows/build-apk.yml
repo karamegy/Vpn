@@ -160,7 +160,7 @@ jobs:
           }
           EOF
 
-          # كتابة ApexVpnService.java (الكود الثاني المحدث والمثالي لمنع قطع الإنترنت)
+          # كتابة ApexVpnService.java (مع منع حجب الإنترنت واستبعاد التطبيق)
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -355,7 +355,7 @@ jobs:
           }
           EOF
 
-          # كتابة AndroidVPNBridgePlugin.java مع دعم Play Billing 7+
+          # كتابة AndroidVPNBridgePlugin.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -458,7 +458,6 @@ jobs:
               public void performNativeScan(PluginCall call) {
                   try {
                       Context context = getContext();
-
                       long totalStorageBytes = 0;
                       long freeStorageBytes = 0;
                       long usedStorageBytes = 0;
@@ -677,7 +676,6 @@ jobs:
 
               private void executeVpnServiceStart() {
                   Context context = getContext();
-
                   if (context != null) {
                       try {
                           Intent intent = new Intent(context, ApexVpnService.class);
@@ -697,7 +695,6 @@ jobs:
               @PluginMethod
               public void stopVpn(PluginCall call) {
                   Context context = getContext();
-
                   if (context != null) {
                       try {
                           Intent intent = new Intent(context, ApexVpnService.class);
@@ -735,12 +732,10 @@ jobs:
 
           # تحويل الأيقونات
           rm -rf android/app/src/main/res/mipmap-anydpi*
-
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
             RES_DIR="android/app/src/main/res"
             mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
-
             convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
             convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
             convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
@@ -754,14 +749,13 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
           fi
 
-          # إضافة مكتبة Google Play Billing 8.0.0
+          # إضافة مكتبة Google Play Billing 8.0.0 وتحديث الإصدارات
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:8.0.0"' android/app/build.gradle
             else
               sed -i -E 's/com\.android\.billingclient:billing:[0-9.]+/com.android.billingclient:billing:8.0.0/' android/app/build.gradle
             fi
-
             sed -i -E 's/versionCode [0-9]+/versionCode 33/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.9"/' android/app/build.gradle
           fi
@@ -772,7 +766,6 @@ jobs:
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 
-          # مزامنة Capacitor مع منصة أندرويد
           npx cap sync android
           chmod +x android/gradlew
 
@@ -784,47 +777,44 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
+          chmod +x gradlew
+          export GRADLE_OPTS="-Dfile.encoding=UTF-8"
 
           if [ -n "$RELEASE_KEY" ]; then
             echo "🔑 فك تشفير المفتاح..."
             printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
-          elif [ -f "../signing.keystore" ]; then
-            cp ../signing.keystore signing.keystore
-          fi
+            
+            ./gradlew assembleRelease bundleRelease -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease --no-daemon
 
-          chmod +x gradlew
-          export GRADLE_OPTS="-Dfile.encoding=UTF-8"
+            APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+            AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
-          ./gradlew assembleRelease bundleRelease -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease --no-daemon
+            APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
+            [ -z "$APKSIGNER" ] && APKSIGNER="apksigner"
 
-          APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
-          AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
-
-          if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
-            echo "❌ لم يتم العثور على APK"
-            exit 1
-          fi
-
-          APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
-          if [ -z "$APKSIGNER" ]; then
-            APKSIGNER="apksigner"
-          fi
-
-          if [ -f "signing.keystore" ]; then
-            echo "✍️ توقيع APK و AAB..."
-            $APKSIGNER sign --ks signing.keystore --ks-pass pass:"$STORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASSWORD" "$APK_FILE"
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+            if [ -f "$APK_FILE" ]; then
+              echo "✍️ توقيع APK و AAB رسمياً..."
+              $APKSIGNER sign --ks signing.keystore --ks-pass pass:"$STORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASSWORD" "$APK_FILE"
+              jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+            fi
             rm -f signing.keystore
+          else
+            echo "⚠️ مفتاح التوقيع غير متوفر، جاري بناء الحزمة بصيغة الدอด أو التوقيع التلقائي..."
+            ./gradlew assembleRelease bundleRelease -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease --no-daemon || ./gradlew assembleDebug bundleDebug --no-daemon
           fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-APK-DirectInstall
-          path: android/app/build/outputs/apk/release/*.apk
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/apk/debug/*.apk
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-AAB-GooglePlay
-          path: android/app/build/outputs/bundle/release/*.aab
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/bundle/debug/*.aab

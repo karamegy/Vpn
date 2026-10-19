@@ -1,4 +1,4 @@
-name: Build Android Native APK & AAB (Apex Shield v18)
+Name: Build Android Native APK & AAB (Apex Shield v18)
 
 on:
   workflow_dispatch:
@@ -21,13 +21,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # إعداد Node.js 22 الحديث رسمياً لمنع تحذيرات إيقاف الدعم
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # ترقية إجرائية Gradle إلى v4 لحل مشاكل الكاش ومحرك تنفيذ الأفعال
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -63,7 +61,6 @@ jobs:
         run: |
           export CI=true
           
-          # إعادة إنشاء منصة أندرويد بنظافة وتوليد ملفات gradlew الأصلية
           rm -rf android
           npx cap add android
 
@@ -78,7 +75,7 @@ jobs:
           # إنشاء هيكل مجلدات الجافا
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # كتابة AndroidManifest.xml متوافق مع Android 14 (API 34)
+          # كتابة AndroidManifest.xml متوافق مع Android 15 (API 36) ومتطلبات Google Play
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -114,6 +111,9 @@ jobs:
                       <intent-filter>
                           <action android:name="android.net.VpnService" />
                       </intent-filter>
+                      <property
+                          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                          android:value="Encrypted VPN tunnel service for private network access" />
                   </service>
 
                   <activity
@@ -168,6 +168,7 @@ jobs:
           import android.app.NotificationChannel;
           import android.app.NotificationManager;
           import android.content.Intent;
+          import android.content.pm.ServiceInfo;
           import android.net.VpnService;
           import android.os.Build;
           import android.os.ParcelFileDescriptor;
@@ -207,7 +208,12 @@ jobs:
                               .setContentText("النفق المشفر يعمل بكفاءة عالية")
                               .setSmallIcon(android.R.drawable.ic_lock_lock)
                               .build();
-                      startForeground(1, notification);
+
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                          startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+                      } else {
+                          startForeground(1, notification);
+                      }
                   }
 
                   try {
@@ -469,12 +475,19 @@ jobs:
                       }
 
                       activeBillingCall = call;
-                      List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = Collections.singletonList(
-                          BillingFlowParams.ProductDetailsParams.newBuilder()
-                              .setProductDetails(cachedProductDetails)
-                              .setOfferToken(cachedProductDetails.getSubscriptionOfferDetails().get(0).getOfferToken())
-                              .build()
-                      );
+                      String offerToken = "";
+                      if (cachedProductDetails.getSubscriptionOfferDetails() != null && !cachedProductDetails.getSubscriptionOfferDetails().isEmpty()) {
+                          offerToken = cachedProductDetails.getSubscriptionOfferDetails().get(0).getOfferToken();
+                      }
+
+                      BillingFlowParams.ProductDetailsParams.Builder pdpBuilder = BillingFlowParams.ProductDetailsParams.newBuilder()
+                          .setProductDetails(cachedProductDetails);
+
+                      if (!offerToken.isEmpty()) {
+                          pdpBuilder.setOfferToken(offerToken);
+                      }
+
+                      List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = Collections.singletonList(pdpBuilder.build());
 
                       BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
                           .setProductDetailsParamsList(productDetailsParamsList)
@@ -547,7 +560,7 @@ jobs:
                       }
                   }
                   JSObject ret = new JSObject();
-                  ret.put("prepared", true);
+                  ret.put("prepared", intent == null);
                   ret.put("success", true);
                   call.resolve(ret);
               }
@@ -647,14 +660,17 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
           fi
 
-          # إضافة مكتبة Google Play Billing وتحديد الإصدارات
-          if [ -f "android/app/build.gradle" ]; then
-            if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
-              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:8.0.0"' android/app/build.gradle
-            fi
+          # إضافة مكتبة Play Billing 8.0.0 المباشرة وتأكيد Target SDK 36 و VersionCode 32
+          cat << 'EOF' >> android/app/build.gradle
 
-            sed -i -E 's/versionCode [0-9]+/versionCode 31/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.7"/' android/app/build.gradle
+          dependencies {
+              implementation "com.android.billingclient:billing:8.0.0"
+          }
+          EOF
+
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i -E 's/versionCode [0-9]+/versionCode 32/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.8"/' android/app/build.gradle
           fi
 
           if [ -f "android/variables.gradle" ]; then

@@ -24,7 +24,7 @@ jobs:
       - name: Set up Node.js System Native & Web Assets
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y nodejs npm imagemagick
+          sudo apt-get install -y nodejs npm imagemagick gradle
           node -v
           npm -v
 
@@ -50,10 +50,19 @@ jobs:
           }
           EOF
 
-      - name: 2. Sync Capacitor Android & Check Assets
+      - name: 2. Sync Capacitor Android & Generate Gradle Wrapper
         run: |
           export CI=true
           npx cap sync android
+
+          # توليد أداة gradlew تلقائياً إذا كانت مفقودة لضمان نجاح البناء
+          cd android
+          if [ ! -f "gradlew" ]; then
+            echo "⚙️ جاري توليد أداة Gradle Wrapper (gradlew)..."
+            gradle wrapper
+          fi
+          chmod +x gradlew
+          cd ..
 
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then

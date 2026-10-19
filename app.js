@@ -538,12 +538,15 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchRealServersFromDB();
 
     // ==========================================================================
-    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المباشر
+    // MODULE 0.2: محرك توليد وإدارة تكوين Cloudflare WARP المباشر مع الحفظ الآمن
     // ==========================================================================
     async function generateCloudflareWarpConfig() {
         const cachedConfig = localStorage.getItem('apex_warp_config');
         if (cachedConfig) {
-            try { return JSON.parse(cachedConfig); } catch (e) {}
+            try { 
+                const parsed = JSON.parse(cachedConfig);
+                if (parsed && parsed.privateKey) return parsed;
+            } catch (e) {}
         }
 
         try {
@@ -556,13 +559,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data && data.success && data.result) {
                 const warpConfig = {
-                    clientIp: data.result.config.interface.addresses.v4 || "172.16.0.2/32",
-                    peerPublicKey: data.result.config.peers[0].public_key || "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=",
+                    clientIp: data.result.config?.interface?.addresses?.v4 || "172.16.0.2/32",
+                    peerPublicKey: data.result.config?.peers?.[0]?.public_key || "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=",
                     endpoint: `${currentServerIp}:2408`,
-                    privateKey: data.result.config.interface.private_key || ""
+                    privateKey: data.result.config?.interface?.private_key || ""
                 };
-                localStorage.setItem('apex_warp_config', JSON.stringify(warpConfig));
-                return warpConfig;
+                if (warpConfig.privateKey) {
+                    localStorage.setItem('apex_warp_config', JSON.stringify(warpConfig));
+                    return warpConfig;
+                }
             }
         } catch (e) {
             console.warn("توليد التكوين التلقائي لشبكة Cloudflare WARP:", e);
@@ -683,7 +688,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tag = node.tagName ? node.tagName.toLowerCase() : '';
                     const className = node.className && typeof node.className === 'string' ? node.className.toLowerCase() : '';
                     
-                    // استخدام فحص دقيق يتجنب عناصر التطبيق
                     const isExternalAd = (tag === 'iframe' && (node.src?.includes('doubleclick') || node.src?.includes('googlesyndication'))) ||
                                          className.includes('adsbygoogle');
                     
@@ -1129,7 +1133,6 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (val === '=') {
                 try { 
                     if (decoyScreen && decoyExpr) {
-                        // حساب دقيق آمن بدون eval مباشر
                         const result = Function(`'use strict'; return (${decoyExpr.replace(/[^0-9+\-*/.]/g, '')})`)();
                         decoyScreen.textContent = result !== undefined ? result : '0';
                     }

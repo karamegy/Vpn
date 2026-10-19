@@ -3,15 +3,21 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="io.github.karamegy.Vpn">
 
+    <!-- الصلاحيات الأساسية والشبكية -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="com.android.vending.BILLING" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    
+    <!-- صلاحيات الخدمات الأمامية والإشعارات (محدثة لدعم أندرويد 13 و 14) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_VPN" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- صلاحيات المتجر -->
+    <uses-permission android:name="com.android.vending.BILLING" />
 
     <application
         android:allowBackup="true"
@@ -21,6 +27,12 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
+
+        <!-- إعدادات إعلانات جوجل (AdMob App ID) - مهم جداً لكي تعمل الإعلانات -->
+        <!-- استبدل "ca-app-pub-3940256099942544~3347511713" بمعرف التطبيق الحقيقي الخاص بك من لوحة تحكم AdMob -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
 
         <activity
             android:name="io.github.karamegy.Vpn.MainActivity"
@@ -48,7 +60,7 @@
         <service
             android:name="io.github.karamegy.Vpn.ApexVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
-            android:foregroundServiceType="connectedDevice"
+            android:foregroundServiceType="vpn|connectedDevice"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.net.VpnService" />

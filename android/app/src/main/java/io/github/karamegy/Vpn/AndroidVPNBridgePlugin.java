@@ -43,6 +43,13 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
     private BillingClient billingClient;
     private PluginCall activeBillingCall = null;
 
+    // متغيرات مؤقتة لتخزين بيانات الخادم والـ VPN لضمان عدم ضياعها أثناء طلب الإذن من نظام أندرويد
+    private String cachedServerIp = "";
+    private String cachedServerName = "";
+    private String cachedWarpClientIp = "";
+    private String cachedWarpEndpoint = "";
+    private String cachedWarpPrivateKey = "";
+
     @Override
     public void load() {
         super.load();
@@ -69,6 +76,7 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
             @Override
             public void onBillingServiceDisconnected() {
                 Log.w(TAG, "Google Play Billing service disconnected. Retrying...");
+                startBillingConnection(); // إعادة المحاولة تلقائياً عند انقطاع الاتصال
             }
         });
     }
@@ -176,7 +184,8 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
         }
 
         if (billingClient == null || !billingClient.isReady()) {
-            call.reject("خدمة Google Play Billing غير جاهزة حالياً.");
+            call.reject("خدمة Google Play Billing غير جاهزة حالياً. جاري إعادة الاتصال...");
+            startBillingConnection();
             return;
         }
 
@@ -194,7 +203,7 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
         billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
             if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
                 ProductDetails productDetails = productDetailsList.get(0);
-                java.util.List<ProductDetails.SubscriptionOfferDetails> offerDetailsList = productDetails.getSubscriptionOfferDetails();
+                List<ProductDetails.SubscriptionOfferDetails> offerDetailsList = productDetails.getSubscriptionOfferDetails();
                 if (offerDetailsList == null || offerDetailsList.isEmpty()) {
                     if (activeBillingCall != null) {
                         activeBillingCall.reject("لا توجد عروض اشتراك متاحة لهذا المنتج.");
@@ -230,7 +239,7 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
     }
 
     @Override
-    public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable java.util.List<Purchase> purchases) {
+    public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
         if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
             for (Purchase purchase : purchases) {
                 handlePurchase(purchase);
@@ -322,6 +331,13 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
             return;
         }
 
+        // حفظ البيانات مؤقتًا قبل إطلاق شاشة الإذن لضمان عدم ضياعها نهائياً
+        cachedServerIp = call.getString("serverIp", "");
+        cachedServerName = call.getString("serverName", "");
+        cachedWarpClientIp = call.getString("warpClientIp", "");
+        cachedWarpEndpoint = call.getString("warpEndpoint", "");
+        cachedWarpPrivateKey = call.getString("warpPrivateKey", "");
+
         Intent intent = VpnService.prepare(activity);
         if (intent != null) {
             activeVpnCall = call;
@@ -361,20 +377,14 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
             return;
         }
 
-        String serverIp = call.getString("serverIp", "");
-        String serverName = call.getString("serverName", "");
-        String warpClientIp = call.getString("warpClientIp", "");
-        String warpEndpoint = call.getString("warpEndpoint", "");
-        String warpPrivateKey = call.getString("warpPrivateKey", "");
-
         try {
             Intent intent = new Intent(context, ApexVpnService.class);
             intent.setAction(ApexVpnService.ACTION_CONNECT);
-            intent.putExtra("serverIp", serverIp);
-            intent.putExtra("serverName", serverName);
-            intent.putExtra("warpClientIp", warpClientIp);
-            intent.putExtra("warpEndpoint", warpEndpoint);
-            intent.putExtra("warpPrivateKey", warpPrivateKey);
+            intent.putExtra("serverIp", cachedServerIp);
+            intent.putExtra("serverName", cachedServerName);
+            intent.putExtra("warpClientIp", cachedWarpClientIp);
+            intent.putExtra("warpEndpoint", cachedWarpEndpoint);
+            intent.putExtra("warpPrivateKey", cachedWarpPrivateKey);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent);

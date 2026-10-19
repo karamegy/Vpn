@@ -1,84 +1,34 @@
 package io.github.karamegy.Vpn;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.net.VpnService;
 import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
-import androidx.core.app.NotificationCompat;
 
-import java.io.IOException;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.net.DatagramSocket;
 
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
-    private static final String CHANNEL_ID = "ApexVpnChannel";
-    private static final int NOTIFICATION_ID = 101;
-
-    public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START_VPN";
-    public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP_VPN";
-
+    private ParcelFileDescriptor vpnInterface = null;
     private volatile boolean isRunning = false;
-    private static ParcelFileDescriptor vpnInterface = null;
+    private Thread vpnWorkerThread;
 
     private static final String ADGUARD_DNS_1 = "94.140.14.14";
-    private static final String ADGUARD_DNS_2 = "94.140.15.15";
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent != null ? intent.getAction() : "";
-        String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Shield Node";
-        String serverIp = intent != null ? intent.getStringExtra("serverIp") : "162.159.192.1";
-
-        if (ACTION_CONNECT.equals(action) || "START".equals(action) || "START_VPN".equals(action)) {
-            createNotificationChannel();
-            try {
-                Notification notification = buildNotification(serverName);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
-                } else {
-                    startForeground(NOTIFICATION_ID, notification);
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "خطأ في بدء الخدمة الأمامية: ", e);
-            }
-            startVpnConnection(serverIp, serverName);
-        } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action) || "STOP_VPN".equals(action)) {
-            stopVpnConnection();
-        }
-
-        return START_STICKY;
-    }
 
     private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
 
-        new Thread(() -> {
+        vpnWorkerThread = new Thread(() -> {
             try {
                 Builder builder = new Builder();
-                builder.setSession("Apex Shield AdBlock & VPN")
+                builder.setSession("Apex Shield AdBlock")
                        .addAddress("10.0.0.2", 32)
                        .setMtu(1500)
                        .addDnsServer(ADGUARD_DNS_1)
-                       .addDnsServer(ADGUARD_DNS_2);
-
-                String[] dnsToIntercept = {
-                    ADGUARD_DNS_1, ADGUARD_DNS_2,
-                    "8.8.8.8", "8.8.4.4",
-                    "1.1.1.1", "1.0.0.1"
-                };
-
-                for (String dnsIp : dnsToIntercept) {
-                    builder.addRoute(dnsIp, 32);
-                }
-
-                builder.setBlocking(false);
+                       .addRoute(ADGUARD_DNS_1, 32); // اقتصار التوجيه على سيرفر الـ DNS فقط
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     try {
@@ -93,81 +43,46 @@ public class ApexVpnService extends VpnService {
                 }
 
                 isRunning = true;
-                Log.i(TAG, "✅ تم تشغيل نفق الحماية وحجب الإعلانات بنجاح عبر " + serverName);
+                runDnsLoop();
 
             } catch (Exception ex) {
-                Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
+                Log.e(TAG, "فشل إنشاء واجهة الـ VPN:", ex);
                 stopVpnConnection();
             }
-        }).start();
+        });
+        vpnWorkerThread.start();
     }
 
-    private synchronized void stopVpnConnection() {
-        if (!isRunning && vpnInterface == null) return;
-        isRunning = false;
+    private void runDnsLoop() {
+        try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor());
+             FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
 
-        new Thread(() -> {
-            try {
-                if (vpnInterface != null) {
-                    vpnInterface.close();
-                    vpnInterface = null;
+            DatagramSocket dnsSocket = new DatagramSocket();
+            protect(dnsSocket); // حماية السوكت لمنع توجيه حزمه داخل نفق الـ VPN
+
+            byte[] buffer = new byte[32767];
+            while (isRunning) {
+                int length = in.read(buffer);
+                if (length > 0) {
+                    // قراءة حزمة الـ DNS وإعادة توجيهها للخادم عبر dnsSocket
+                    // ثم كتابة الرد إلى out.write()
                 }
-            } catch (Exception e) {
-                Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
             }
-
-            new Handler(Looper.getMainLooper()).post(() -> {
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        stopForeground(STOP_FOREGROUND_REMOVE);
-                    } else {
-                        stopForeground(true);
-                    }
-                } catch (Exception ignored) {}
-                stopSelf();
-                Log.i(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
-            });
-        }).start();
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Apex Shield VPN Protection",
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription("حالة الاتصال بالشبكة المشفرة");
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
+        } catch (Exception e) {
+            Log.e(TAG, "خطأ في حلقة معالجة الحزم:", e);
         }
     }
 
-    private Notification buildNotification(String serverName) {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                this, 0, notificationIntent,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-        );
-
-        int appIcon = getApplicationInfo().icon != 0 ? getApplicationInfo().icon : android.R.drawable.ic_lock_lock;
-        String contentText = (serverName != null && !serverName.isEmpty()) ? "متصل بالدرع عبر: " + serverName : "درع الحماية المشفرة نشط الآن";
-
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Apex Shield AI")
-                .setContentText(contentText)
-                .setSmallIcon(appIcon)
-                .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setOngoing(true)
-                .build();
-    }
-
-    @Override
-    public void onDestroy() {
-        stopVpnConnection();
-        super.onDestroy();
+    private synchronized void stopVpnConnection() {
+        isRunning = false;
+        try {
+            if (vpnInterface != null) {
+                vpnInterface.close();
+                vpnInterface = null;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
+        }
+        stopSelf();
     }
 }

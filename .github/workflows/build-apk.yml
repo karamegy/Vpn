@@ -1,4 +1,4 @@
-name: Build Android Native APK & AAB (Apex Shield)
+name: Build Android Native APK & AAB (Apex Shield v18)
 
 on:
   workflow_dispatch:
@@ -78,7 +78,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png
           fi
 
-          # كتابة AndroidManifest.xml
+          # كتابة AndroidManifest.xml المحدث والآمن
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -88,12 +88,13 @@ jobs:
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-              <uses-permission android:name="com.android.vending.BILLING" />
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
               <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_VPN" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="com.android.vending.BILLING" />
 
               <application
                   android:allowBackup="true"
@@ -103,6 +104,10 @@ jobs:
                   android:supportsRtl="true"
                   android:usesCleartextTraffic="true"
                   android:theme="@style/AppTheme">
+
+                  <meta-data
+                      android:name="com.google.android.gms.ads.APPLICATION_ID"
+                      android:value="ca-app-pub-3940256099942544~3347511713" />
 
                   <activity
                       android:name="io.github.karamegy.Vpn.MainActivity"
@@ -130,7 +135,7 @@ jobs:
                   <service
                       android:name="io.github.karamegy.Vpn.ApexVpnService"
                       android:permission="android.permission.BIND_VPN_SERVICE"
-                      android:foregroundServiceType="connectedDevice"
+                      android:foregroundServiceType="vpn|connectedDevice"
                       android:exported="false">
                       <intent-filter>
                           <action android:name="android.net.VpnService" />
@@ -160,7 +165,7 @@ jobs:
           }
           EOF
 
-          # كتابة AndroidVPNBridgePlugin.java
+          # كتابة AndroidVPNBridgePlugin.java بالنسخة المحدثة الكاملة (تمنع الكراش وتدعم الإضافات)
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -219,7 +224,7 @@ jobs:
                   }
                   Intent intent = VpnService.prepare(context);
                   if (intent != null) {
-                      startActivityForResult(call, intent, "vpnPermissionResult");
+                      startActivityForResult(call, intent, "vpnPrepareResult");
                   } else {
                       JSObject ret = new JSObject();
                       ret.put("prepared", true);
@@ -229,7 +234,7 @@ jobs:
               }
 
               @ActivityCallback
-              public void vpnPermissionResult(PluginCall call, ActivityResult result) {
+              public void vpnPrepareResult(PluginCall call, ActivityResult result) {
                   if (call == null) return;
                   if (result.getResultCode() == Activity.RESULT_OK) {
                       JSObject ret = new JSObject();
@@ -251,18 +256,43 @@ jobs:
 
                   Intent prepareIntent = VpnService.prepare(context);
                   if (prepareIntent != null) {
-                      startActivityForResult(call, prepareIntent, "vpnPermissionResult");
+                      startActivityForResult(call, prepareIntent, "vpnStartResult");
                       return;
                   }
 
-                  String serverIp = call.getString("serverIp", "162.159.192.1");
-                  String serverName = call.getString("serverName", "Apex Cloud");
+                  executeStartVpn(call, context);
+              }
+
+              @ActivityCallback
+              public void vpnStartResult(PluginCall call, ActivityResult result) {
+                  if (call == null) return;
+                  if (result.getResultCode() == Activity.RESULT_OK) {
+                      Context context = getContext();
+                      if (context == null) {
+                          call.reject("السياق غير متوفر");
+                          return;
+                      }
+                      executeStartVpn(call, context);
+                  } else {
+                      call.reject("تم رفض إذن VPN من قبل المستخدم");
+                  }
+              }
+
+              private void executeStartVpn(PluginCall call, Context context) {
+                  String serverIp = call.getString("serverIp", "");
+                  String serverName = call.getString("serverName", "");
+                  String warpClientIp = call.getString("warpClientIp", "");
+                  String warpEndpoint = call.getString("warpEndpoint", "");
+                  String warpPrivateKey = call.getString("warpPrivateKey", "");
 
                   try {
                       Intent intent = new Intent(context, ApexVpnService.class);
                       intent.setAction(ApexVpnService.ACTION_CONNECT);
                       intent.putExtra("serverIp", serverIp);
                       intent.putExtra("serverName", serverName);
+                      intent.putExtra("warpClientIp", warpClientIp);
+                      intent.putExtra("warpEndpoint", warpEndpoint);
+                      intent.putExtra("warpPrivateKey", warpPrivateKey);
 
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                           context.startForegroundService(intent);
@@ -318,7 +348,7 @@ jobs:
           }
           EOF
 
-          # كتابة ApexVpnService.java (مستقر وخالٍ من الأخطاء)
+          # كتابة ApexVpnService.java المستقر الذي يمنع حلقة الخروج (Crash)
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -330,6 +360,8 @@ jobs:
           import android.content.pm.ServiceInfo;
           import android.net.VpnService;
           import android.os.Build;
+          import android.os.Handler;
+          import android.os.Looper;
           import android.os.ParcelFileDescriptor;
           import android.util.Log;
 
@@ -350,16 +382,18 @@ jobs:
 
                   if (ACTION_CONNECT.equals(action) || "START".equals(action)) {
                       String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Cloud Server";
-                      String serverIp = intent != null ? intent.getStringExtra("serverIp") : "162.159.192.1";
+                      String serverIp = intent != null ? intent.getStringExtra("serverIp") : "1.1.1.1";
 
                       createNotificationChannel();
                       
                       try {
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                              startForeground(NOTIFICATION_ID, buildNotification(serverName), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
-                          } else {
-                              startForeground(NOTIFICATION_ID, buildNotification(serverName));
+                          int foregroundType = 0;
+                          if (Build.VERSION.SDK_INT >= 34) {
+                              foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_VPN;
+                          } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                              foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
                           }
+                          startForeground(NOTIFICATION_ID, buildNotification(serverName), foregroundType);
                       } catch (Exception e) {
                           startForeground(NOTIFICATION_ID, buildNotification(serverName));
                       }
@@ -378,9 +412,9 @@ jobs:
                   new Thread(() -> {
                       try {
                           Builder builder = new Builder();
-                          builder.addAddress("172.16.0.2", 32);
+                          builder.addAddress("10.0.0.2", 32);
                           builder.addDnsServer("1.1.1.1");
-                          builder.addDnsServer("1.0.0.1");
+                          builder.addDnsServer("8.8.8.8");
                           builder.addRoute("0.0.0.0", 0);
                           
                           try {
@@ -390,7 +424,7 @@ jobs:
                           builder.setSession("ApexShieldVPN");
                           vpnInterface = builder.establish();
                           isRunning = true;
-                          Log.d(TAG, "✅ تم تشغيل النفق بنجاح عبر " + serverName);
+                          Log.d(TAG, "✅ تم تشغيل نفق الحماية بنجاح عبر " + serverName);
                       } catch (Exception ex) {
                           Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
                           stopVpnConnection();
@@ -398,7 +432,12 @@ jobs:
                   }).start();
               }
 
-              private void stopVpnConnection() {
+              private synchronized void stopVpnConnection() {
+                  if (!isRunning && vpnInterface == null) {
+                      return;
+                  }
+                  isRunning = false;
+
                   new Thread(() -> {
                       try {
                           if (vpnInterface != null) {
@@ -409,16 +448,17 @@ jobs:
                           Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
                       }
 
-                      isRunning = false;
-                      try {
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                              stopForeground(STOP_FOREGROUND_REMOVE);
-                          } else {
-                              stopForeground(true);
-                          }
-                      } catch (Exception ignored) {}
-                      stopSelf();
-                      Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN.");
+                      new Handler(Looper.getMainLooper()).post(() -> {
+                          try {
+                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                  stopForeground(STOP_FOREGROUND_REMOVE);
+                              } else {
+                                  stopForeground(true);
+                              }
+                          } catch (Exception ignored) {}
+                          stopSelf();
+                          Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
+                      });
                   }).start();
               }
 
@@ -467,15 +507,23 @@ jobs:
 
               @Override
               public void onDestroy() {
-                  stopVpnConnection();
+                  try {
+                      if (vpnInterface != null) {
+                          vpnInterface.close();
+                          vpnInterface = null;
+                      }
+                  } catch (Exception e) {
+                      Log.e(TAG, "خطأ في onDestroy أثناء إغلاق الواجهة: ", e);
+                  }
+                  isRunning = false;
                   super.onDestroy();
               }
           }
           EOF
 
           if [ -f "android/app/build.gradle" ]; then
-            sed -i -E 's/versionCode [0-9]+/versionCode 35/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.11"/' android/app/build.gradle
+            sed -i -E 's/versionCode [0-9]+/versionCode 36/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "18.0.0"/' android/app/build.gradle
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle

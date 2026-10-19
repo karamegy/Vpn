@@ -64,7 +64,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # ضبط المتغيرات لـ Target SDK 36 وتفادي تعارض الإصدارات
+          # 1. ضبط متغيرات الإعدادات
           cat << 'EOF' > android/variables.gradle
           ext {
               minSdkVersion = 24
@@ -80,30 +80,65 @@ jobs:
           }
           EOF
 
-          # فرض مكتبة Billing 8.0.0 و Target SDK 36 و VersionCode 35
-          cat << 'EOF' >> android/app/build.gradle
+          # 2. إعادة كتابة android/app/build.gradle بالكامل بنظافة لمنع أخطاء Gradle DSL
+          cat << 'EOF' > android/app/build.gradle
+          apply plugin: 'com.android.application'
 
           android {
+              namespace "io.github.karamegy.Vpn"
               compileSdk 36
+
               defaultConfig {
+                  applicationId "io.github.karamegy.Vpn"
+                  minSdk 24
                   targetSdk 36
                   versionCode 35
                   versionName "8.0.0.10"
+                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+                  aaptOptions {
+                      ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!<dir>_*:!*~'
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
               }
           }
 
-          configurations.all {
-              resolutionStrategy {
-                  force 'com.android.billingclient:billing:8.0.0'
+          repositories {
+              flatDir {
+                  dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
               }
           }
 
           dependencies {
+              implementation fileTree(include: ['*.jar'], dir: 'libs')
+              implementation "androidx.appcompat:appcompat:1.6.1"
+              implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
+              implementation "androidx.core:core-splashscreen:1.0.1"
+              implementation project(':capacitor-android')
               implementation "com.android.billingclient:billing:8.0.0"
+          }
+
+          try {
+              def servicesJSON = file('google-services.json')
+              if (servicesJSON.exists() && servicesJSON.text.trim()) {
+                  apply plugin: 'com.google.gms.google-services'
+              }
+          } catch(Exception e) {
+              logger.info("google-services.json check skipped")
           }
           EOF
 
-          # إعداد gradle.properties
+          # 3. إعداد gradle.properties
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
@@ -111,10 +146,10 @@ jobs:
           android.useAndroidX=true
           EOF
 
-          # إنشاء مجلدات Java
+          # 4. إنشاء مجلدات Java
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # كتابة AndroidManifest.xml متوافق مع Android 15 (API 36)
+          # 5. كتابة AndroidManifest.xml متوافق مع Android 15 (API 36)
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -183,7 +218,7 @@ jobs:
           </manifest>
           EOF
 
-          # كتابة MainActivity.java
+          # 6. كتابة MainActivity.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
 
@@ -199,7 +234,7 @@ jobs:
           }
           EOF
 
-          # كتابة ApexVpnService.java
+          # 7. كتابة ApexVpnService.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -295,7 +330,7 @@ jobs:
           }
           EOF
 
-          # كتابة AndroidVPNBridgePlugin.java مع واجهات Play Billing 8.0.0 الصريحة
+          # 8. كتابة AndroidVPNBridgePlugin.java مع واجهات Play Billing 8.0.0 الصريحة
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -684,7 +719,7 @@ jobs:
           }
           EOF
 
-          # تحويل الأيقونات
+          # 9. تحويل الأيقونات
           rm -rf android/app/src/main/res/mipmap-anydpi*
 
           ICON_SOURCE="icon-512.png"
@@ -705,7 +740,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
           fi
 
-          # مزامنة Capacitor مع منصة أندرويد
+          # 10. مزامنة منصة أندرويد
           npx cap sync android
           chmod +x android/gradlew
 

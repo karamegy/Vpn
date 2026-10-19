@@ -8,6 +8,8 @@ import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.StatFs;
 import android.util.Log;
 import androidx.annotation.NonNull;
@@ -42,10 +44,15 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
     private static final String TAG = "AndroidVPNBridge";
     private BillingClient billingClient;
     private PluginCall activeBillingCall = null;
+    private boolean isBillingConnecting = false;
 
     @Override
     public void load() {
         super.load();
+        initBillingClient();
+    }
+
+    private void initBillingClient() {
         try {
             Context context = getContext();
             if (context != null) {
@@ -53,30 +60,46 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
                         .setListener(this)
                         .enablePendingPurchases()
                         .build();
-                startBillingConnection();
+                startBillingConnection(null);
             }
         } catch (Exception e) {
             Log.e(TAG, "خطأ أثناء تهيئة نظام دفع جوجل بلاي: ", e);
         }
     }
 
-    private void startBillingConnection() {
+    private void startBillingConnection(@Nullable Runnable onReadyCallback) {
         if (billingClient == null) return;
+        if (billingClient.isReady()) {
+            if (onReadyCallback != null) onReadyCallback.run();
+            return;
+        }
+
+        if (isBillingConnecting) return;
+        isBillingConnecting = true;
+
         try {
             billingClient.startConnection(new BillingClientStateListener() {
                 @Override
                 public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+                    isBillingConnecting = false;
                     if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
                         Log.d(TAG, "تم الاتصال بنجاح بخدمة Google Play Billing.");
+                        if (onReadyCallback != null) {
+                            new Handler(Looper.getMainLooper()).post(onReadyCallback);
+                        }
+                    } else {
+                        Log.w(TAG, "فشل الاتصال بـ Billing code: " + billingResult.getResponseCode());
                     }
                 }
 
                 @Override
                 public void onBillingServiceDisconnected() {
+                    isBillingConnecting = false;
                     Log.w(TAG, "انقطع الاتصال بخدمة Google Play Billing. جاري إعادة المحاولة...");
                 }
             });
         } catch (Exception e) {
+            isBillingConnecting = false;
             Log.e(TAG, "خطأ أثناء الاتصال بـ Billing: ", e);
         }
     }
@@ -148,112 +171,134 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
 
     @PluginMethod
     public void checkSubscriptionStatus(PluginCall call) {
-        try {
-            if (billingClient == null || !billingClient.isReady()) {
+        Runnable checkTask = () -> {
+            try {
+                if (billingClient == null || !billingClient.isReady()) {
+                    JSObject ret = new JSObject();
+                    ret.put("isPro", false);
+                    call.resolve(ret);
+                    return;
+                }
+
+                billingClient.queryPurchasesAsync(
+                        QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+                        (billingResult, purchases) -> {
+                            boolean hasActiveSub = false;
+                            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                                for (Purchase purchase : purchases) {
+                                    if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                        hasActiveSub = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            JSObject ret = new JSObject();
+                            ret.put("isPro", hasActiveSub);
+                            call.resolve(ret);
+                        }
+                );
+            } catch (Exception e) {
+                Log.e(TAG, "خطأ في التحقق من الاشتراكات: ", e);
                 JSObject ret = new JSObject();
                 ret.put("isPro", false);
                 call.resolve(ret);
-                return;
             }
+        };
 
-            billingClient.queryPurchasesAsync(
-                    QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
-                    (billingResult, purchases) -> {
-                        boolean hasActiveSub = false;
-                        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
-                            for (Purchase purchase : purchases) {
-                                if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                    hasActiveSub = true;
-                                    break;
-                                }
-                            }
-                        }
-                        JSObject ret = new JSObject();
-                        ret.put("isPro", hasActiveSub);
-                        call.resolve(ret);
-                    }
-            );
-        } catch (Exception e) {
-            Log.e(TAG, "خطأ في التحقق من الاشتراكات: ", e);
-            JSObject ret = new JSObject();
-            ret.put("isPro", false);
-            call.resolve(ret);
+        if (billingClient != null && billingClient.isReady()) {
+            checkTask.run();
+        } else {
+            startBillingConnection(checkTask);
         }
     }
 
     @PluginMethod
     public void launchBilling(PluginCall call) {
-        try {
-            Activity activity = getActivity();
-            String productId = call.getString("productId", "");
-            if (activity == null || productId.isEmpty()) {
-                call.reject("النشاط غير متوفر أو معرف المنتج (productId) مفقود");
-                return;
-            }
+        Activity activity = getActivity();
+        String productId = call.getString("productId", "");
+        if (activity == null || productId.isEmpty()) {
+            call.reject("النشاط غير متوفر أو معرف المنتج (productId) مفقود");
+            return;
+        }
 
-            if (billingClient == null || !billingClient.isReady()) {
-                call.reject("خدمة Google Play Billing غير جاهزة حالياً. تأكد من تثبيت التطبيق كـ APK رسمي من المتجر.");
-                return;
-            }
+        activeBillingCall = call;
 
-            activeBillingCall = call;
+        Runnable processBilling = () -> {
+            try {
+                if (billingClient == null || !billingClient.isReady()) {
+                    if (activeBillingCall != null) {
+                        activeBillingCall.reject("تعذر الاتصال بـ Google Play Billing. تأكد من وجود اتصال بالإنترنت وحساب Google موثق.");
+                        activeBillingCall = null;
+                    }
+                    return;
+                }
 
-            QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
-                    .setProductId(productId)
-                    .setProductType(BillingClient.ProductType.SUBS)
-                    .build();
+                QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(productId)
+                        .setProductType(BillingClient.ProductType.SUBS)
+                        .build();
 
-            QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
-                    .setProductList(Collections.singletonList(product))
-                    .build();
+                QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
+                        .setProductList(Collections.singletonList(product))
+                        .build();
 
-            billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
-                try {
-                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
-                        ProductDetails productDetails = productDetailsList.get(0);
-                        List<ProductDetails.SubscriptionOfferDetails> offerDetailsList = productDetails.getSubscriptionOfferDetails();
-                        if (offerDetailsList == null || offerDetailsList.isEmpty()) {
+                billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+                    try {
+                        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
+                            ProductDetails productDetails = productDetailsList.get(0);
+                            List<ProductDetails.SubscriptionOfferDetails> offerDetailsList = productDetails.getSubscriptionOfferDetails();
+                            if (offerDetailsList == null || offerDetailsList.isEmpty()) {
+                                if (activeBillingCall != null) {
+                                    activeBillingCall.reject("لا توجد عروض اشتراك متاحة لهذا المنتج في المتجر.");
+                                    activeBillingCall = null;
+                                }
+                                return;
+                            }
+                            String offerToken = offerDetailsList.get(0).getOfferToken();
+
+                            BillingFlowParams.ProductDetailsParams productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+                                    .setProductDetails(productDetails)
+                                    .setOfferToken(offerToken)
+                                    .build();
+
+                            BillingFlowParams flowParams = BillingFlowParams.newBuilder()
+                                    .setProductDetailsParamsList(Collections.singletonList(productDetailsParams))
+                                    .build();
+
+                            BillingResult result = billingClient.launchBillingFlow(activity, flowParams);
+                            if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                                if (activeBillingCall != null) {
+                                    activeBillingCall.reject("فشل إطلاق نافذة الشراء: " + result.getDebugMessage());
+                                    activeBillingCall = null;
+                                }
+                            }
+                        } else {
                             if (activeBillingCall != null) {
-                                activeBillingCall.reject("لا توجد عروض اشتراك متاحة لهذا المنتج.");
+                                activeBillingCall.reject("تعذر العثور على المنتج (" + productId + ") في متجر Google Play.");
                                 activeBillingCall = null;
                             }
-                            return;
                         }
-                        String offerToken = offerDetailsList.get(0).getOfferToken();
-
-                        BillingFlowParams.ProductDetailsParams productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
-                                .setProductDetails(productDetails)
-                                .setOfferToken(offerToken)
-                                .build();
-
-                        BillingFlowParams flowParams = BillingFlowParams.newBuilder()
-                                .setProductDetailsParamsList(Collections.singletonList(productDetailsParams))
-                                .build();
-
-                        BillingResult result = billingClient.launchBillingFlow(activity, flowParams);
-                        if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                            if (activeBillingCall != null) {
-                                activeBillingCall.reject("فشل إطلاق نافذة دفع Google Play: " + result.getDebugMessage());
-                                activeBillingCall = null;
-                            }
-                        }
-                    } else {
+                    } catch (Exception e) {
+                        Log.e(TAG, "خطأ في معالجة تفاصيل الشراء: ", e);
                         if (activeBillingCall != null) {
-                            activeBillingCall.reject("تعذر العثور على تفاصيل المنتج في متجر جوجل بلاي.");
+                            activeBillingCall.reject("حدث خطأ أثناء معالجة المنتج: " + e.getMessage());
                             activeBillingCall = null;
                         }
                     }
-                } catch (Exception e) {
-                    Log.e(TAG, "خطأ في معالجة تفاصيل الشراء: ", e);
-                    if (activeBillingCall != null) {
-                        activeBillingCall.reject("حدث خطأ أثناء معالجة تفاصيل المنتج: " + e.getMessage());
-                        activeBillingCall = null;
-                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "خطأ أثناء تنفيذ launchBilling: ", e);
+                if (activeBillingCall != null) {
+                    activeBillingCall.reject("حدث خطأ غير متوقع: " + e.getMessage());
+                    activeBillingCall = null;
                 }
-            });
-        } catch (Exception e) {
-            Log.e(TAG, "خطأ في launchBilling: ", e);
-            call.reject("حدث خطأ غير متوقع في عملية الشراء: " + e.getMessage());
+            }
+        };
+
+        if (billingClient != null && billingClient.isReady()) {
+            processBilling.run();
+        } else {
+            startBillingConnection(processBilling);
         }
     }
 
@@ -265,12 +310,12 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
             }
         } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
             if (activeBillingCall != null) {
-                activeBillingCall.reject("تم إلغاء عملية الشراء من قبل المستخدم.");
+                activeBillingCall.reject("تم إلغاء عملية الشراء.");
                 activeBillingCall = null;
             }
         } else {
             if (activeBillingCall != null) {
-                activeBillingCall.reject("حدث خطأ في عملية الشراء: " + billingResult.getDebugMessage());
+                activeBillingCall.reject("خطأ الشراء: " + billingResult.getDebugMessage());
                 activeBillingCall = null;
             }
         }

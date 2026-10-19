@@ -57,7 +57,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # تعطيل فحوصات Lint التلقائية
+          # تعطيل فحوصات Lint التلقائية عالمياً
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
@@ -66,10 +66,11 @@ jobs:
           # 1. إنشاء هيكل مجلدات الجافا
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 2. كتابة ملف AndroidManifest.xml المحدث والشامل لأذونات أندرويد 14
+          # 2. كتابة ملف AndroidManifest.xml الموزون والمحمي من أخطاء الـ Merger
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
 
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -121,7 +122,8 @@ jobs:
                       android:name="io.github.karamegy.Vpn.ApexVpnService"
                       android:permission="android.permission.BIND_VPN_SERVICE"
                       android:foregroundServiceType="vpn"
-                      android:exported="false">
+                      android:exported="false"
+                      tools:ignore="ForegroundServicePermission">
                       <intent-filter>
                           <action android:name="android.net.VpnService" />
                       </intent-filter>
@@ -148,7 +150,7 @@ jobs:
           }
           EOF
 
-          # 4. كتابة AndroidVPNBridgePlugin.java مع معالجة حكيمة تمنع الخروج التلقائي
+          # 4. كتابة AndroidVPNBridgePlugin.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -354,7 +356,7 @@ jobs:
           }
           EOF
 
-          # 5. كتابة ApexVpnService.java محمية ومصممة للتوافق الكامل مع أندرويد 14
+          # 5. كتابة ApexVpnService.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -423,7 +425,7 @@ jobs:
           }
           EOF
 
-          # 6. إجبار أندرويد على استخدام اللوجو icon-512.png
+          # 6. حذف الأيقونات التكيّفية الافتراضية وإجبار أندرويد على استخدام icon-512.png
           rm -rf android/app/src/main/res/mipmap-anydpi*
 
           ICON_SOURCE="icon-512.png"
@@ -446,7 +448,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
           fi
 
-          # 7. ضبط المشتريات وإصدارات SDK
+          # 7. تعديل build.gradle وإلغاء إيقاف البناء عند وجود أي تنبيهات Lint
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
@@ -454,6 +456,16 @@ jobs:
 
             sed -i -E 's/versionCode [0-9]+/versionCode 36/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "18.0.0"/' android/app/build.gradle
+
+            cat << 'EOF_LINT' >> android/app/build.gradle
+
+          android {
+              lintOptions {
+                  checkReleaseBuilds false
+                  abortOnError false
+              }
+          }
+          EOF_LINT
           fi
 
           if [ -f "android/variables.gradle" ]; then

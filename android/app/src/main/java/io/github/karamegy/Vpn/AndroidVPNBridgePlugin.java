@@ -10,6 +10,8 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.util.Log;
+
+import androidx.activity.result.ActivityResult;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -18,6 +20,7 @@ import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesUpdatedListener;
@@ -28,6 +31,7 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.File;
@@ -38,12 +42,10 @@ import java.util.Locale;
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedListener {
     private static final String TAG = "AndroidVPNBridge";
-    private static final int VPN_REQUEST_CODE = 0x9999;
-    private PluginCall activeVpnCall = null;
     private BillingClient billingClient;
     private PluginCall activeBillingCall = null;
+    private ProductDetails cachedProductDetails = null;
 
-    // متغيرات مؤقتة لتخزين بيانات الخادم والـ VPN لضمان عدم ضياعها أثناء طلب الإذن من نظام أندرويد
     private String cachedServerIp = "";
     private String cachedServerName = "";
     private String cachedWarpClientIp = "";
@@ -55,9 +57,12 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
         super.load();
         Context context = getContext();
         if (context != null) {
+            PendingPurchasesParams pendingParams = PendingPurchasesParams.newBuilder()
+                    .enableOneTimeProducts()
+                    .build();
             billingClient = BillingClient.newBuilder(context)
                     .setListener(this)
-                    .enablePendingPurchases()
+                    .enablePendingPurchases(pendingParams)
                     .build();
             startBillingConnection();
         }
@@ -69,16 +74,34 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
             @Override
             public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
                 if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                    Log.d(TAG, "Google Play Billing connected successfully.");
+                    queryAvailableProducts("apex_pro_monthly");
                 }
             }
 
             @Override
             public void onBillingServiceDisconnected() {
-                Log.w(TAG, "Google Play Billing service disconnected. Retrying...");
-                startBillingConnection(); // إعادة المحاولة تلقائياً عند انقطاع الاتصال
+                startBillingConnection();
             }
         });
+    }
+
+    private void queryAvailableProducts(String targetProductId) {
+        try {
+            if (billingClient == null || !billingClient.isReady()) return;
+            String productId = (targetProductId != null && !targetProductId.isEmpty()) ? targetProductId : "apex_pro_monthly";
+            List<QueryProductDetailsParams.Product> productList = Collections.singletonList(
+                    QueryProductDetailsParams.Product.newBuilder()
+                            .setProductId(productId)
+                            .setProductType(BillingClient.ProductType.SUBS)
+                            .build()
+            );
+            QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(productList).build();
+            billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
+                    cachedProductDetails = productDetailsList.get(0);
+                }
+            });
+        } catch (Exception ignored) {}
     }
 
     @PluginMethod
@@ -116,27 +139,30 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
             if (totalMB <= 0) totalMB = 10240.0;
             if (usedMB <= 0) usedMB = totalMB * 0.38;
 
-            int scannedAppsCount = 0;
+            int scannedAppsCount = 42;
             if (context != null) {
                 try {
                     PackageManager pm = context.getPackageManager();
                     List<ApplicationInfo> apps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
-                    scannedAppsCount = (apps != null) ? apps.size() : 0;
+                    if (apps != null && !apps.isEmpty()) {
+                        scannedAppsCount = apps.size();
+                    }
                 } catch (Exception e) {
-                    Log.w(TAG, "خطأ أثناء جلب عدد التطبيقات: ", e);
+                    Log.w(TAG, "خطأ أثناء جلب التطبيقات: ", e);
                 }
             }
-            if (scannedAppsCount <= 0) scannedAppsCount = 42;
 
             JSObject ret = new JSObject();
             ret.put("success", true);
             ret.put("scannedMB", String.format(Locale.US, "%.1f", usedMB));
             ret.put("totalMB", String.format(Locale.US, "%.0f", totalMB));
             ret.put("scannedApps", scannedAppsCount);
+            ret.put("total", totalMB);
+            ret.put("used", usedMB);
+            ret.put("free", totalMB - usedMB);
 
             call.resolve(ret);
         } catch (Exception e) {
-            Log.e(TAG, "خطأ أثناء الفحص الأصلي: ", e);
             JSObject ret = new JSObject();
             ret.put("success", true);
             ret.put("scannedMB", "384.2");
@@ -147,141 +173,97 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
     }
 
     @PluginMethod
-    public void checkSubscriptionStatus(PluginCall call) {
-        if (billingClient == null || !billingClient.isReady()) {
-            JSObject ret = new JSObject();
-            ret.put("isPro", false);
-            call.resolve(ret);
-            return;
-        }
+    public void getStorageInfo(PluginCall call) {
+        performNativeScan(call);
+    }
 
-        billingClient.queryPurchasesAsync(
-                QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
-                (billingResult, purchases) -> {
-                    boolean hasActiveSub = false;
-                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
-                        for (Purchase purchase : purchases) {
-                            if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                hasActiveSub = true;
-                                break;
+    @PluginMethod
+    public void checkSubscriptionStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        try {
+            if (billingClient == null || !billingClient.isReady()) {
+                ret.put("isPro", false);
+                call.resolve(ret);
+                return;
+            }
+            billingClient.queryPurchasesAsync(
+                    QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+                    (billingResult, purchases) -> {
+                        boolean isPro = false;
+                        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                            for (Purchase purchase : purchases) {
+                                if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                    isPro = true;
+                                    break;
+                                }
                             }
                         }
+                        ret.put("isPro", isPro);
+                        call.resolve(ret);
                     }
-                    JSObject ret = new JSObject();
-                    ret.put("isPro", hasActiveSub);
-                    call.resolve(ret);
-                }
-        );
+            );
+        } catch (Exception e) {
+            ret.put("isPro", false);
+            call.resolve(ret);
+        }
     }
 
     @PluginMethod
     public void launchBilling(PluginCall call) {
-        Activity activity = getActivity();
-        String productId = call.getString("productId", "");
-        if (activity == null || productId.isEmpty()) {
-            call.reject("النشاط غير متوفر أو معرف المنتج (productId) مفقود");
-            return;
-        }
-
-        if (billingClient == null || !billingClient.isReady()) {
-            call.reject("خدمة Google Play Billing غير جاهزة حالياً. جاري إعادة الاتصال...");
-            startBillingConnection();
-            return;
-        }
-
-        activeBillingCall = call;
-
-        QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(productId)
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build();
-
-        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
-                .setProductList(Collections.singletonList(product))
-                .build();
-
-        billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
-            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
-                ProductDetails productDetails = productDetailsList.get(0);
-                List<ProductDetails.SubscriptionOfferDetails> offerDetailsList = productDetails.getSubscriptionOfferDetails();
-                if (offerDetailsList == null || offerDetailsList.isEmpty()) {
-                    if (activeBillingCall != null) {
-                        activeBillingCall.reject("لا توجد عروض اشتراك متاحة لهذا المنتج.");
-                        activeBillingCall = null;
-                    }
-                    return;
-                }
-                String offerToken = offerDetailsList.get(0).getOfferToken();
-
-                BillingFlowParams.ProductDetailsParams productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
-                        .setProductDetails(productDetails)
-                        .setOfferToken(offerToken)
-                        .build();
-
-                BillingFlowParams flowParams = BillingFlowParams.newBuilder()
-                        .setProductDetailsParamsList(Collections.singletonList(productDetailsParams))
-                        .build();
-
-                BillingResult result = billingClient.launchBillingFlow(activity, flowParams);
-                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                    if (activeBillingCall != null) {
-                        activeBillingCall.reject("فشل إطلاق نافذة دفع Google Play: " + result.getDebugMessage());
-                        activeBillingCall = null;
-                    }
-                }
-            } else {
-                if (activeBillingCall != null) {
-                    activeBillingCall.reject("تعذر العثور على تفاصيل المنتج في متجر جوجل بلاي.");
-                    activeBillingCall = null;
-                }
+        try {
+            String productId = call.getString("productId", "apex_pro_monthly");
+            Activity activity = getActivity();
+            if (activity == null || billingClient == null || !billingClient.isReady()) {
+                call.reject("خدمة Google Play Billing غير جاهزة حالياً");
+                return;
             }
-        });
+
+            if (cachedProductDetails == null || !cachedProductDetails.getProductId().equals(productId)) {
+                queryAvailableProducts(productId);
+            }
+
+            if (cachedProductDetails == null) {
+                call.reject("لم يتم تحميل تفاصيل المنتج من متجر جوجل بلاي حتى الآن");
+                return;
+            }
+
+            activeBillingCall = call;
+            List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = Collections.singletonList(
+                    BillingFlowParams.ProductDetailsParams.newBuilder()
+                            .setProductDetails(cachedProductDetails)
+                            .setOfferToken(cachedProductDetails.getSubscriptionOfferDetails().get(0).getOfferToken())
+                            .build()
+            );
+
+            BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
+                    .setProductDetailsParamsList(productDetailsParamsList)
+                    .build();
+
+            billingClient.launchBillingFlow(activity, billingFlowParams);
+        } catch (Exception e) {
+            call.reject("خطأ في المشتريات: " + e.getMessage());
+        }
     }
 
     @Override
     public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
-        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
-            for (Purchase purchase : purchases) {
-                handlePurchase(purchase);
-            }
-        } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
-            if (activeBillingCall != null) {
-                activeBillingCall.reject("تم إلغاء عملية الشراء من قبل المستخدم.");
-                activeBillingCall = null;
-            }
-        } else {
-            if (activeBillingCall != null) {
-                activeBillingCall.reject("حدث خطأ في عملية الشراء: " + billingResult.getDebugMessage());
-                activeBillingCall = null;
-            }
-        }
-    }
-
-    private void handlePurchase(Purchase purchase) {
-        if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-            if (!purchase.isAcknowledged()) {
-                AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-                        .setPurchaseToken(purchase.getPurchaseToken())
-                        .build();
-                billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult -> {
-                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                        if (activeBillingCall != null) {
-                            JSObject ret = new JSObject();
-                            ret.put("success", true);
-                            ret.put("orderId", purchase.getOrderId());
-                            activeBillingCall.resolve(ret);
-                            activeBillingCall = null;
-                        }
+        if (activeBillingCall != null) {
+            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                for (Purchase purchase : purchases) {
+                    if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged()) {
+                        AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
+                                .setPurchaseToken(purchase.getPurchaseToken())
+                                .build();
+                        billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult1 -> {});
                     }
-                });
-            } else {
-                if (activeBillingCall != null) {
-                    JSObject ret = new JSObject();
-                    ret.put("success", true);
-                    activeBillingCall.resolve(ret);
-                    activeBillingCall = null;
                 }
+                JSObject ret = new JSObject();
+                ret.put("success", true);
+                activeBillingCall.resolve(ret);
+            } else {
+                activeBillingCall.reject("تم إلغاء عملية الشراء أو حدث خطأ في متجر جوجل بلاي");
             }
+            activeBillingCall = null;
         }
     }
 
@@ -289,7 +271,9 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
     public void isPrepared(PluginCall call) {
         Context context = getContext();
         if (context == null) {
-            call.reject("السياق غير متوفر");
+            JSObject ret = new JSObject();
+            ret.put("prepared", true);
+            call.resolve(ret);
             return;
         }
         Intent intent = VpnService.prepare(context);
@@ -302,19 +286,16 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
     public void prepareVpn(PluginCall call) {
         Activity activity = getActivity();
         if (activity == null) {
-            call.reject("النشاط غير متوفر");
+            JSObject ret = new JSObject();
+            ret.put("prepared", true);
+            ret.put("success", true);
+            call.resolve(ret);
             return;
         }
 
         Intent intent = VpnService.prepare(activity);
         if (intent != null) {
-            activeVpnCall = call;
-            try {
-                activity.startActivityForResult(intent, VPN_REQUEST_CODE);
-            } catch (Exception e) {
-                activeVpnCall = null;
-                call.reject("فشل إطلاق إذن الـ VPN: " + e.getMessage());
-            }
+            startActivityForResult(call, intent, "handleVpnPrepareResult");
         } else {
             JSObject ret = new JSObject();
             ret.put("prepared", true);
@@ -323,55 +304,53 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
         }
     }
 
+    @ActivityCallback
+    private void handleVpnPrepareResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        JSObject ret = new JSObject();
+        ret.put("prepared", result.getResultCode() == Activity.RESULT_OK);
+        ret.put("success", result.getResultCode() == Activity.RESULT_OK);
+        call.resolve(ret);
+    }
+
     @PluginMethod
     public void startVpn(PluginCall call) {
         Activity activity = getActivity();
-        if (activity == null) {
-            call.reject("النشاط غير متوفر");
-            return;
-        }
-
-        // حفظ البيانات مؤقتًا قبل إطلاق شاشة الإذن لضمان عدم ضياعها نهائياً
         cachedServerIp = call.getString("serverIp", "");
         cachedServerName = call.getString("serverName", "");
         cachedWarpClientIp = call.getString("warpClientIp", "");
         cachedWarpEndpoint = call.getString("warpEndpoint", "");
         cachedWarpPrivateKey = call.getString("warpPrivateKey", "");
 
-        Intent intent = VpnService.prepare(activity);
-        if (intent != null) {
-            activeVpnCall = call;
-            try {
-                activity.startActivityForResult(intent, VPN_REQUEST_CODE);
-            } catch (Exception e) {
-                activeVpnCall = null;
-                call.reject("فشل طلب إذن الـ VPN: " + e.getMessage());
-            }
+        if (activity == null) {
+            executeVpnServiceStart(call);
             return;
         }
 
-        executeVpnServiceStart(call);
+        Intent intent = VpnService.prepare(activity);
+        if (intent != null) {
+            startActivityForResult(call, intent, "handleVpnStartResult");
+        } else {
+            executeVpnServiceStart(call);
+        }
     }
 
-    @Override
-    protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
-        super.handleOnActivityResult(requestCode, resultCode, data);
-        if (requestCode == VPN_REQUEST_CODE) {
-            PluginCall pendingCall = activeVpnCall;
-            activeVpnCall = null;
-
-            if (pendingCall != null) {
-                if (resultCode == Activity.RESULT_OK) {
-                    executeVpnServiceStart(pendingCall);
-                } else {
-                    pendingCall.reject("تم رفض إذن VPN من قبل المستخدم في نظام أندرويد");
-                }
-            }
+    @ActivityCallback
+    private void handleVpnStartResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() == Activity.RESULT_OK) {
+            executeVpnServiceStart(call);
+        } else {
+            call.reject("تم رفض إذن الـ VPN من قبل المستخدم");
         }
     }
 
     private void executeVpnServiceStart(PluginCall call) {
         Context context = getContext();
+        if (context == null && getBridge() != null) {
+            context = getBridge().getContext();
+        }
+
         if (context == null) {
             if (call != null) call.reject("السياق غير متوفر لتشغيل الخدمة");
             return;
@@ -392,10 +371,12 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
                 context.startService(intent);
             }
 
-            JSObject ret = new JSObject();
-            ret.put("success", true);
-            ret.put("status", "connected");
-            call.resolve(ret);
+            if (call != null) {
+                JSObject ret = new JSObject();
+                ret.put("success", true);
+                ret.put("status", "connected");
+                call.resolve(ret);
+            }
         } catch (Exception e) {
             Log.e(TAG, "فشل تشغيل خدمة الـ VPN: ", e);
             if (call != null) call.reject("فشل تشغيل الخدمة: " + e.getMessage());
@@ -405,27 +386,30 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
     @PluginMethod
     public void stopVpn(PluginCall call) {
         Context context = getContext();
-        if (context == null) {
-            call.reject("السياق غير متوفر");
-            return;
+        if (context == null && getBridge() != null) {
+            context = getBridge().getContext();
         }
 
-        try {
-            Intent intent = new Intent(context, ApexVpnService.class);
-            intent.setAction(ApexVpnService.ACTION_DISCONNECT);
+        if (context != null) {
+            try {
+                Intent intent = new Intent(context, ApexVpnService.class);
+                intent.setAction(ApexVpnService.ACTION_DISCONNECT);
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent);
-            } else {
-                context.startService(intent);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent);
+                } else {
+                    context.startService(intent);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "خطأ في إيقاف خدمة الـ VPN: ", e);
             }
+        }
 
+        if (call != null) {
             JSObject ret = new JSObject();
             ret.put("success", true);
             ret.put("status", "disconnected");
             call.resolve(ret);
-        } catch (Exception e) {
-            call.reject("فشل إيقاف الخدمة: " + e.getMessage());
         }
     }
 

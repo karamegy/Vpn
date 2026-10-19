@@ -54,7 +54,6 @@ jobs:
         run: |
           export CI=true
           
-          # إجبار إنشاء مشروع أندرويد جديد وتوليد gradlew إذا لم يكن موجوداً
           if [ ! -f "android/gradlew" ]; then
             echo "⚠️ ملف gradlew غير موجود! جاري توليد مشروع أندرويد باستخدام Capacitor..."
             rm -rf android
@@ -543,7 +542,7 @@ jobs:
               }
 
               @ActivityCallback
-              private void handleVpnResult(PluginCall call, ActivityResult result) {
+              public void handleVpnResult(PluginCall call, ActivityResult result) {
                   if (call == null) return;
                   if (result.getResultCode() == Activity.RESULT_OK) {
                       executeVpnServiceStart(call);
@@ -633,6 +632,7 @@ jobs:
           import android.app.NotificationManager;
           import android.app.PendingIntent;
           import android.content.Intent;
+          import android.content.pm.PackageManager;
           import android.content.pm.ServiceInfo;
           import android.net.VpnService;
           import android.os.Build;
@@ -696,8 +696,10 @@ jobs:
                           
                           try {
                               builder.addDisallowedApplication(getPackageName());
-                          } catch (Exception e) {
+                          } catch (PackageManager.NameNotFoundException e) {
                               Log.w(TAG, "تعذر إضافة التطبيق المستثنى: ", e);
+                          } catch (Exception e) {
+                              Log.w(TAG, "خطأ عام أثناء إضافة الاستثناء: ", e);
                           }
 
                           builder.setSession("ApexShieldVPN");

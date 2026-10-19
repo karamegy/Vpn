@@ -57,7 +57,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
         Intent intent = VpnService.prepare(context);
         if (intent != null) {
-            startActivityForResult(call, intent, "vpnPermissionResult");
+            startActivityForResult(call, intent, "vpnPrepareResult");
         } else {
             JSObject ret = new JSObject();
             ret.put("prepared", true);
@@ -67,7 +67,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
     }
 
     @ActivityCallback
-    public void vpnPermissionResult(PluginCall call, ActivityResult result) {
+    public void vpnPrepareResult(PluginCall call, ActivityResult result) {
         if (call == null) return;
 
         if (result.getResultCode() == Activity.RESULT_OK) {
@@ -90,10 +90,31 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
         Intent prepareIntent = VpnService.prepare(context);
         if (prepareIntent != null) {
-            startActivityForResult(call, prepareIntent, "vpnPermissionResult");
+            // طلب الإذن والاحتفاظ بالـ Call لتنفيذ الاتصال تلقائياً بعد الموافقة
+            startActivityForResult(call, prepareIntent, "vpnStartResult");
             return;
         }
 
+        executeStartVpn(call, context);
+    }
+
+    @ActivityCallback
+    public void vpnStartResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+
+        if (result.getResultCode() == Activity.RESULT_OK) {
+            Context context = getContext();
+            if (context == null) {
+                call.reject("السياق (Context) غير متوفر");
+                return;
+            }
+            executeStartVpn(call, context);
+        } else {
+            call.reject("تم رفض إذن VPN من قبل المستخدم");
+        }
+    }
+
+    private void executeStartVpn(PluginCall call, Context context) {
         String serverIp = call.getString("serverIp", "");
         String serverName = call.getString("serverName", "");
         String warpClientIp = call.getString("warpClientIp", "");
@@ -142,6 +163,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
                 context.startService(intent);
             }
 
+        // تم إلغاء استدعاء stopSelf المتداخل في الخدمة، والآن نعتمد على استجابة الخدمة المباشرة
             JSObject ret = new JSObject();
             ret.put("success", true);
             ret.put("status", "disconnected");

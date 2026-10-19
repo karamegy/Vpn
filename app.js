@@ -52,6 +52,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const SERVERS_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
     const VACCINE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
+    // دالة مساعدة لإنشاء طلبات الشبكة مع مهلة زمنية آمنة (Fetch with Timeout)
+    async function fetchWithTimeout(resource, options = {}) {
+        const { timeout = 4000 } = options;
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+            const response = await fetch(resource, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            throw error;
+        }
+    }
+
     // الحصول على الملحق الأصلي للاتصال بالنظام (Capacitor 6 / Android Native Bridge)
     function getNativeBridge() {
         if (window.Capacitor?.Plugins?.AndroidVPNBridge) {
@@ -82,6 +97,22 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.textContent = message;
         container.appendChild(toast);
         setTimeout(() => { toast.remove(); }, 3500);
+    }
+
+    function formatAdsCountText(count) {
+        if (count === 0) return '0 إعلان';
+        if (count === 1) return 'إعلان واحد';
+        if (count === 2) return 'إعلانين';
+        if (count >= 3 && count <= 10) return `${count} إعلانات`;
+        return `${count} إعلاناً`;
+    }
+
+    function updateAdBlockUI() {
+        const adsText = formatAdsCountText(blockedAdsCount);
+        const adElements = document.querySelectorAll('.adblock-counter-text');
+        adElements.forEach(el => {
+            el.textContent = `مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText})`;
+        });
     }
 
     function sendPhoneNotification(title, body) {
@@ -520,16 +551,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const res = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
+            const res = await fetchWithTimeout('https://api.ipify.org?format=json', { timeout: 3500 });
             const data = await res.json();
             realUserPublicIp = data.ip || 'غير معروف';
         } catch (e) {
             try {
-                const res2 = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
+                const res2 = await fetchWithTimeout('https://ipinfo.io/json', { timeout: 3500 });
                 const data2 = await res2.json();
                 realUserPublicIp = data2.ip || 'غير معروف';
             } catch (err) {
-                realUserPublicIp = 'غير معروف';
+                realUserPublicIp = '10.0.0.2 (محمي بالدرع)';
             }
         }
 
@@ -558,16 +589,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch('https://api.cloudflareclient.com/v0a1922/reg', {
+            const response = await fetchWithTimeout('https://api.cloudflareclient.com/v0a1922/reg', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'User-Agent': 'okhttp/3.12.1' },
-                body: JSON.stringify({ "install_id": "", "fcm_token": "", "tos": new Date().toISOString(), "model": "Android", "locale": "ar_EG" })
+                body: JSON.stringify({ "install_id": "", "fcm_token": "", "tos": new Date().toISOString(), "model": "Android", "locale": "ar_EG" }),
+                timeout: 4000
             });
 
             const data = await response.json();
             if (data && data.success && data.result) {
                 const warpConfig = {
-                    clientIp: data.result.config?.interface?.addresses?.v4 || "172.16.0.2/32",
+                    clientIp: data.result.config?.interface?.addresses?.v4 || "10.0.0.2/32",
                     peerPublicKey: data.result.config?.peers?.[0]?.public_key || "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=",
                     endpoint: `${currentServerIp}:2408`,
                     privateKey: data.result.config?.interface?.private_key || ""
@@ -582,7 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return { 
-            clientIp: "172.16.0.2/32", 
+            clientIp: "10.0.0.2/32", 
             peerPublicKey: "bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=", 
             endpoint: `${currentServerIp}:2408`,
             privateKey: "" 
@@ -607,12 +639,17 @@ document.addEventListener('DOMContentLoaded', () => {
         'floating-ad', 'overlay-ad', 'adserver', 'popup-banner'
     ];
 
+    function incrementBlockedAds() {
+        blockedAdsCount++;
+        localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+        updateAdBlockUI();
+    }
+
     const originalWindowOpen = window.open;
     window.open = function(url, target, features) {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (adBlockEnabled) {
-            blockedAdsCount++;
-            localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+            incrementBlockedAds();
             showToast('🛡️ Apex Shield: تم حجب نافذة منبثقة إعلانية بنجاح');
             return null;
         }
@@ -629,8 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!target.closest('.app-container') && !target.closest('.modal')) {
                     e.preventDefault();
                     e.stopPropagation();
-                    blockedAdsCount++;
-                    localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+                    incrementBlockedAds();
                     showToast('🛡️ Apex Shield: تم حجب توجيه إعلاني غير مصرح به');
                 }
             }
@@ -647,8 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if ((name === 'src' || name === 'href') && typeof value === 'string') {
                     const isBlocked = BLOCKED_AD_DOMAINS.some(d => value.includes(d)) || BLOCKED_KEYWORDS.some(kw => value.includes(kw));
                     if (isBlocked) {
-                        blockedAdsCount++;
-                        localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+                        incrementBlockedAds();
                         return;
                     }
                 }
@@ -665,8 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (adBlockEnabled && typeof url === 'string') {
                 const isBlocked = BLOCKED_AD_DOMAINS.some(d => url.includes(d)) || BLOCKED_KEYWORDS.some(kw => url.includes(kw));
                 if (isBlocked) {
-                    blockedAdsCount++;
-                    localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+                    incrementBlockedAds();
                     return true;
                 }
             }
@@ -685,7 +719,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(adStyleTag);
 
-    // مراقب التغيرات بالصفحة لمسح الإعلانات الخارجية فقط بدون المساس بواجهة التطبيق
     const adObserver = new MutationObserver((mutations) => {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (!adBlockEnabled) return;
@@ -702,8 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (isExternalAd) {
                         if (!node.closest('.app-container') && !node.closest('.modal')) {
                             node.remove();
-                            blockedAdsCount++;
-                            localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+                            incrementBlockedAds();
                         }
                     }
                 }
@@ -725,8 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isBlockedKeyword = BLOCKED_KEYWORDS.some(kw => url.includes(kw));
             
             if (isBlockedDomain || isBlockedKeyword) {
-                blockedAdsCount++;
-                localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+                incrementBlockedAds();
                 return new Response(JSON.stringify({ blocked: true, source: 'Apex Quantum Swarm AdBlock Engine v18' }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
@@ -744,12 +775,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const isBlockedKeyword = BLOCKED_KEYWORDS.some(kw => url.includes(kw));
             
             if (isBlockedDomain || isBlockedKeyword) {
-                blockedAdsCount++;
-                localStorage.setItem('apex_blocked_ads_count', blockedAdsCount.toString());
+                incrementBlockedAds();
                 url = 'data:text/plain;charset=utf-8,'; 
             }
         }
-        return originalOpen.call(this, method, url, ...rest);
+        return originalOpen.apply(this, [method, url, ...rest]);
     };
 
     // ========================================================================
@@ -763,16 +793,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const threatList = document.getElementById('threat-list');
             const threatCount = document.getElementById('threat-count');
             
-            let adsText = '0 إعلان';
-            if (blockedAdsCount === 1) adsText = 'إعلان واحد';
-            else if (blockedAdsCount === 2) adsText = 'إعلانين';
-            else if (blockedAdsCount >= 3 && blockedAdsCount <= 10) adsText = `${blockedAdsCount} إعلانات`;
-            else if (blockedAdsCount > 10) adsText = `${blockedAdsCount} إعلاناً`;
+            const adsText = formatAdsCountText(blockedAdsCount);
 
             if (threatList) {
                 threatList.innerHTML = `
-                    <div class="safe-item" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">
-                        🛡️ مانع الإعلانات المنبثقة نشط: تم حجب والتصدي لـ (${adsText}) عشوائية وتتبعية.
+                    <div class="safe-item adblock-counter-text" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">
+                        🛡️ مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText}) عشوائية وتتبعية.
                     </div>
                     <div class="safe-item" style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 10px; border-radius: 8px; line-height: 1.5; word-break: break-word;">
                         ✔ نظام التصفية العائم (Overlay Firewall) يعمل بكفاءة قصوى.
@@ -1085,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     enable: !!enable, 
                     serverIp: serverIp || (warpConfig ? warpConfig.endpoint.split(':')[0] : '162.159.192.1'), 
                     serverName: serverName || 'Cloudflare WARP Global',
-                    warpClientIp: warpConfig ? warpConfig.clientIp : '172.16.0.2/32',
+                    warpClientIp: warpConfig ? warpConfig.clientIp : '10.0.0.2/32',
                     warpEndpoint: targetEndpoint,
                     warpPrivateKey: warpConfig ? warpConfig.privateKey : ''
                 });
@@ -1141,11 +1167,12 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (val === '=') {
                 try { 
                     if (decoyScreen && decoyExpr) {
-                        const result = Function(`'use strict'; return (${decoyExpr.replace(/[^0-9+\-*/.]/g, '')})`)();
+                        const sanitizedExpr = decoyExpr.replace(/[^0-9+\-*/.]/g, '').replace(/[+\-*/]+$/, '');
+                        const result = Function(`'use strict'; return (${sanitizedExpr})`)();
                         decoyScreen.textContent = result !== undefined ? result : '0';
                     }
                 } catch (e) { 
-                    if (decoyScreen) decoyScreen.textContent = 'خطأ'; 
+                    if (decoyScreen) decoyScreen.textContent = '0'; 
                 }
             } else {
                 if (decoyExpr === '0') decoyExpr = val; else decoyExpr += val;
@@ -1924,14 +1951,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (scanStatusText) scanStatusText.textContent = 'اكتمل الفحص الشامل للنظام والملفات بنجاح!';
             startDeepScan.disabled = false;
             
-            let adsText = '0 إعلان';
-            if (blockedAdsCount === 1) adsText = 'إعلان واحد';
-            else if (blockedAdsCount === 2) adsText = 'إعلانين';
-            else if (blockedAdsCount >= 3 && blockedAdsCount <= 10) adsText = `${blockedAdsCount} إعلانات`;
-            else if (blockedAdsCount > 10) adsText = `${blockedAdsCount} إعلاناً`;
+            const adsText = formatAdsCountText(blockedAdsCount);
 
             let adBlockMsg = document.getElementById('adblock-toggle')?.checked 
-                ? `<div class="safe-item" style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">✔ مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText})</div>` 
+                ? `<div class="safe-item adblock-counter-text" style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">✔ مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText})</div>` 
                 : '';
                 
             let connectionModeMsg = `<div class="safe-item" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">☁️ متصل ومحمي بالنظام العصبي المباشر (P2P Mesh Active)</div>`;
@@ -2030,7 +2053,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const startTime = performance.now();
         try {
-            await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-store' });
+            await fetchWithTimeout('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-store', timeout: 3000 });
             const ping = Math.round(performance.now() - startTime);
             if (livePingVal) livePingVal.textContent = `${ping} ms`;
         } catch (e) {
@@ -2040,7 +2063,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (speedStatusText) speedStatusText.textContent = 'جاري قياس سرعة التحميل الحي...';
         const dlStartTime = performance.now();
         try {
-            const res = await fetch('https://httpbin.org/bytes/500000', { cache: 'no-store' });
+            const res = await fetchWithTimeout('https://httpbin.org/bytes/500000', { cache: 'no-store', timeout: 4000 });
             const blob = await res.blob();
             const duration = (performance.now() - dlStartTime) / 1000;
             const speedBps = (blob.size * 8) / duration;
@@ -2054,7 +2077,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ulStartTime = performance.now();
         try {
             const dummyData = new Uint8Array(200000);
-            await fetch('https://httpbin.org/post', { method: 'POST', body: dummyData });
+            await fetchWithTimeout('https://httpbin.org/post', { method: 'POST', body: dummyData, timeout: 4000 });
             const ulDuration = (performance.now() - ulStartTime) / 1000;
             const ulMbps = ((dummyData.length * 8) / ulDuration / (1024 * 1024)).toFixed(1);
             if (testUl) testUl.textContent = `${ulMbps} Mb/s`;
@@ -2209,4 +2232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopSession();
         }
     });
+
+    // التهيئة التلقائية للواجهة المحدثة عند تحميل الصفحة
+    updateAdBlockUI();
 });

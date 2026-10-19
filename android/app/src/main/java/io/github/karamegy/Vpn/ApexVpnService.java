@@ -74,7 +74,7 @@ public class ApexVpnService extends VpnService {
                 builder.setSession("ApexShieldVPN");
                 vpnInterface = builder.establish();
                 isRunning = true;
-                Log.log(Log.DEBUG, TAG, "✅ تم تشغيل نفق الحماية بنجاح واستمرار الإنترنت عبر " + serverName);
+                Log.d(TAG, "✅ تم تشغيل نفق الحماية بنجاح واستمرار الإنترنت عبر " + serverName);
             } catch (Exception ex) {
                 Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN، وتم الحفاظ على اتصال الإنترنت المحلي:", ex);
                 stopVpnConnection();
@@ -134,7 +134,7 @@ public class ApexVpnService extends VpnService {
                 ? new Notification.Builder(this, CHANNEL_ID)
                 : new Notification.Builder(this);
 
-            String contentText = (serverName != null && !serverName.isEmpty())
+        String contentText = (serverName != null && !serverName.isEmpty())
                 ? "متصل بالدرع عبر: " + serverName
                 : "درع الحماية المشفرة نشط الآن";
 

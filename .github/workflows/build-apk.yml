@@ -62,14 +62,13 @@ jobs:
         run: |
           export CI=true
           
-          # لا نقوم بمسح مجلد android هنا لكي نحافظ على ملفات الجافا والـ Manifest التي رفعتها بنفسك في المستودع!
           if [ ! -d "android" ]; then
             npx cap add android
           fi
           
           npx cap sync android
 
-          # 🎨 توليد أيقونات التطبيق (اللوجو) تلقائياً لمقاسات أندرويد عبر ImageMagick
+          # 🎨 توليد أيقونات التطبيق تلقائياً عبر ImageMagick
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
             echo "🎨 تم العثور على اللوجو (icon-512.png)، جاري توليد الأيقونات الرسمية..."
@@ -91,7 +90,7 @@ jobs:
             echo "✨ تم توليد اللوجو ووضع البصمة بنجاح!"
           fi
 
-          # تعديل إعدادات gradle.properties
+          # إعدادات gradle.properties
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
@@ -99,7 +98,7 @@ jobs:
           android.useAndroidX=true
           EOF
 
-          # إعدادات الـ SDK ومكتبة الفواتير الرسمية لمتجر جوجل بلاي
+          # إعدادات الـ SDK ومكتبة الفواتير لمتجر جوجل بلاي
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "google()" android/build.gradle; then
               sed -i '/allprojects {/,/}/ s/repositories {/repositories {\n        google()\n        mavenCentral()/' android/build.gradle || true
@@ -117,8 +116,8 @@ jobs:
           fi
 
           if [ -f "android/variables.gradle" ]; then
-            sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
-            sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
+            sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 35/' android/variables.gradle
+            sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 35/' android/variables.gradle
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 

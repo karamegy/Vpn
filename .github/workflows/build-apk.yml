@@ -64,27 +64,26 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # تعديل ملفات الإعدادات تلقائياً ودون المساس بمتغيرات Capacitor الافتراضية
+          # 1. ضبط Target SDK و Compile SDK إلى 35 عبر Node.js
           node -e '
           const fs = require("fs");
 
-          // 1. تعديل Target SDK و Compile SDK إلى 36 ب أمان
           let varPath = "android/variables.gradle";
           if (fs.existsSync(varPath)) {
             let content = fs.readFileSync(varPath, "utf8");
-            content = content.replace(/compileSdkVersion\s*=\s*\d+/, "compileSdkVersion = 36");
-            content = content.replace(/targetSdkVersion\s*=\s*\d+/, "targetSdkVersion = 36");
+            content = content.replace(/compileSdkVersion\s*=\s*\d+/, "compileSdkVersion = 35");
+            content = content.replace(/targetSdkVersion\s*=\s*\d+/, "targetSdkVersion = 35");
             fs.writeFileSync(varPath, content);
           }
 
-          // 2. تحديث versionCode إلى 36 و Play Billing إلى 8.0.0
+          // 2. تحديث versionCode إلى 36 وإضافة Play Billing 7.1.1 المعتمدة
           let appBuildPath = "android/app/build.gradle";
           if (fs.existsSync(appBuildPath)) {
             let content = fs.readFileSync(appBuildPath, "utf8");
             content = content.replace(/versionCode\s+\d+/, "versionCode 36");
             content = content.replace(/versionName\s+"[^"]+"/, "versionName \"8.0.0.36\"");
             if (!content.includes("com.android.billingclient:billing")) {
-              content = content.replace(/dependencies\s*\{/, "dependencies {\n    implementation \"com.android.billingclient:billing:8.0.0\"");
+              content = content.replace(/dependencies\s*\{/, "dependencies {\n    implementation \"com.android.billingclient:billing:7.1.1\"");
             }
             fs.writeFileSync(appBuildPath, content);
           }
@@ -101,7 +100,7 @@ jobs:
           # 4. إنشاء مجلدات Java
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 5. كتابة AndroidManifest.xml متوافق مع Android 15 (API 36)
+          # 5. كتابة AndroidManifest.xml
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -170,7 +169,7 @@ jobs:
           </manifest>
           EOF
 
-          # 6. كتابة MainActivity.java القياسية
+          # 6. كتابة MainActivity.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
 
@@ -282,7 +281,7 @@ jobs:
           }
           EOF
 
-          # 8. كتابة AndroidVPNBridgePlugin.java مع Play Billing 8.0.0 الصريحة
+          # 8. كتابة AndroidVPNBridgePlugin.java المتوافق مع Play Billing 7.1.1
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 

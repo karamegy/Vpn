@@ -58,17 +58,38 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android Platform & Inject Native Core
+      - name: 2. Sync Web Assets with Existing Repository Android Platform
         run: |
           export CI=true
           
-          # إعادة إنشاء مجلد أندرويد نظيف لضمان تواجد gradlew وكافة الملفات الأساسية
-          rm -rf android
-          npx cap add android
+          # لا نقوم بمسح مجلد android هنا لكي نحافظ على ملفات الجافا والـ Manifest التي رفعتها بنفسك في المستودع!
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          
           npx cap sync android
 
-          # إذا كانت لديك مجلدات جافا محفوظة في مكان مؤقت أو سيتم نسخها، نؤكد على هيكلها
-          mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
+          # 🎨 توليد أيقونات التطبيق (اللوجو) تلقائياً لمقاسات أندرويد عبر ImageMagick
+          ICON_SOURCE="icon-512.png"
+          if [ -f "$ICON_SOURCE" ]; then
+            echo "🎨 تم العثور على اللوجو (icon-512.png)، جاري توليد الأيقونات الرسمية..."
+            RES_DIR="android/app/src/main/res"
+            
+            mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
+            
+            convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher.png || true
+            convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher.png || true
+            convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher.png || true
+            convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher.png || true
+            convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher.png || true
+
+            convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher_round.png || true
+            convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher_round.png || true
+            convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher_round.png || true
+            convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher_round.png || true
+            convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png || true
+            echo "✨ تم توليد اللوجو ووضع البصمة بنجاح!"
+          fi
 
           # تعديل إعدادات gradle.properties
           cat << 'EOF' >> android/gradle.properties
@@ -77,24 +98,6 @@ jobs:
           android.enableJetifier=true
           android.useAndroidX=true
           EOF
-
-          # تحويل الأيقونات إذا وجدت
-          ICON_SOURCE="icon-512.png"
-          if [ -f "$ICON_SOURCE" ]; then
-            RES_DIR="android/app/src/main/res"
-            mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
-            convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
-            convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
-            convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
-            convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || true
-            convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher.png 2>/dev/null || true
-
-            convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher_round.png 2>/dev/null || true
-            convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher_round.png 2>/dev/null || true
-            convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher_round.png 2>/dev/null || true
-            convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher_round.png 2>/dev/null || true
-            convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
-          fi
 
           # إعدادات الـ SDK ومكتبة الفواتير الرسمية لمتجر جوجل بلاي
           if [ -f "android/app/build.gradle" ]; then

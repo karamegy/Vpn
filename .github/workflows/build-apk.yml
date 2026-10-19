@@ -80,10 +80,14 @@ jobs:
             cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
           fi
 
-          # 🎨 توليد أيقونات التطبيق تلقائياً
+          # 🎨 توليد أيقونات التطبيق تلقائياً وحذف المجلد التكيفي الافتراضي
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
             RES_DIR="android/app/src/main/res"
+            
+            # إزالة مجلد الأيقونات التكيفية الافتراضية لمنع إخفاء الشعار الخاص بك
+            rm -rf $RES_DIR/mipmap-anydpi-v26
+            
             mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
             
             convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher.png || true

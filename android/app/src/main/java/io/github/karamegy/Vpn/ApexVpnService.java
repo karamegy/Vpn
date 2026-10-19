@@ -14,7 +14,6 @@ import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 
 public class ApexVpnService extends VpnService {
@@ -27,7 +26,6 @@ public class ApexVpnService extends VpnService {
 
     private volatile boolean isRunning = false;
     private static ParcelFileDescriptor vpnInterface = null;
-    private Thread vpnThread = null;
 
     private static final String ADGUARD_DNS_1 = "94.140.14.14";
     private static final String ADGUARD_DNS_2 = "94.140.15.15";
@@ -35,8 +33,8 @@ public class ApexVpnService extends VpnService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : "";
-        String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Cloud Server";
-        String serverIp = intent != null ? intent.getStringExtra("serverIp") : "1.1.1.1";
+        String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Shield Node";
+        String serverIp = intent != null ? intent.getStringExtra("serverIp") : "162.159.192.1";
 
         if (ACTION_CONNECT.equals(action) || "START".equals(action) || "START_VPN".equals(action)) {
             createNotificationChannel();
@@ -61,15 +59,26 @@ public class ApexVpnService extends VpnService {
     private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
 
-        vpnThread = new Thread(() -> {
+        new Thread(() -> {
             try {
                 Builder builder = new Builder();
                 builder.setSession("Apex Shield AdBlock & VPN")
                        .addAddress("10.0.0.2", 32)
                        .setMtu(1500)
                        .addDnsServer(ADGUARD_DNS_1)
-                       .addDnsServer(ADGUARD_DNS_2)
-                       .addRoute("0.0.0.0", 0);
+                       .addDnsServer(ADGUARD_DNS_2);
+
+                String[] dnsToIntercept = {
+                    ADGUARD_DNS_1, ADGUARD_DNS_2,
+                    "8.8.8.8", "8.8.4.4",
+                    "1.1.1.1", "1.0.0.1"
+                };
+
+                for (String dnsIp : dnsToIntercept) {
+                    builder.addRoute(dnsIp, 32);
+                }
+
+                builder.setBlocking(false);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     try {
@@ -86,24 +95,11 @@ public class ApexVpnService extends VpnService {
                 isRunning = true;
                 Log.i(TAG, "✅ تم تشغيل نفق الحماية وحجب الإعلانات بنجاح عبر " + serverName);
 
-                try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor())) {
-                    byte[] buffer = new byte[32767];
-                    while (isRunning && vpnInterface != null) {
-                        int length = in.read(buffer);
-                        if (length <= 0) {
-                            Thread.sleep(100);
-                        }
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "حلقة قراءة واجهة الـ VPN انتهت: ", e);
-                }
-
             } catch (Exception ex) {
                 Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
                 stopVpnConnection();
             }
-        });
-        vpnThread.start();
+        }).start();
     }
 
     private synchronized void stopVpnConnection() {

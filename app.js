@@ -52,10 +52,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const SERVERS_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
     const VACCINE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
-    // الحصول على الملحق الأصلي للاتصال بالنظام (Capacitor أو Android JS Interface)
+    // الحصول على الملحق الأصلي للاتصال بالنظام (Capacitor 6 / Android Native Bridge)
     function getNativeBridge() {
         if (window.Capacitor?.Plugins?.AndroidVPNBridge) {
             return window.Capacitor.Plugins.AndroidVPNBridge;
+        }
+        if (window.Capacitor?.registerPlugin) {
+            try {
+                const bridge = window.Capacitor.registerPlugin('AndroidVPNBridge');
+                if (bridge) return bridge;
+            } catch (e) {
+                console.warn("جاري محاولة تسجيل الجسر عبر Capacitor...", e);
+            }
         }
         if (window.AndroidVPNBridge) {
             return window.AndroidVPNBridge;

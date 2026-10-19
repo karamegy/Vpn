@@ -57,7 +57,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # تعطيل فحوصات Lint الناتجة عن الأخطاء التلقائية
+          # تعطيل فحوصات Lint التلقائية عبر gradle.properties لتفادي أخطاء التجميع
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
@@ -66,7 +66,7 @@ jobs:
           # 1. إنشاء هيكل مجلدات الجافا
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 2. كتابة ملف AndroidManifest.xml نقي ومستقر لجميع الإصدارات
+          # 2. كتابة ملف AndroidManifest.xml الموزون
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -130,7 +130,7 @@ jobs:
           </manifest>
           EOF
 
-          # 3. كتابة MainActivity.java
+          # 3. كتابة MainActivity.java مع تسجيل الجسر قبل super.onCreate
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
 
@@ -140,8 +140,8 @@ jobs:
           public class MainActivity extends BridgeActivity {
               @Override
               public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
                   registerPlugin(AndroidVPNBridgePlugin.class);
+                  super.onCreate(savedInstanceState);
               }
           }
           EOF
@@ -393,10 +393,12 @@ jobs:
           }
           EOF
 
-          # 6. تحويل اللوجو icon-512.png إلى أيقونات أندرويد الرسمية
+          # 6. حذف الأيقونات التكيّفية الافتراضية وإجبار أندرويد على استخدام اللوجو icon-512.png
+          rm -rf android/app/src/main/res/mipmap-anydpi*
+
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
-            echo "🎨 جاري تحويل icon-512.png إلى أيقونات أندرويد..."
+            echo "🎨 جاري تحويل icon-512.png لجميع المجلدات..."
             RES_DIR="android/app/src/main/res"
 
             mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi

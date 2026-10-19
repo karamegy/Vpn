@@ -16,7 +16,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_VPN" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
-    <!-- صلاحيات المتجر -->
+    <!-- صلاحية فحص التطبيقات المثبتة (ضرورية لعمل دالة الفحص performNativeScan على أندرويد 11+) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+    
+    <!-- صلاحيات المتجر والشراء -->
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <application
@@ -28,8 +31,7 @@
         android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
 
-        <!-- إعدادات إعلانات جوجل (AdMob App ID) - مهم جداً لكي تعمل الإعلانات -->
-        <!-- استبدل "ca-app-pub-3940256099942544~3347511713" بمعرف التطبيق الحقيقي الخاص بك من لوحة تحكم AdMob -->
+        <!-- إعدادات إعلانات جوجل (AdMob App ID) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713" />
@@ -60,7 +62,7 @@
         <service
             android:name="io.github.karamegy.Vpn.ApexVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
-            android:foregroundServiceType="vpn|connectedDevice"
+            android:foregroundServiceType="connectedDevice"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.net.VpnService" />

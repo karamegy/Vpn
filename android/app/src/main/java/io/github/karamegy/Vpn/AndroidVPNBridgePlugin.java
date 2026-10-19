@@ -17,6 +17,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin {
 
+    // مفتاح الترخيص الخاص بـ Google Play Console
+    public static final String BASE64_LICENSE_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmxgdl9pF2Wa6OpHD7jQnmAKZ+1Z/TgyCo5WhWAcd1yVbsKW6/MeEk3wHECm/j8RNdqVTSpa5Gwle0uuiT+yNaIjZgVwg1CdjkPzu6F3TYiazdGTxTvK3bb5a+TYQB2B6di30vTP6BAVqRSFOiVuULEDH/DcLjWuqVGMgWRe4ni37yoHnBtRh5Lyj/Dg3jq01AeUg/xNlK7kUi/xY1zqCH3oXtou4uxTLBTWGrIvisrKVyj3Xx6npCrwAQRiVGC0rjUiYUltkqx5r2ZAWGOxOpH0ia6HqNveJjMbY9icRLrmfiemky107HCqEjB+QTGCR7Lw+5QjIFD1DARb1E/YJbwIDAQAB";
+
     @PluginMethod
     public void prepareVpn(PluginCall call) {
         Intent intent = VpnService.prepare(getContext());
@@ -78,6 +81,13 @@ public class AndroidVPNBridgePlugin extends Plugin {
     public void checkSubscriptionStatus(PluginCall call) {
         JSObject ret = new JSObject();
         ret.put("isPro", false);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getLicenseKey(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("licenseKey", BASE64_LICENSE_KEY);
         call.resolve(ret);
     }
 }

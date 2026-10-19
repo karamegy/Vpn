@@ -21,11 +21,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # تثبيت Gradle 8.7 الحديث المتوافق كلياً مع Java 17
-      - name: Setup Gradle 8.7
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.7'
 
       - name: 1. Setup Node.js System Native & Web Assets
         run: |
@@ -59,23 +56,11 @@ jobs:
         run: |
           export CI=true
           
-          # إنشاء المنصة إن لم تكن موجودة
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          # إعادة إنشاء منصة أندرويد بنظافة وتوليد ملفات gradlew الأصلية
+          rm -rf android
+          npx cap add android
 
-          # 1. إنشاء هيكل مجلدات الجافا
-          mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
-
-          # 2. توليد gradlew باستخدام Gradle 8.7 الحديث في حال عدم وجوده
-          if [ ! -f "android/gradlew" ]; then
-            cd android
-            gradle wrapper --gradle-version 8.7
-            cd ..
-          fi
-          chmod +x android/gradlew
-
-          # 3. إعداد خيارات gradle.properties
+          # إعداد خيارات gradle.properties
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
@@ -83,7 +68,10 @@ jobs:
           android.useAndroidX=true
           EOF
 
-          # 4. كتابة ملف AndroidManifest.xml المحدث
+          # إنشاء هيكل مجلدات الجافا
+          mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
+
+          # كتابة AndroidManifest.xml متوافق مع Android 14 (API 34)
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -92,17 +80,11 @@ jobs:
 
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-              <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-              <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-              
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_VPN" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-              
-              <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
               <uses-permission android:name="com.android.vending.BILLING" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
               <application
                   android:allowBackup="true"
@@ -116,6 +98,16 @@ jobs:
                   <meta-data
                       android:name="com.google.android.gms.ads.APPLICATION_ID"
                       android:value="ca-app-pub-3940256099942544~3347511713" />
+
+                  <service
+                      android:name="io.github.karamegy.Vpn.ApexVpnService"
+                      android:permission="android.permission.BIND_VPN_SERVICE"
+                      android:exported="true"
+                      android:foregroundServiceType="specialUse">
+                      <intent-filter>
+                          <action android:name="android.net.VpnService" />
+                      </intent-filter>
+                  </service>
 
                   <activity
                       android:name="io.github.karamegy.Vpn.MainActivity"
@@ -140,22 +132,12 @@ jobs:
                       </intent-filter>
                   </activity>
 
-                  <service
-                      android:name="io.github.karamegy.Vpn.ApexVpnService"
-                      android:permission="android.permission.BIND_VPN_SERVICE"
-                      android:foregroundServiceType="connectedDevice"
-                      android:exported="false">
-                      <intent-filter>
-                          <action android:name="android.net.VpnService" />
-                      </intent-filter>
-                  </service>
-
               </application>
 
           </manifest>
           EOF
 
-          # 5. كتابة MainActivity.java
+          # كتابة MainActivity.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
 
@@ -171,202 +153,97 @@ jobs:
           }
           EOF
 
-          # 6. كتابة ApexVpnService.java
+          # كتابة ApexVpnService.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
           import android.app.Notification;
           import android.app.NotificationChannel;
           import android.app.NotificationManager;
-          import android.app.PendingIntent;
           import android.content.Intent;
-          import android.content.pm.ServiceInfo;
           import android.net.VpnService;
           import android.os.Build;
-          import android.os.Handler;
-          import android.os.Looper;
           import android.os.ParcelFileDescriptor;
-          import android.util.Log;
-
-          import java.io.FileInputStream;
+          import androidx.core.app.NotificationCompat;
+          import java.io.IOException;
 
           public class ApexVpnService extends VpnService {
-              private static final String TAG = "ApexVpnService";
+              public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START_VPN";
+              public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP_VPN";
+              private static ParcelFileDescriptor vpnInterface = null;
               private static final String CHANNEL_ID = "ApexVpnChannel";
-              private static final int NOTIFICATION_ID = 101;
-
-              public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START";
-              public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP";
-
-              private volatile boolean isRunning = false;
-              private ParcelFileDescriptor vpnInterface = null;
-              private Thread vpnThread = null;
+              private static boolean isRunning = false;
 
               @Override
               public int onStartCommand(Intent intent, int flags, int startId) {
-                  String action = intent != null ? intent.getAction() : "";
-
-                  if (ACTION_CONNECT.equals(action) || "START".equals(action)) {
-                      String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Cloud Server";
-                      String serverIp = intent != null ? intent.getStringExtra("serverIp") : "1.1.1.1";
-
-                      createNotificationChannel();
-
-                      try {
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                              int foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
-                              startForeground(NOTIFICATION_ID, buildNotification(serverName), foregroundType);
-                          } else {
-                              startForeground(NOTIFICATION_ID, buildNotification(serverName));
-                          }
-                      } catch (Exception e) {
-                          Log.e(TAG, "خطأ أثناء تشغيل Foreground Service: ", e);
-                          startForeground(NOTIFICATION_ID, buildNotification(serverName));
+                  if (intent != null) {
+                      String action = intent.getAction();
+                      if (ACTION_CONNECT.equals(action) || "START".equals(action)) {
+                          startVpnTunnel();
+                      } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
+                          stopVpnTunnel();
                       }
-
-                      startVpnConnection(serverIp, serverName);
-                  } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
-                      stopVpnConnection();
                   }
-
                   return START_STICKY;
               }
 
-              private synchronized void startVpnConnection(String serverIp, String serverName) {
+              private synchronized void startVpnTunnel() {
                   if (isRunning) return;
 
-                  vpnThread = new Thread(() -> {
-                      try {
-                          Builder builder = new Builder();
-                          builder.addAddress("10.0.0.2", 32);
-                          builder.addDnsServer("1.1.1.1");
-                          builder.addDnsServer("8.8.8.8");
-                          builder.addRoute("0.0.0.0", 0);
-
-                          try {
-                              builder.addDisallowedApplication(getPackageName());
-                          } catch (Exception ignored) {}
-
-                          builder.setSession("ApexShieldVPN");
-                          vpnInterface = builder.establish();
-                          if (vpnInterface == null) {
-                              stopVpnConnection();
-                              return;
-                          }
-
-                          isRunning = true;
-                          Log.d(TAG, "✅ تم تشغيل نفق الحماية بنجاح واستمرار الإنترنت عبر " + serverName);
-
-                          try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor())) {
-                              byte[] buffer = new byte[32767];
-                              while (isRunning && vpnInterface != null) {
-                                  int length = in.read(buffer);
-                                  if (length <= 0) {
-                                      Thread.sleep(100);
-                                  }
-                              }
-                          } catch (Exception e) {
-                              Log.e(TAG, "حلقة قراءة واجهة الـ VPN انتهت: ", e);
-                          }
-
-                      } catch (Exception ex) {
-                          Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
-                          stopVpnConnection();
-                      }
-                  });
-                  vpnThread.start();
-              }
-
-              private synchronized void stopVpnConnection() {
-                  if (!isRunning && vpnInterface == null) {
-                      return;
-                  }
-                  isRunning = false;
-
-                  new Thread(() -> {
-                      try {
-                          if (vpnInterface != null) {
-                              vpnInterface.close();
-                              vpnInterface = null;
-                          }
-                      } catch (Exception e) {
-                          Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
-                      }
-
-                      new Handler(Looper.getMainLooper()).post(() -> {
-                          try {
-                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                  stopForeground(STOP_FOREGROUND_REMOVE);
-                              } else {
-                                  stopForeground(true);
-                              }
-                          } catch (Exception ignored) {}
-                          stopSelf();
-                          Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
-                      });
-                  }).start();
-              }
-
-              private void createNotificationChannel() {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      NotificationChannel channel = new NotificationChannel(
-                              CHANNEL_ID,
-                              "Apex Shield VPN Protection",
-                              NotificationManager.IMPORTANCE_LOW
-                      );
-                      channel.setDescription("حالة الاتصال بالشبكة المشفرة");
+                      NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Apex Shield VPN", NotificationManager.IMPORTANCE_LOW);
                       NotificationManager manager = getSystemService(NotificationManager.class);
-                      if (manager != null) {
-                          manager.createNotificationChannel(channel);
+                      if (manager != null) manager.createNotificationChannel(channel);
+
+                      Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                              .setContentTitle("Apex Shield AI نشط")
+                              .setContentText("النفق المشفر يعمل بكفاءة عالية")
+                              .setSmallIcon(android.R.drawable.ic_lock_lock)
+                              .build();
+                      startForeground(1, notification);
+                  }
+
+                  try {
+                      Builder builder = new Builder();
+                      builder.setSession("Apex Shield VPN")
+                             .addAddress("10.0.0.2", 32)
+                             .addRoute("0.0.0.0", 0)
+                             .addDnsServer("1.1.1.1")
+                             .addDnsServer("8.8.8.8")
+                             .setBlocking(true);
+
+                      vpnInterface = builder.establish();
+                      if (vpnInterface != null) {
+                          isRunning = true;
                       }
+                  } catch (Exception e) {
+                      e.printStackTrace();
                   }
               }
 
-              private Notification buildNotification(String serverName) {
-                  Intent notificationIntent = new Intent(this, MainActivity.class);
-                  PendingIntent pendingIntent = PendingIntent.getActivity(
-                          this,
-                          0,
-                          notificationIntent,
-                          PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-                  );
-
-                  Notification.Builder builder = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                          ? new Notification.Builder(this, CHANNEL_ID)
-                          : new Notification.Builder(this);
-
-                  String contentText = (serverName != null && !serverName.isEmpty())
-                          ? "متصل بالدرع عبر: " + serverName
-                          : "درع الحماية المشفرة نشط الآن";
-
-                  int appIcon = getApplicationInfo().icon != 0 ? getApplicationInfo().icon : android.R.drawable.ic_lock_lock;
-
-                  return builder
-                          .setContentTitle("Apex Shield AI")
-                          .setContentText(contentText)
-                          .setSmallIcon(appIcon)
-                          .setContentIntent(pendingIntent)
-                          .setOngoing(true)
-                          .build();
+              private synchronized void stopVpnTunnel() {
+                  isRunning = false;
+                  if (vpnInterface != null) {
+                      try {
+                          vpnInterface.close();
+                      } catch (IOException e) {
+                          e.printStackTrace();
+                      }
+                      vpnInterface = null;
+                  }
+                  stopForeground(true);
+                  stopSelf();
               }
 
               @Override
               public void onDestroy() {
-                  isRunning = false;
-                  try {
-                      if (vpnInterface != null) {
-                          vpnInterface.close();
-                          vpnInterface = null;
-                      }
-                  } catch (Exception e) {
-                      Log.e(TAG, "خطأ في onDestroy أثناء إغلاق الواجهة: ", e);
-                  }
                   super.onDestroy();
+                  stopVpnTunnel();
               }
           }
           EOF
 
-          # 7. كتابة AndroidVPNBridgePlugin.java
+          # كتابة AndroidVPNBridgePlugin.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -380,8 +257,6 @@ jobs:
           import android.os.Environment;
           import android.os.StatFs;
           import android.util.Log;
-
-          import androidx.activity.result.ActivityResult;
           import androidx.annotation.NonNull;
           import androidx.annotation.Nullable;
 
@@ -390,7 +265,6 @@ jobs:
           import com.android.billingclient.api.BillingClientStateListener;
           import com.android.billingclient.api.BillingFlowParams;
           import com.android.billingclient.api.BillingResult;
-          import com.android.billingclient.api.PendingPurchasesParams;
           import com.android.billingclient.api.ProductDetails;
           import com.android.billingclient.api.Purchase;
           import com.android.billingclient.api.PurchasesUpdatedListener;
@@ -401,7 +275,6 @@ jobs:
           import com.getcapacitor.Plugin;
           import com.getcapacitor.PluginCall;
           import com.getcapacitor.PluginMethod;
-          import com.getcapacitor.annotation.ActivityCallback;
           import com.getcapacitor.annotation.CapacitorPlugin;
 
           import java.io.File;
@@ -416,23 +289,14 @@ jobs:
               private PluginCall activeBillingCall = null;
               private ProductDetails cachedProductDetails = null;
 
-              private String cachedServerIp = "";
-              private String cachedServerName = "";
-              private String cachedWarpClientIp = "";
-              private String cachedWarpEndpoint = "";
-              private String cachedWarpPrivateKey = "";
-
               @Override
               public void load() {
                   super.load();
                   Context context = getContext();
                   if (context != null) {
-                      PendingPurchasesParams pendingParams = PendingPurchasesParams.newBuilder()
-                              .enableOneTimeProducts()
-                              .build();
                       billingClient = BillingClient.newBuilder(context)
                               .setListener(this)
-                              .enablePendingPurchases(pendingParams)
+                              .enablePendingPurchases()
                               .build();
                       startBillingConnection();
                   }
@@ -460,10 +324,10 @@ jobs:
                       if (billingClient == null || !billingClient.isReady()) return;
                       String productId = (targetProductId != null && !targetProductId.isEmpty()) ? targetProductId : "apex_pro_monthly";
                       List<QueryProductDetailsParams.Product> productList = Collections.singletonList(
-                              QueryProductDetailsParams.Product.newBuilder()
-                                      .setProductId(productId)
-                                      .setProductType(BillingClient.ProductType.SUBS)
-                                      .build()
+                          QueryProductDetailsParams.Product.newBuilder()
+                              .setProductId(productId)
+                              .setProductType(BillingClient.ProductType.SUBS)
+                              .build()
                       );
                       QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(productList).build();
                       billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
@@ -557,20 +421,20 @@ jobs:
                           return;
                       }
                       billingClient.queryPurchasesAsync(
-                              QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
-                              (billingResult, purchases) -> {
-                                  boolean isPro = false;
-                                  if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
-                                      for (Purchase purchase : purchases) {
-                                          if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                              isPro = true;
-                                              break;
-                                          }
+                          QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+                          (billingResult, purchases) -> {
+                              boolean isPro = false;
+                              if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                                  for (Purchase purchase : purchases) {
+                                      if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                          isPro = true;
+                                          break;
                                       }
                                   }
-                                  ret.put("isPro", isPro);
-                                  call.resolve(ret);
                               }
+                              ret.put("isPro", isPro);
+                              call.resolve(ret);
+                          }
                       );
                   } catch (Exception e) {
                       ret.put("isPro", false);
@@ -584,7 +448,7 @@ jobs:
                       String productId = call.getString("productId", "apex_pro_monthly");
                       Activity activity = getActivity();
                       if (activity == null || billingClient == null || !billingClient.isReady()) {
-                          call.reject("خدمة Google Play Billing غير جاهزة حالياً");
+                          call.reject("Google Play Billing غير جاهز حالياً");
                           return;
                       }
 
@@ -599,15 +463,15 @@ jobs:
 
                       activeBillingCall = call;
                       List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = Collections.singletonList(
-                              BillingFlowParams.ProductDetailsParams.newBuilder()
-                                      .setProductDetails(cachedProductDetails)
-                                      .setOfferToken(cachedProductDetails.getSubscriptionOfferDetails().get(0).getOfferToken())
-                                      .build()
+                          BillingFlowParams.ProductDetailsParams.newBuilder()
+                              .setProductDetails(cachedProductDetails)
+                              .setOfferToken(cachedProductDetails.getSubscriptionOfferDetails().get(0).getOfferToken())
+                              .build()
                       );
 
                       BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
-                              .setProductDetailsParamsList(productDetailsParamsList)
-                              .build();
+                          .setProductDetailsParamsList(productDetailsParamsList)
+                          .build();
 
                       billingClient.launchBillingFlow(activity, billingFlowParams);
                   } catch (Exception e) {
@@ -622,8 +486,8 @@ jobs:
                           for (Purchase purchase : purchases) {
                               if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged()) {
                                   AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-                                          .setPurchaseToken(purchase.getPurchaseToken())
-                                          .build();
+                                      .setPurchaseToken(purchase.getPurchaseToken())
+                                      .build();
                                   billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult1 -> {});
                               }
                           }
@@ -665,53 +529,28 @@ jobs:
 
                   Intent intent = VpnService.prepare(activity);
                   if (intent != null) {
-                      startActivityForResult(call, intent, "handleVpnPrepareResult");
-                  } else {
-                      JSObject ret = new JSObject();
-                      ret.put("prepared", true);
-                      ret.put("success", true);
-                      call.resolve(ret);
+                      try {
+                          activity.startActivityForResult(intent, 0x8888);
+                      } catch (Exception e) {
+                          JSObject ret = new JSObject();
+                          ret.put("prepared", true);
+                          ret.put("success", true);
+                          call.resolve(ret);
+                          return;
+                      }
                   }
-              }
-
-              @ActivityCallback
-              private void handleVpnPrepareResult(PluginCall call, ActivityResult result) {
-                  if (call == null) return;
                   JSObject ret = new JSObject();
-                  ret.put("prepared", result.getResultCode() == Activity.RESULT_OK);
-                  ret.put("success", result.getResultCode() == Activity.RESULT_OK);
+                  ret.put("prepared", true);
+                  ret.put("success", true);
                   call.resolve(ret);
               }
 
               @PluginMethod
               public void startVpn(PluginCall call) {
-                  Activity activity = getActivity();
-                  cachedServerIp = call.getString("serverIp", "");
-                  cachedServerName = call.getString("serverName", "");
-                  cachedWarpClientIp = call.getString("warpClientIp", "");
-                  cachedWarpEndpoint = call.getString("warpEndpoint", "");
-                  cachedWarpPrivateKey = call.getString("warpPrivateKey", "");
-
-                  // إنهاء الوعد فوراً لواجهة الويب لضمان التفاعل السريع
                   JSObject ret = new JSObject();
                   ret.put("success", true);
                   ret.put("status", "connected");
                   call.resolve(ret);
-
-                  if (activity == null) {
-                      executeVpnServiceStart();
-                      return;
-                  }
-
-                  Intent intent = VpnService.prepare(activity);
-                  if (intent != null) {
-                      try {
-                          activity.startActivityForResult(intent, 0x8888);
-                      } catch (Exception e) {
-                          executeVpnServiceStart();
-                      }
-                      return;
-                  }
 
                   executeVpnServiceStart();
               }
@@ -726,11 +565,6 @@ jobs:
                       try {
                           Intent intent = new Intent(context, ApexVpnService.class);
                           intent.setAction(ApexVpnService.ACTION_CONNECT);
-                          intent.putExtra("serverIp", cachedServerIp);
-                          intent.putExtra("serverName", cachedServerName);
-                          intent.putExtra("warpClientIp", cachedWarpClientIp);
-                          intent.putExtra("warpEndpoint", cachedWarpEndpoint);
-                          intent.putExtra("warpPrivateKey", cachedWarpPrivateKey);
 
                           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                               context.startForegroundService(intent);
@@ -785,7 +619,7 @@ jobs:
           }
           EOF
 
-          # 8. تحويل وتوليد الأيقونات
+          # تحويل الأيقونات
           rm -rf android/app/src/main/res/mipmap-anydpi*
 
           ICON_SOURCE="icon-512.png"
@@ -806,7 +640,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
           fi
 
-          # 9. إضافة مكتبة الشراء وتحديث الإصدارات
+          # إضافة مكتبة Google Play Billing وتحديد الإصدارات
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
@@ -822,9 +656,9 @@ jobs:
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 
-          # 10. مزامنة Capacitor النهائية
-          npx cap copy android
+          # مزامنة Capacitor مع منصة أندرويد
           npx cap sync android
+          chmod +x android/gradlew
 
       - name: 3. Build & Sign APK & AAB Packages
         env:

@@ -13,6 +13,8 @@ import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
+import java.io.FileInputStream;
+
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
     private static final String CHANNEL_ID = "ApexVpnChannel";
@@ -21,8 +23,9 @@ public class ApexVpnService extends VpnService {
     public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START";
     public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP";
 
-    private boolean isRunning = false;
+    private volatile boolean isRunning = false;
     private ParcelFileDescriptor vpnInterface = null;
+    private Thread vpnThread = null;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -33,22 +36,16 @@ public class ApexVpnService extends VpnService {
             String serverIp = intent != null ? intent.getStringExtra("serverIp") : "1.1.1.1";
 
             createNotificationChannel();
-            
+
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // اختيار نوع الخدمة المناسب حسب إصدار أندرويد
-                    int foregroundType = 0;
-                    if (Build.VERSION.SDK_INT >= 34) { // Android 14+
-                        foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_VPN;
-                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
-                    }
+                    int foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
                     startForeground(NOTIFICATION_ID, buildNotification(serverName), foregroundType);
                 } else {
                     startForeground(NOTIFICATION_ID, buildNotification(serverName));
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error starting foreground service", e);
+                Log.e(TAG, "خطأ أثناء تشغيل Foreground Service: ", e);
                 startForeground(NOTIFICATION_ID, buildNotification(serverName));
             }
 
@@ -60,35 +57,55 @@ public class ApexVpnService extends VpnService {
         return START_STICKY;
     }
 
-    private void startVpnConnection(String serverIp, String serverName) {
+    private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
 
-        new Thread(() -> {
+        vpnThread = new Thread(() -> {
             try {
                 Builder builder = new Builder();
                 builder.addAddress("10.0.0.2", 32);
                 builder.addDnsServer("1.1.1.1");
                 builder.addDnsServer("8.8.8.8");
                 builder.addRoute("0.0.0.0", 0);
-                
+
                 try {
                     builder.addDisallowedApplication(getPackageName());
                 } catch (Exception ignored) {}
 
                 builder.setSession("ApexShieldVPN");
                 vpnInterface = builder.establish();
+                if (vpnInterface == null) {
+                    stopVpnConnection();
+                    return;
+                }
+
                 isRunning = true;
                 Log.d(TAG, "✅ تم تشغيل نفق الحماية بنجاح واستمرار الإنترنت عبر " + serverName);
+
+                // خيط معالجة وقراءة الحزم لمنع انسداد الواجهة وتوقف الشبكة على الهاتف
+                try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor())) {
+                    byte[] buffer = new byte[32767];
+                    while (isRunning && vpnInterface != null) {
+                        int length = in.read(buffer);
+                        if (length <= 0) {
+                            Thread.sleep(100);
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "حلقة قراءة واجهة الـ VPN انتهت: ", e);
+                }
+
             } catch (Exception ex) {
                 Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
                 stopVpnConnection();
             }
-        }).start();
+        });
+        vpnThread.start();
     }
 
     private synchronized void stopVpnConnection() {
         if (!isRunning && vpnInterface == null) {
-            return; // لمنع التكرار إذا كانت الخدمة متوقفة بالفعل
+            return;
         }
         isRunning = false;
 
@@ -102,7 +119,6 @@ public class ApexVpnService extends VpnService {
                 Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
             }
 
-            // تنفيذ عمليات إيقاف الإشعار والخدمة على الخيط الرئيسي (Main Thread) لمنع الانهيار
             new Handler(Looper.getMainLooper()).post(() -> {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -162,7 +178,7 @@ public class ApexVpnService extends VpnService {
 
     @Override
     public void onDestroy() {
-        // الاكتفاء بالتنظيف المحلي المباشر للواجهة دون استدعاء stopVpnConnection لتجنب حلقة التكرار
+        isRunning = false;
         try {
             if (vpnInterface != null) {
                 vpnInterface.close();
@@ -171,7 +187,6 @@ public class ApexVpnService extends VpnService {
         } catch (Exception e) {
             Log.e(TAG, "خطأ في onDestroy أثناء إغلاق الواجهة: ", e);
         }
-        isRunning = false;
         super.onDestroy();
     }
 }

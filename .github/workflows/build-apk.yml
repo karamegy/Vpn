@@ -50,7 +50,7 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android Platform & Custom Logo Icons
+      - name: 2. Prepare Android Platform, WireGuard & Custom Logo Icons
         run: |
           export CI=true
           
@@ -76,15 +76,9 @@ jobs:
             convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher_round.png
             convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher_round.png
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png
-
-            convert "$ICON_SOURCE" -resize 108x108 $RES_DIR/mipmap-mdpi/ic_launcher_foreground.png
-            convert "$ICON_SOURCE" -resize 162x162 $RES_DIR/mipmap-hdpi/ic_launcher_foreground.png
-            convert "$ICON_SOURCE" -resize 216x216 $RES_DIR/mipmap-xhdpi/ic_launcher_foreground.png
-            convert "$ICON_SOURCE" -resize 324x324 $RES_DIR/mipmap-xxhdpi/ic_launcher_foreground.png
-            convert "$ICON_SOURCE" -resize 432x432 $RES_DIR/mipmap-xxxhdpi/ic_launcher_foreground.png
           fi
 
-          # كتابة AndroidManifest.xml المكتمل بالأذونات وتصريح الخدمة لأندرويد 14+
+          # كتابة AndroidManifest.xml
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -152,7 +146,7 @@ jobs:
           }
           EOF
 
-          # AndroidVPNBridgePlugin.java
+          # AndroidVPNBridgePlugin.java (نسخة الجسر الخاصة بك)
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -590,7 +584,7 @@ jobs:
           }
           EOF
 
-          # ApexVpnService.java
+          # 3. ApexVpnService.java (المحتوي على مكتبات WireGuard التي قمت بإرسالها)
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -605,16 +599,36 @@ jobs:
           import android.os.ParcelFileDescriptor;
           import android.util.Log;
 
+          import com.wireguard.android.backend.GoBackend;
+          import com.wireguard.android.backend.Tunnel;
+          import com.wireguard.config.Config;
+          import com.wireguard.config.KeyPair;
+
+          import java.io.ByteArrayInputStream;
+          import java.nio.charset.StandardCharsets;
+
           public class ApexVpnService extends VpnService {
               private static final String TAG = "ApexVpnService";
               private static final String CHANNEL_ID = "ApexVpnChannel";
               private static final int NOTIFICATION_ID = 101;
+              private static final String TUNNEL_NAME = "ApexWarpTunnel";
 
               public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START";
               public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP";
 
-              private boolean isRunning = false;
+              private GoBackend backend;
+              private boolean isTunnelRunning = false;
               private ParcelFileDescriptor vpnInterface = null;
+
+              @Override
+              public void onCreate() {
+                  super.onCreate();
+                  try {
+                      backend = new GoBackend(getApplicationContext());
+                  } catch (Exception e) {
+                      Log.e(TAG, "فشل تهيئة محرك WireGuard GoBackend", e);
+                  }
+              }
 
               @Override
               public int onStartCommand(Intent intent, int flags, int startId) {
@@ -622,7 +636,9 @@ jobs:
 
                   if (ACTION_CONNECT.equals(action) || "START".equals(action)) {
                       String serverName = intent != null ? intent.getStringExtra("serverName") : "Cloudflare WARP";
-                      String serverIp = intent != null ? intent.getStringExtra("serverIp") : "162.159.192.1";
+                      String warpClientIp = intent != null ? intent.getStringExtra("warpClientIp") : "172.16.0.2/32";
+                      String warpEndpoint = intent != null ? intent.getStringExtra("warpEndpoint") : "162.159.192.1:2408";
+                      String warpPrivateKey = intent != null ? intent.getStringExtra("warpPrivateKey") : "";
 
                       createNotificationChannel();
                       
@@ -633,7 +649,7 @@ jobs:
                               startForeground(NOTIFICATION_ID, buildNotification(serverName));
                           }
                       } catch (Exception e) {
-                          Log.w(TAG, "تراجع تشغيل الخدمة الأمامية: ", e);
+                          Log.w(TAG, "تراجُع تشغيل الخدمة الأمامية بالطريقة القياسية: ", e);
                           try {
                               startForeground(NOTIFICATION_ID, buildNotification(serverName));
                           } catch (Exception ex) {
@@ -641,7 +657,7 @@ jobs:
                           }
                       }
 
-                      startVpnConnection(serverIp, serverName);
+                      startVpnConnection(warpClientIp, warpEndpoint, serverName, warpPrivateKey);
                   } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
                       stopVpnConnection();
                   }
@@ -649,30 +665,60 @@ jobs:
                   return START_STICKY;
               }
 
-              private void startVpnConnection(String serverIp, String serverName) {
-                  if (isRunning) return;
+              private void startVpnConnection(String clientIpStr, String endpointStr, String serverName, String privateKeyBase64) {
+                  if (isTunnelRunning) return;
 
                   new Thread(() -> {
                       try {
-                          Builder builder = new Builder();
-                          builder.addAddress("172.16.0.2", 32);
-                          builder.addDnsServer("1.1.1.1");
-                          builder.addDnsServer("1.0.0.1");
-                          builder.addRoute("0.0.0.0", 0);
-                          
-                          try {
-                              builder.addDisallowedApplication(getPackageName());
-                          } catch (Exception e) {
-                              Log.w(TAG, "تعذر إضافة التطبيق المستثنى: ", e);
-                          }
+                          if (backend != null) {
+                              String privateKey;
+                              if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
+                                  privateKey = privateKeyBase64.trim();
+                              } else {
+                                  KeyPair keyPair = new KeyPair();
+                                  privateKey = keyPair.getPrivateKey().toBase64();
+                              }
 
-                          builder.setSession("ApexShieldVPN");
-                          
-                          vpnInterface = builder.establish();
-                          isRunning = true;
-                          Log.d(TAG, "✅ تم تشغيل نفق الحماية بنجاح عبر " + serverName + " (" + serverIp + ")");
-                      } catch (Exception ex) {
-                          Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
+                              String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
+                              if (!formattedClientIp.contains("/")) {
+                                  formattedClientIp += "/32";
+                              }
+
+                              String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
+
+                              String excludedApps = getPackageName() + ", com.android.vending, com.google.android.gms";
+
+                              String wgConfigStr = "[Interface]\n" +
+                                      "PrivateKey = " + privateKey + "\n" +
+                                      "Address = " + formattedClientIp + "\n" +
+                                      "DNS = 1.1.1.1, 1.0.0.1\n" +
+                                      "MTU = 1280\n" +
+                                      "ExcludedApplications = " + excludedApps + "\n\n" +
+                                      "[Peer]\n" +
+                                      "PublicKey = bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=\n" +
+                                      "Endpoint = " + targetEndpoint + "\n" +
+                                      "AllowedIPs = 0.0.0.0/0, ::/0\n";
+
+                              Config config = Config.parse(new ByteArrayInputStream(wgConfigStr.getBytes(StandardCharsets.UTF_8)));
+
+                              backend.setState(new Tunnel() {
+                                  @Override
+                                  public String getName() {
+                                      return TUNNEL_NAME;
+                                  }
+
+                                  @Override
+                                  public void onStateChange(State state) {
+                                      Log.d(TAG, "حالة نفق WireGuard تغيرت إلى: " + state.name());
+                                  }
+                              }, Tunnel.State.UP, config);
+
+                              isTunnelRunning = true;
+                              Log.d(TAG, "✅ تم تشغيل نفق WireGuard/WARP وتوجيه البيانات بنجاح!");
+                              return;
+                          }
+                      } catch (Exception e) {
+                          Log.e(TAG, "فشل تشغيل نفق WireGuard GoBackend:", e);
                           stopVpnConnection();
                       }
                   }).start();
@@ -681,24 +727,39 @@ jobs:
               private void stopVpnConnection() {
                   new Thread(() -> {
                       try {
+                          if (backend != null && isTunnelRunning) {
+                              backend.setState(new Tunnel() {
+                                  @Override
+                                  public String getName() {
+                                      return TUNNEL_NAME;
+                                  }
+
+                                  @Override
+                                  public void onStateChange(State state) {}
+                              }, Tunnel.State.DOWN, null);
+                          }
+                      } catch (Exception e) {
+                          Log.e(TAG, "خطأ أثناء إيقاف WireGuard backend:", e);
+                      }
+
+                      try {
                           if (vpnInterface != null) {
                               vpnInterface.close();
                               vpnInterface = null;
                           }
                       } catch (Exception e) {
-                          Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
+                          Log.e(TAG, "خطأ أثناء إغلاق vpnInterface:", e);
                       }
 
-                      isRunning = false;
-                      try {
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                              stopForeground(STOP_FOREGROUND_REMOVE);
-                          } else {
-                              stopForeground(true);
-                          }
-                      } catch (Exception ignored) {}
+                      isTunnelRunning = false;
+                      
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                          stopForeground(STOP_FOREGROUND_REMOVE);
+                      } else {
+                          stopForeground(true);
+                      }
                       stopSelf();
-                      Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN.");
+                      Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN وإعادة الـ IP الأصلي.");
                   }).start();
               }
 
@@ -709,7 +770,7 @@ jobs:
                               "Apex Shield VPN Protection",
                               NotificationManager.IMPORTANCE_LOW
                       );
-                      channel.setDescription("حالة الاتصال بالشبكة المشفرة");
+                      channel.setDescription("حالة الاتصال بالشبكة الافتراضية المشفرة");
                       NotificationManager manager = getSystemService(NotificationManager.class);
                       if (manager != null) {
                           manager.createNotificationChannel(channel);
@@ -732,7 +793,7 @@ jobs:
 
                   String contentText = (serverName != null && !serverName.isEmpty())
                           ? "متصل بالدرع عبر: " + serverName
-                          : "درع الحماية المشفرة نشط الآن";
+                          : "درع الحماية وخدمة Cloudflare WARP المشفرة نشطة الآن";
 
                   int appIcon = getApplicationInfo().icon != 0 ? getApplicationInfo().icon : android.R.drawable.sym_def_app_icon;
 
@@ -753,14 +814,17 @@ jobs:
           }
           EOF
 
-          # تعديل إعدادات Gradle
+          # تعديل إعدادات Gradle وحقن مكتبات Billing و WireGuard
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
             fi
+            if ! grep -q "com.wireguard.android" android/app/build.gradle; then
+              sed -i '/dependencies {/a \    implementation "com.wireguard.android:tunnel:1.0.20230712"' android/app/build.gradle
+            fi
 
-            sed -i -E 's/versionCode [0-9]+/versionCode 30/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.6"/' android/app/build.gradle
+            sed -i -E 's/versionCode [0-9]+/versionCode 34/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.10"/' android/app/build.gradle
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle

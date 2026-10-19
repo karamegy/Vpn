@@ -57,14 +57,19 @@ jobs:
           rm -rf android
           npx cap add android
 
+          # تعطيل فحوصات Lint الناتجة عن الأخطاء التلقائية
+          cat << 'EOF' >> android/gradle.properties
+          android.lint.checkReleaseBuilds=false
+          android.lint.abortOnError=false
+          EOF
+
           # 1. إنشاء هيكل مجلدات الجافا
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 2. كتابة ملف AndroidManifest.xml الموزون والمحمي من أخطاء الـ Merger
+          # 2. كتابة ملف AndroidManifest.xml نقي ومستقر لجميع الإصدارات
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              xmlns:tools="http://schemas.android.com/tools">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -72,7 +77,6 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
               <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_VPN" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="com.android.vending.BILLING" />
 
@@ -115,9 +119,7 @@ jobs:
                   <service
                       android:name="io.github.karamegy.Vpn.ApexVpnService"
                       android:permission="android.permission.BIND_VPN_SERVICE"
-                      android:foregroundServiceType="vpn"
-                      android:exported="false"
-                      tools:ignore="ForegroundServicePermission">
+                      android:exported="false">
                       <intent-filter>
                           <action android:name="android.net.VpnService" />
                       </intent-filter>
@@ -144,7 +146,7 @@ jobs:
           }
           EOF
 
-          # 4. كتابة AndroidVPNBridgePlugin.java شامل المشتريات والـ VPN
+          # 4. كتابة AndroidVPNBridgePlugin.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -345,7 +347,6 @@ jobs:
           import android.app.NotificationChannel;
           import android.app.NotificationManager;
           import android.content.Intent;
-          import android.content.pm.ServiceInfo;
           import android.net.VpnService;
           import android.os.Build;
           import android.os.ParcelFileDescriptor;
@@ -366,11 +367,7 @@ jobs:
                               .setSmallIcon(android.R.drawable.ic_lock_lock)
                               .build();
 
-                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                          startForeground(101, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_VPN);
-                      } else {
-                          startForeground(101, notification);
-                      }
+                      startForeground(101, notification);
                   }
 
                   try {
@@ -396,10 +393,10 @@ jobs:
           }
           EOF
 
-          # 6. تحويل icon-512.png إلى أيقونات التطبيق الرسمية لأندرويد
+          # 6. تحويل اللوجو icon-512.png إلى أيقونات أندرويد الرسمية
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
-            echo "🎨 جاري تحويل اللوجو icon-512.png إلى أيقونات أندرويد..."
+            echo "🎨 جاري تحويل icon-512.png إلى أيقونات أندرويد..."
             RES_DIR="android/app/src/main/res"
 
             mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
@@ -417,7 +414,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
           fi
 
-          # 7. تعديل build.gradle وإضافة إعدادات Lint الرسمية لـ AGP 8 لتجاوز فحوصات الأذونات التلقائية
+          # 7. ضبط المشتريات وإصدارات SDK
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
@@ -425,17 +422,6 @@ jobs:
 
             sed -i -E 's/versionCode [0-9]+/versionCode 36/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "18.0.0"/' android/app/build.gradle
-
-            cat << 'EOF_LINT' >> android/app/build.gradle
-
-          android {
-              lint {
-                  checkReleaseBuilds = false
-                  abortOnError = false
-                  disable += ["ForegroundServicePermission"]
-              }
-          }
-          EOF_LINT
           fi
 
           if [ -f "android/variables.gradle" ]; then
@@ -444,7 +430,7 @@ jobs:
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
 
-          # 8. المزامنة النهائية وإعطاء صلاحيات التشغيل
+          # 8. المزامنة النهائية
           npx cap sync android
           chmod +x android/gradlew
 

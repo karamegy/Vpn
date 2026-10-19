@@ -25,7 +25,7 @@
 
 Unlike conventional security apps, Apex Shield introduces groundbreaking features:
 
-1. **🧬 Zero-Day Neural Immune Shield:** Proactively analyzes local entropy and dynamically poisons telemetry and tracking payloads to deceive unknown zero-day attacks.
+1. **🧬 Zero-Day1 Neural Immune Shield:** Proactively analyzes local entropy and dynamically poisons telemetry and tracking payloads to deceive unknown zero-day attacks.
 2. **⚡ G-Force Anti-Confiscation Phalanx:** Monitors device acceleration sensors (`devicemotion`) to instantly detect violent physical confiscation and trigger an emergency wipe of local vaults and session data.
 3. **🚨 Duress Reflex & Decoy Mode:** Detects rapid physiological tap patterns under coercion and instantly transforms the interface into a functional, secure calculator mode.
 4. **👻 Quantum Entropy Ghost:** Injects microscopic, randomized behavioral jitter and defends against advanced Canvas fingerprinting algorithms.

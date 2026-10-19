@@ -50,14 +50,15 @@ jobs:
           }
           EOF
 
-      - name: 2. Sync Capacitor Android & Configure Gradle 8.5
+      - name: 2. Sync Capacitor Android & Force Gradle Wrapper Generation
         run: |
           export CI=true
           npx cap sync android
 
-          # ضبط Gradle Wrapper للإصدار 8.5 ليتوافق تماماً مع Java 17 الحديثة
-          mkdir -p android/gradle/wrapper
-          cat << 'EOF' > android/gradle/wrapper/gradle-wrapper.properties
+          # إنشاء هيكل Gradle Wrapper وتوليد ملف gradlew قسرياً
+          cd android
+          mkdir -p gradle/wrapper
+          cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
@@ -65,7 +66,9 @@ jobs:
           zipStorePath=wrapper/dists
           EOF
 
-          cd android
+          # توليد أداة gradlew باستخدام gradle التابع للنظام
+          gradle wrapper --gradle-version 8.5
+          
           chmod +x gradlew
           cd ..
 

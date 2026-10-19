@@ -57,37 +57,38 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android Platform & Inject Native Core
+      - name: 2. Prepare Android Platform & Inject Native Core Safely
         run: |
           export CI=true
           
           rm -rf android
           npx cap add android
 
-          # 1. ضبط متغيرات Target SDK 35 و Compile SDK 35 المتوافقين مع سحابة GitHub وجوجل بلاي
-          cat << 'EOF' > android/variables.gradle
-          ext {
-              minSdkVersion = 24
-              compileSdkVersion = 35
-              targetSdkVersion = 35
-              androidxActivityVersion = '1.8.0'
-              androidxAppCompatVersion = '1.6.1'
-              androidxCoordinatorLayoutVersion = '1.2.0'
-              androidxCoreVersion = '1.12.0'
-              androidxFragmentVersion = '1.6.2'
-              coreSplashScreenVersion = '1.0.1'
-              androidxWebkitVersion = '1.9.0'
-          }
-          EOF
+          # تعديل ملفات الإعدادات تلقائياً ودون المساس بمتغيرات Capacitor الافتراضية
+          node -e '
+          const fs = require("fs");
 
-          # 2. إضافة Play Billing 8.0.0 وضبط الاصدار على VersionCode 36
-          if [ -f "android/app/build.gradle" ]; then
-            sed -i -E 's/versionCode [0-9]+/versionCode 36/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.12"/' android/app/build.gradle
-            if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
-              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:8.0.0"' android/app/build.gradle
-            fi
-          fi
+          // 1. تعديل Target SDK و Compile SDK إلى 36 ب أمان
+          let varPath = "android/variables.gradle";
+          if (fs.existsSync(varPath)) {
+            let content = fs.readFileSync(varPath, "utf8");
+            content = content.replace(/compileSdkVersion\s*=\s*\d+/, "compileSdkVersion = 36");
+            content = content.replace(/targetSdkVersion\s*=\s*\d+/, "targetSdkVersion = 36");
+            fs.writeFileSync(varPath, content);
+          }
+
+          // 2. تحديث versionCode إلى 36 و Play Billing إلى 8.0.0
+          let appBuildPath = "android/app/build.gradle";
+          if (fs.existsSync(appBuildPath)) {
+            let content = fs.readFileSync(appBuildPath, "utf8");
+            content = content.replace(/versionCode\s+\d+/, "versionCode 36");
+            content = content.replace(/versionName\s+"[^"]+"/, "versionName \"8.0.0.36\"");
+            if (!content.includes("com.android.billingclient:billing")) {
+              content = content.replace(/dependencies\s*\{/, "dependencies {\n    implementation \"com.android.billingclient:billing:8.0.0\"");
+            }
+            fs.writeFileSync(appBuildPath, content);
+          }
+          '
 
           # 3. إعداد gradle.properties
           cat << 'EOF' >> android/gradle.properties
@@ -100,7 +101,7 @@ jobs:
           # 4. إنشاء مجلدات Java
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 5. كتابة AndroidManifest.xml
+          # 5. كتابة AndroidManifest.xml متوافق مع Android 15 (API 36)
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -169,13 +170,20 @@ jobs:
           </manifest>
           EOF
 
-          # 6. كتابة MainActivity.java
+          # 6. كتابة MainActivity.java القياسية
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
 
+          import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;
 
-          public class MainActivity extends BridgeActivity {}
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(AndroidVPNBridgePlugin.class);
+                  super.onCreate(savedInstanceState);
+              }
+          }
           EOF
 
           # 7. كتابة ApexVpnService.java
@@ -274,7 +282,7 @@ jobs:
           }
           EOF
 
-          # 8. كتابة AndroidVPNBridgePlugin.java باستخدام Anonymous Listeners صريحة
+          # 8. كتابة AndroidVPNBridgePlugin.java مع Play Billing 8.0.0 الصريحة
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 

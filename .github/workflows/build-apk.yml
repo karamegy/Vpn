@@ -1,4 +1,4 @@
-name: Build Android Native APK & AAB (Apex Shield v20)
+name: Build Android Native APK & AAB (Apex Shield v21)
 
 on:
   workflow_dispatch:
@@ -54,14 +54,13 @@ jobs:
         run: |
           export CI=true
           
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          rm -rf android
+          npx cap add android
           npx cap sync android
 
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 1. تحديث AndroidManifest.xml لضمان مطابقة متطلبات واجهة 36 وخدمة VPN
+          # 1. تحديث AndroidManifest.xml ليتوافق مع API 36 وخدمة VPN
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -327,7 +326,7 @@ jobs:
           }
           EOF
 
-          # 4. ملف ApexVpnService.java للخدمة في الخلفية
+          # 4. ملف ApexVpnService.java للخدمة في الخلفية مع إضافة استيراد IOException بشكل صحيح
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -339,6 +338,7 @@ jobs:
           import android.net.VpnService;
           import android.os.Build;
           import android.os.ParcelFileDescriptor;
+          import java.io.IOException;
 
           public class ApexVpnService extends VpnService {
               private ParcelFileDescriptor vpnInterface = null;
@@ -386,7 +386,7 @@ jobs:
           }
           EOF
 
-          # تحديث إعدادات build.gradle لضبط الـ SDK وتحديث Billing إلى 7.1.1
+          # 5. تعديل إعدادات build.gradle لتضمين Google Play Billing 7.1.1 وتركيز API 36
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:7.1.1"' android/app/build.gradle
@@ -394,8 +394,8 @@ jobs:
               sed -i 's/com\.android\.billingclient:billing:[^"]*/com.android.billingclient:billing:7.1.1/g' android/app/build.gradle
             fi
 
-            sed -i -E 's/versionCode [0-9]+/versionCode 39/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.1"/' android/app/build.gradle
+            sed -i -E 's/versionCode [0-9]+/versionCode 40/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.2"/' android/app/build.gradle
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
             sed -i 's/compileSdk [0-9]+/compileSdk 36/g' android/app/build.gradle

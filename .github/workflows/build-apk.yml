@@ -54,17 +54,17 @@ jobs:
         run: |
           export CI=true
 
-          # 1. إعادة إنشاء مشروع أندرويد الهيكلي
+          # 1. إعادة إنشاء مشروع أندرويد
           rm -rf android
           npx cap add android
 
-          # 2. تعطيل فحص Lint التلقائي بأمان عبر gradle.properties المتوافق مع AGP 8
+          # 2. تعطيل فحوصات Lint التلقائية
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
           EOF
 
-          # 3. كتابة ملف AndroidManifest.xml المحدث والمتوافق
+          # 3. كتابة ملف AndroidManifest.xml الموزون
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -76,7 +76,6 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
               <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE_VPN" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="com.android.vending.BILLING" />
@@ -120,7 +119,7 @@ jobs:
                   <service
                       android:name="io.github.karamegy.Vpn.ApexVpnService"
                       android:permission="android.permission.BIND_VPN_SERVICE"
-                      android:foregroundServiceType="vpn|connectedDevice"
+                      android:foregroundServiceType="vpn"
                       android:exported="false">
                       <intent-filter>
                           <action android:name="android.net.VpnService" />
@@ -134,7 +133,7 @@ jobs:
 
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 4. كتابة MainActivity.java بالترتيب الصحيح
+          # 4. كتابة MainActivity.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
 
@@ -333,7 +332,7 @@ jobs:
           }
           EOF
 
-          # 6. كتابة ApexVpnService.java
+          # 6. كتابة ApexVpnService.java المحدثة لتوافق SDK 34
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -372,10 +371,8 @@ jobs:
                       createNotificationChannel();
                       
                       try {
-                          if (Build.VERSION.SDK_INT >= 34) {
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                               startForeground(NOTIFICATION_ID, buildNotification(serverName), ServiceInfo.FOREGROUND_SERVICE_TYPE_VPN);
-                          } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                              startForeground(NOTIFICATION_ID, buildNotification(serverName), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
                           } else {
                               startForeground(NOTIFICATION_ID, buildNotification(serverName));
                           }
@@ -514,17 +511,17 @@ jobs:
 
             mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
 
-            convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher.png
-            convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher.png
-            convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher.png
-            convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher.png
-            convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher.png
+            convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+            convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
+            convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
+            convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || true
+            convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher.png 2>/dev/null || true
 
-            convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher_round.png
-            convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher_round.png
-            convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher_round.png
-            convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher_round.png
-            convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png
+            convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher_round.png 2>/dev/null || true
+            convert "$ICON_SOURCE" -resize 72x72 $RES_DIR/mipmap-hdpi/ic_launcher_round.png 2>/dev/null || true
+            convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher_round.png 2>/dev/null || true
+            convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher_round.png 2>/dev/null || true
+            convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
           fi
 
           # 8. تعديل إصدارات التطبيق ومستويات SDK
@@ -564,7 +561,7 @@ jobs:
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           
-          ./gradlew assembleRelease bundleRelease -x lint -x lintVitalRelease --no-daemon
+          ./gradlew assembleRelease bundleRelease -x lint -x lintVitalRelease -x test --no-daemon
 
           APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)

@@ -24,7 +24,8 @@ jobs:
       - name: 1. Setup Node.js System Native & Web Assets
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y nodejs npm imagemagick gradle
+          # تم إزالة gradle القديم من التثبيت لتجنب التعارض مع Java 17
+          sudo apt-get install -y nodejs npm imagemagick
           node -v
           npm -v
 
@@ -42,7 +43,6 @@ jobs:
             "appId": "io.github.karamegy.Vpn",
             "appName": "Apex Shield AI",
             "webDir": "www",
-            "bundledWebRuntime": false,
             "android": {
               "webContentsDebuggingEnabled": true,
               "allowMixedContent": true
@@ -54,7 +54,7 @@ jobs:
         run: |
           export CI=true
           
-          # إعداد مجلد أندرويد دون حذفه إذا كان موجوداً
+          # إنشاء منصة أندرويد عبر Capacitor بملفات Gradle الحديثة (Gradle 8+)
           if [ ! -d "android" ]; then
             npx cap add android
           fi
@@ -62,13 +62,10 @@ jobs:
           # 1. إنشاء هيكل مجلدات الجافا
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 2. ضمان وجود gradlew وتصريح التشغيل
-          if [ ! -f "android/gradlew" ]; then
-            cd android && gradle wrapper && cd ..
-          fi
+          # 2. ضمان تصريح التشغيل لمحرّك Gradlew الخاص بـ Capacitor
           chmod +x android/gradlew
 
-          # 3. تعطيل فحوصات Lint
+          # 3. تعطيل فحوصات Lint وتفعيل التوافق مع AndroidX
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false

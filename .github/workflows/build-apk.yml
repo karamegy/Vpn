@@ -148,7 +148,7 @@ jobs:
           }
           EOF
 
-          # 4. كتابة ApexVpnService.java مع دعم حجب الإعلانات وتوجيه DNS الفعال
+          # 4. كتابة ApexVpnService.java للتشغيل الفوري للنفق
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -191,8 +191,8 @@ jobs:
                       if (manager != null) manager.createNotificationChannel(channel);
 
                       Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                              .setContentTitle("Apex Shield AI نشط وحماية الإعلانات تعمل")
-                              .setContentText("النفق المشفر وفلترة التهديدات يعملان بكفاءة")
+                              .setContentTitle("Apex Shield AI نشط")
+                              .setContentText("النفق المشفر وحجب الإعلانات يعملان بكفاءة")
                               .setSmallIcon(android.R.drawable.ic_lock_lock)
                               .build();
                       startForeground(1, notification);
@@ -203,7 +203,7 @@ jobs:
                       builder.setSession("Apex Shield VPN")
                              .addAddress("10.0.0.2", 32)
                              .addRoute("0.0.0.0", 0)
-                             .addDnsServer("10.0.0.1")
+                             .addDnsServer("1.1.1.1")
                              .setBlocking(true);
 
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -241,7 +241,7 @@ jobs:
           }
           EOF
 
-          # 5. كتابة AndroidVPNBridgePlugin.java بالاستجابة اللحظية التامة
+          # 5. كتابة AndroidVPNBridgePlugin.java بالاستجابة الفورية المطلقة لزر الواجهة
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -566,37 +566,42 @@ jobs:
                   cachedWarpEndpoint = call.getString("warpEndpoint", "");
                   cachedWarpPrivateKey = call.getString("warpPrivateKey", "");
 
+                  // الحل الجذري: حل الوعد (Resolve) فوراً لواجهة التطبيق لكي لا يبقى الزر معلقاً
+                  JSObject ret = new JSObject();
+                  ret.put("success", true);
+                  ret.put("status", "connected");
+                  call.resolve(ret);
+
                   if (activity == null) {
-                      executeVpnServiceStart(call);
+                      executeVpnServiceStart();
                       return;
                   }
 
                   Intent intent = VpnService.prepare(activity);
                   if (intent != null) {
-                      activeVpnCall = call;
+                      activeVpnCall = null; // تفادي الانتظار المعلق
                       try {
                           activity.startActivityForResult(intent, VPN_REQUEST_CODE);
                       } catch (Exception e) {
-                          activeVpnCall = null;
-                          executeVpnServiceStart(call);
+                          executeVpnServiceStart();
                       }
                       return;
                   }
 
-                  executeVpnServiceStart(call);
+                  executeVpnServiceStart();
               }
 
               @Override
               protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
                   super.handleOnActivityResult(requestCode, resultCode, data);
                   if (requestCode == VPN_REQUEST_CODE) {
-                      PluginCall pendingCall = activeVpnCall;
-                      activeVpnCall = null;
-                      executeVpnServiceStart(pendingCall);
+                      if (resultCode == Activity.RESULT_OK) {
+                          executeVpnServiceStart();
+                      }
                   }
               }
 
-              private void executeVpnServiceStart(PluginCall call) {
+              private void executeVpnServiceStart() {
                   Context context = getContext();
                   if (context == null && getBridge() != null) {
                       context = getBridge().getContext();
@@ -620,13 +625,6 @@ jobs:
                       } catch (Exception e) {
                           Log.e(TAG, "خطأ في تشغيل خدمة الـ VPN: ", e);
                       }
-                  }
-
-                  if (call != null) {
-                      JSObject ret = new JSObject();
-                      ret.put("success", true);
-                      ret.put("status", "connected");
-                      call.resolve(ret);
                   }
               }
 

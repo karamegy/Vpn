@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.net.VpnService;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
@@ -34,11 +36,19 @@ public class ApexVpnService extends VpnService {
             
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, buildNotification(serverName), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+                    // اختيار نوع الخدمة المناسب حسب إصدار أندرويد
+                    int foregroundType = 0;
+                    if (Build.VERSION.SDK_INT >= 34) { // Android 14+
+                        foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_VPN;
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+                    }
+                    startForeground(NOTIFICATION_ID, buildNotification(serverName), foregroundType);
                 } else {
                     startForeground(NOTIFICATION_ID, buildNotification(serverName));
                 }
             } catch (Exception e) {
+                Log.e(TAG, "Error starting foreground service", e);
                 startForeground(NOTIFICATION_ID, buildNotification(serverName));
             }
 
@@ -56,17 +66,11 @@ public class ApexVpnService extends VpnService {
         new Thread(() -> {
             try {
                 Builder builder = new Builder();
-                // تعيين عنوان IP محلي آمن للنفق
                 builder.addAddress("10.0.0.2", 32);
-                
-                // استخدام خوادم DNS موثوقة وسريعة لضمان عدم انقطاع تصفح الإنترنت
                 builder.addDnsServer("1.1.1.1");
                 builder.addDnsServer("8.8.8.8");
-                
-                // السماح بتوجيه البيانات مع الحفاظ على اتصال البوابة المحلية لمنع انقطاع الإنترنت
                 builder.addRoute("0.0.0.0", 0);
                 
-                // استثناء التطبيق نفسه لمنع تعارض اتصالات الترافيك الداخلي
                 try {
                     builder.addDisallowedApplication(getPackageName());
                 } catch (Exception ignored) {}
@@ -76,13 +80,18 @@ public class ApexVpnService extends VpnService {
                 isRunning = true;
                 Log.d(TAG, "✅ تم تشغيل نفق الحماية بنجاح واستمرار الإنترنت عبر " + serverName);
             } catch (Exception ex) {
-                Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN، وتم الحفاظ على اتصال الإنترنت المحلي:", ex);
+                Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
                 stopVpnConnection();
             }
         }).start();
     }
 
-    private void stopVpnConnection() {
+    private synchronized void stopVpnConnection() {
+        if (!isRunning && vpnInterface == null) {
+            return; // لمنع التكرار إذا كانت الخدمة متوقفة بالفعل
+        }
+        isRunning = false;
+
         new Thread(() -> {
             try {
                 if (vpnInterface != null) {
@@ -93,16 +102,18 @@ public class ApexVpnService extends VpnService {
                 Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
             }
 
-            isRunning = false;
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    stopForeground(STOP_FOREGROUND_REMOVE);
-                } else {
-                    stopForeground(true);
-                }
-            } catch (Exception ignored) {}
-            stopSelf();
-            Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
+            // تنفيذ عمليات إيقاف الإشعار والخدمة على الخيط الرئيسي (Main Thread) لمنع الانهيار
+            new Handler(Looper.getMainLooper()).post(() -> {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_REMOVE);
+                    } else {
+                        stopForeground(true);
+                    }
+                } catch (Exception ignored) {}
+                stopSelf();
+                Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
+            });
         }).start();
     }
 
@@ -151,7 +162,16 @@ public class ApexVpnService extends VpnService {
 
     @Override
     public void onDestroy() {
-        stopVpnConnection();
+        // الاكتفاء بالتنظيف المحلي المباشر للواجهة دون استدعاء stopVpnConnection لتجنب حلقة التكرار
+        try {
+            if (vpnInterface != null) {
+                vpnInterface.close();
+                vpnInterface = null;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "خطأ في onDestroy أثناء إغلاق الواجهة: ", e);
+        }
+        isRunning = false;
         super.onDestroy();
     }
 }

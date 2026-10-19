@@ -3,21 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="io.github.karamegy.Vpn">
 
-    <!-- أذونات الشبكة والخدمة في الخلفية (يدعم Android 14+) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- إذن قراءة قائمة التطبيقات لخاصية الفحص المتقدم على Android 11+ -->
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
-
-    <!-- إذن بوابة دفع جوجل بلاي -->
     <uses-permission android:name="com.android.vending.BILLING" />
-
-    <!-- أذونات الواي فاي والشبكة -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
@@ -53,7 +45,6 @@
             </intent-filter>
         </activity>
 
-        <!-- خدمة الـ VPN الرئيسية التفاعلية مع النظام -->
         <service
             android:name="io.github.karamegy.Vpn.ApexVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"

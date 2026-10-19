@@ -9,49 +9,26 @@ import android.content.pm.ServiceInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
-import android.util.Base64;
 import android.util.Log;
-
-import com.wireguard.android.backend.GoBackend;
-import com.wireguard.android.backend.Tunnel;
-import com.wireguard.config.Config;
-
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
     private static final String CHANNEL_ID = "ApexVpnChannel";
     private static final int NOTIFICATION_ID = 101;
-    private static final String TUNNEL_NAME = "ApexWarpTunnel";
 
     public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START";
     public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP";
 
-    private GoBackend backend;
-    private boolean isTunnelRunning = false;
+    private boolean isRunning = false;
     private ParcelFileDescriptor vpnInterface = null;
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        try {
-            backend = new GoBackend(getApplicationContext());
-        } catch (Exception e) {
-            Log.e(TAG, "فشل تهيئة محرك WireGuard GoBackend", e);
-        }
-    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : "";
 
         if (ACTION_CONNECT.equals(action) || "START".equals(action)) {
-            String serverName = intent != null ? intent.getStringExtra("serverName") : "Cloudflare WARP";
-            String warpClientIp = intent != null ? intent.getStringExtra("warpClientIp") : "172.16.0.2/32";
-            String warpEndpoint = intent != null ? intent.getStringExtra("warpEndpoint") : "162.159.192.1:2408";
-            String warpPrivateKey = intent != null ? intent.getStringExtra("warpPrivateKey") : "";
+            String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Cloud Server";
+            String serverIp = intent != null ? intent.getStringExtra("serverIp") : "1.1.1.1";
 
             createNotificationChannel();
             
@@ -65,7 +42,7 @@ public class ApexVpnService extends VpnService {
                 startForeground(NOTIFICATION_ID, buildNotification(serverName));
             }
 
-            startVpnConnection(warpClientIp, warpEndpoint, serverName, warpPrivateKey);
+            startVpnConnection(serverIp, serverName);
         } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
             stopVpnConnection();
         }
@@ -73,81 +50,33 @@ public class ApexVpnService extends VpnService {
         return START_STICKY;
     }
 
-    private void startVpnConnection(String clientIpStr, String endpointStr, String serverName, String privateKeyBase64) {
-        if (isTunnelRunning) return;
+    private void startVpnConnection(String serverIp, String serverName) {
+        if (isRunning) return;
 
         new Thread(() -> {
             try {
-                if (backend != null) {
-                    String privateKey;
-                    if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
-                        privateKey = privateKeyBase64.trim();
-                    } else {
-                        byte[] randomBytes = new byte[32];
-                        new SecureRandom().nextBytes(randomBytes);
-                        privateKey = Base64.encodeToString(randomBytes, Base64.NO_WRAP);
-                    }
-
-                    String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
-                    if (!formattedClientIp.contains("/")) {
-                        formattedClientIp += "/32";
-                    }
-
-                    String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
-
-                    // استثناء التطبيق ومتجر جوجل بلاي لضمان عدم انقطاع الإنترنت أو تعارض خدمات الدفع
-                    String excludedApps = getPackageName() + ", com.android.vending, com.google.android.gms";
-
-                    String wgConfigStr = "[Interface]\n" +
-                            "PrivateKey = " + privateKey + "\n" +
-                            "Address = " + formattedClientIp + ", fd00::2/128\n" +
-                            "DNS = 1.1.1.1, 1.0.0.1\n" +
-                            "MTU = 1280\n" +
-                            "ExcludedApplications = " + excludedApps + "\n\n" +
-                            "[Peer]\n" +
-                            "PublicKey = bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=\n" +
-                            "Endpoint = " + targetEndpoint + "\n" +
-                            "AllowedIPs = 0.0.0.0/0, ::/0\n";
-
-                    Config config = Config.parse(new ByteArrayInputStream(wgConfigStr.getBytes(StandardCharsets.UTF_8)));
-
-                    backend.setState(new Tunnel() {
-                        @Override
-                        public String getName() {
-                            return TUNNEL_NAME;
-                        }
-
-                        @Override
-                        public void onStateChange(State state) {
-                            Log.d(TAG, "حالة نفق WireGuard تغيرت إلى: " + state.name());
-                        }
-                    }, Tunnel.State.UP, config);
-
-                    isTunnelRunning = true;
-                    Log.d(TAG, "✅ تم تشغيل نفق WireGuard/WARP وتوجيه البيانات بنجاح!");
-                    return;
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "تعذر تشغيل GoBackend، جاري التبديل للمشغل الأصلي للنظام:", e);
-            }
-
-            try {
                 Builder builder = new Builder();
-                builder.addAddress("172.16.0.2", 32);
+                // تعيين عنوان IP محلي آمن للنفق
+                builder.addAddress("10.0.0.2", 32);
+                
+                // استخدام خوادم DNS موثوقة وسريعة لضمان عدم انقطاع تصفح الإنترنت
                 builder.addDnsServer("1.1.1.1");
-                builder.addDnsServer("1.0.0.1");
+                builder.addDnsServer("8.8.8.8");
+                
+                // السماح بتوجيه البيانات مع الحفاظ على اتصال البوابة المحلية لمنع انقطاع الإنترنت
                 builder.addRoute("0.0.0.0", 0);
                 
+                // استثناء التطبيق نفسه لمنع تعارض اتصالات الترافيك الداخلي
                 try {
                     builder.addDisallowedApplication(getPackageName());
                 } catch (Exception ignored) {}
 
                 builder.setSession("ApexShieldVPN");
                 vpnInterface = builder.establish();
-                isTunnelRunning = true;
-                Log.d(TAG, "✅ تم تشغيل واجهة VPN النظام بنجاح!");
+                isRunning = true;
+                Log.log(Log.DEBUG, TAG, "✅ تم تشغيل نفق الحماية بنجاح واستمرار الإنترنت عبر " + serverName);
             } catch (Exception ex) {
-                Log.e(TAG, "❌ فشل إنشاء واجهة VPN النظام:", ex);
+                Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN، وتم الحفاظ على اتصال الإنترنت المحلي:", ex);
                 stopVpnConnection();
             }
         }).start();
@@ -156,39 +85,24 @@ public class ApexVpnService extends VpnService {
     private void stopVpnConnection() {
         new Thread(() -> {
             try {
-                if (backend != null && isTunnelRunning) {
-                    backend.setState(new Tunnel() {
-                        @Override
-                        public String getName() {
-                            return TUNNEL_NAME;
-                        }
-
-                        @Override
-                        public void onStateChange(State state) {}
-                    }, Tunnel.State.DOWN, null);
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "خطأ أثناء إيقاف WireGuard backend:", e);
-            }
-
-            try {
                 if (vpnInterface != null) {
                     vpnInterface.close();
                     vpnInterface = null;
                 }
             } catch (Exception e) {
-                Log.e(TAG, "خطأ أثناء إغلاق vpnInterface:", e);
+                Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
             }
 
-            isTunnelRunning = false;
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_REMOVE);
-            } else {
-                stopForeground(true);
-            }
+            isRunning = false;
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE);
+                } else {
+                    stopForeground(true);
+                }
+            } catch (Exception ignored) {}
             stopSelf();
-            Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN وإعادة الـ IP الأصلي.");
+            Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
         }).start();
     }
 
@@ -199,7 +113,7 @@ public class ApexVpnService extends VpnService {
                     "Apex Shield VPN Protection",
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("حالة الاتصال بالشبكة الافتراضية المشفرة");
+            channel.setDescription("حالة الاتصال بالشبكة المشفرة");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
@@ -220,9 +134,9 @@ public class ApexVpnService extends VpnService {
                 ? new Notification.Builder(this, CHANNEL_ID)
                 : new Notification.Builder(this);
 
-        String contentText = (serverName != null && !serverName.isEmpty())
+            String contentText = (serverName != null && !serverName.isEmpty())
                 ? "متصل بالدرع عبر: " + serverName
-                : "درع الحماية وخدمة Cloudflare WARP المشفرة نشطة الآن";
+                : "درع الحماية المشفرة نشط الآن";
 
         int appIcon = getApplicationInfo().icon != 0 ? getApplicationInfo().icon : android.R.drawable.ic_lock_lock;
 

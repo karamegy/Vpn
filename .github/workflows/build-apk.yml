@@ -29,12 +29,10 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: 1. Setup Node.js System Native & Web Assets
+      - name: 1. Setup Node.js System & Web Assets
         run: |
           sudo apt-get update -y
           sudo apt-get install -y imagemagick
-          node -v
-          npm -v
 
           mkdir -p www
           cp -r index.html app.js style.css manifest.json sw.js *.png *.html .well-known www/ 2>/dev/null || true
@@ -58,23 +56,34 @@ jobs:
           }
           EOF
 
-      - name: 2. Sync Web Assets with Existing Repository Android Platform
+      - name: 2. Backup Native Code, Rebuild Clean Android Platform & Merge
         run: |
           export CI=true
           
-          # لا نقوم بمسح مجلد android هنا لكي نحافظ على ملفات الجافا والـ Manifest التي رفعتها بنفسك في المستودع!
-          if [ ! -d "android" ]; then
-            npx cap add android
+          # 1. أخذ نسخة احتياطية من ملفات الجافا والـ Manifest المخصصة
+          mkdir -p /tmp/native_backup
+          if [ -d "android/app/src/main" ]; then
+            cp -r android/app/src/main/java /tmp/native_backup/ 2>/dev/null || true
+            cp android/app/src/main/AndroidManifest.xml /tmp/native_backup/ 2>/dev/null || true
           fi
-          
+
+          # 2. حذف المجلد الناقص وإعادة إنشاء مشروع أندرويد كامل بملف gradlew الرسمي
+          rm -rf android
+          npx cap add android
           npx cap sync android
 
-          # 🎨 توليد أيقونات التطبيق (اللوجو) تلقائياً لمقاسات أندرويد عبر ImageMagick
+          # 3. استعادة ملفات الكود والجسر المخصص داخل مشروع أندرويد المكتمل
+          if [ -d "/tmp/native_backup/java" ]; then
+            cp -r /tmp/native_backup/java/* android/app/src/main/java/ 2>/dev/null || true
+          fi
+          if [ -f "/tmp/native_backup/AndroidManifest.xml" ]; then
+            cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          fi
+
+          # 🎨 توليد أيقونات التطبيق تلقائياً
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
-            echo "🎨 تم العثور على اللوجو (icon-512.png)، جاري توليد الأيقونات الرسمية..."
             RES_DIR="android/app/src/main/res"
-            
             mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
             
             convert "$ICON_SOURCE" -resize 48x48 $RES_DIR/mipmap-mdpi/ic_launcher.png || true
@@ -88,7 +97,6 @@ jobs:
             convert "$ICON_SOURCE" -resize 96x96 $RES_DIR/mipmap-xhdpi/ic_launcher_round.png || true
             convert "$ICON_SOURCE" -resize 144x144 $RES_DIR/mipmap-xxhdpi/ic_launcher_round.png || true
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png || true
-            echo "✨ تم توليد اللوجو ووضع البصمة بنجاح!"
           fi
 
           # تعديل إعدادات gradle.properties
@@ -99,21 +107,15 @@ jobs:
           android.useAndroidX=true
           EOF
 
-          # إعدادات الـ SDK ومكتبة الفواتير الرسمية لمتجر جوجل بلاي
+          # حقن مكتبة Google Play Billing وضبط الإعدادات
           if [ -f "android/app/build.gradle" ]; then
-            if ! grep -q "google()" android/build.gradle; then
-              sed -i '/allprojects {/,/}/ s/repositories {/repositories {\n        google()\n        mavenCentral()/' android/build.gradle || true
-            fi
-
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
-              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:8.0.0"' android/app/build.gradle
+              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:7.0.0"' android/app/build.gradle
             fi
-
             sed -i -E 's/versionCode [0-9]+/versionCode 33/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.9"/' android/app/build.gradle
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
-            sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
           fi
 
           if [ -f "android/variables.gradle" ]; then

@@ -64,7 +64,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 1. ضبط Target SDK و Compile SDK إلى 36
+          # 1. ضبط Target SDK و Compile SDK إلى 36 بوضوح
           node -e '
           const fs = require("fs");
 
@@ -76,11 +76,11 @@ jobs:
             fs.writeFileSync(varPath, content);
           }
 
-          // 2. تحديث versionCode إلى 37 و versionName إلى "8.0.0" مع Play Billing 7.1.1
+          # 2. تحديث versionCode إلى 38 و versionName إلى "8.0.0" مع Play Billing 7.1.1
           let appBuildPath = "android/app/build.gradle";
           if (fs.existsSync(appBuildPath)) {
             let content = fs.readFileSync(appBuildPath, "utf8");
-            content = content.replace(/versionCode\s+\d+/, "versionCode 37");
+            content = content.replace(/versionCode\s+\d+/, "versionCode 38");
             content = content.replace(/versionName\s+"[^"]+"/, "versionName \"8.0.0\"");
             content = content.replace(/compileSdkVersion\s+\d+/, "compileSdkVersion 36");
             content = content.replace(/targetSdkVersion\s+\d+/, "targetSdkVersion 36");
@@ -105,7 +105,7 @@ jobs:
           # 4. إنشاء مجلدات Java
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 5. كتابة AndroidManifest.xml
+          # 5. كتابة AndroidManifest.xml المحدث لأندرويد 15 (API 36)
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -203,7 +203,7 @@ jobs:
           import android.os.Build;
           import android.os.ParcelFileDescriptor;
           import androidx.core.app.NotificationCompat;
-          java.io.IOException;
+          import java.io.IOException;
 
           public class ApexVpnService extends VpnService {
               public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START_VPN";
@@ -286,7 +286,7 @@ jobs:
           }
           EOF
 
-          # 8. كتابة AndroidVPNBridgePlugin.java
+          # 8. كتابة AndroidVPNBridgePlugin.java المتوافق مع Play Billing 7.1.1
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 

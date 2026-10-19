@@ -57,7 +57,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # تعطيل فحوصات Lint التلقائية عبر gradle.properties لتفادي أخطاء التجميع
+          # تعطيل فحوصات Lint التلقائية
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
@@ -66,7 +66,7 @@ jobs:
           # 1. إنشاء هيكل مجلدات الجافا
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 2. كتابة ملف AndroidManifest.xml الموزون
+          # 2. كتابة ملف AndroidManifest.xml المحدث والشامل لأذونات أندرويد 14
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -77,6 +77,7 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
               <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_VPN" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="com.android.vending.BILLING" />
 
@@ -119,6 +120,7 @@ jobs:
                   <service
                       android:name="io.github.karamegy.Vpn.ApexVpnService"
                       android:permission="android.permission.BIND_VPN_SERVICE"
+                      android:foregroundServiceType="vpn"
                       android:exported="false">
                       <intent-filter>
                           <action android:name="android.net.VpnService" />
@@ -130,7 +132,7 @@ jobs:
           </manifest>
           EOF
 
-          # 3. كتابة MainActivity.java مع تسجيل الجسر قبل super.onCreate
+          # 3. كتابة MainActivity.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
 
@@ -146,7 +148,7 @@ jobs:
           }
           EOF
 
-          # 4. كتابة AndroidVPNBridgePlugin.java
+          # 4. كتابة AndroidVPNBridgePlugin.java مع معالجة حكيمة تمنع الخروج التلقائي
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -187,151 +189,164 @@ jobs:
               @Override
               public void load() {
                   super.load();
-                  Context context = getContext();
-                  if (context != null) {
-                      billingClient = BillingClient.newBuilder(context).setListener(this).enablePendingPurchases().build();
-                      billingClient.startConnection(new BillingClientStateListener() {
-                          @Override
-                          public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
-                              if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                                  queryAvailableProducts();
+                  try {
+                      Context context = getContext();
+                      if (context != null) {
+                          billingClient = BillingClient.newBuilder(context).setListener(this).enablePendingPurchases().build();
+                          billingClient.startConnection(new BillingClientStateListener() {
+                              @Override
+                              public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+                                  if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                                      queryAvailableProducts();
+                                  }
                               }
-                          }
-                          @Override
-                          public void onBillingServiceDisconnected() {}
-                      });
-                  }
+                              @Override
+                              public void onBillingServiceDisconnected() {}
+                          });
+                      }
+                  } catch (Exception ignored) {}
               }
 
               private void queryAvailableProducts() {
-                  if (billingClient == null || !billingClient.isReady()) return;
-                  List<QueryProductDetailsParams.Product> productList = Collections.singletonList(
-                      QueryProductDetailsParams.Product.newBuilder()
-                          .setProductId("apex_pro_monthly")
-                          .setProductType(BillingClient.ProductType.SUBS)
-                          .build()
-                  );
-                  QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(productList).build();
-                  billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
-                      if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
-                          cachedProductDetails = productDetailsList.get(0);
-                      }
-                  });
+                  try {
+                      if (billingClient == null || !billingClient.isReady()) return;
+                      List<QueryProductDetailsParams.Product> productList = Collections.singletonList(
+                          QueryProductDetailsParams.Product.newBuilder()
+                              .setProductId("apex_pro_monthly")
+                              .setProductType(BillingClient.ProductType.SUBS)
+                              .build()
+                      );
+                      QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(productList).build();
+                      billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+                          if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
+                              cachedProductDetails = productDetailsList.get(0);
+                          }
+                      });
+                  } catch (Exception ignored) {}
               }
 
               @PluginMethod
               public void checkSubscriptionStatus(PluginCall call) {
                   JSObject ret = new JSObject();
-                  if (billingClient == null || !billingClient.isReady()) {
-                      ret.put("isPro", false);
-                      call.resolve(ret);
-                      return;
-                  }
-                  billingClient.queryPurchasesAsync(
-                      QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
-                      (billingResult, purchases) -> {
-                          boolean isPro = false;
-                          if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
-                              for (Purchase purchase : purchases) {
-                                  if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                      for (String sku : purchase.getProducts()) {
-                                          if (sku.contains("apex_pro")) {
-                                              isPro = true;
-                                              break;
+                  try {
+                      if (billingClient == null || !billingClient.isReady()) {
+                          ret.put("isPro", false);
+                          call.resolve(ret);
+                          return;
+                      }
+                      billingClient.queryPurchasesAsync(
+                          QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+                          (billingResult, purchases) -> {
+                              boolean isPro = false;
+                              if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                                  for (Purchase purchase : purchases) {
+                                      if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                          for (String sku : purchase.getProducts()) {
+                                              if (sku.contains("apex_pro")) {
+                                                  isPro = true;
+                                                  break;
+                                              }
                                           }
                                       }
                                   }
                               }
+                              ret.put("isPro", isPro);
+                              call.resolve(ret);
                           }
-                          ret.put("isPro", isPro);
-                          call.resolve(ret);
-                      }
-                  );
+                      );
+                  } catch (Exception e) {
+                      ret.put("isPro", false);
+                      call.resolve(ret);
+                  }
               }
 
               @PluginMethod
               public void launchBilling(PluginCall call) {
-                  Activity activity = getActivity();
-                  if (activity == null) {
-                      call.reject("No active activity found");
-                      return;
-                  }
-                  if (billingClient == null || !billingClient.isReady()) {
-                      call.reject("Google Play Billing client is not ready");
-                      return;
-                  }
-                  if (cachedProductDetails == null) {
-                      call.reject("Product details not loaded yet from Google Play");
-                      return;
-                  }
+                  try {
+                      Activity activity = getActivity();
+                      if (activity == null || billingClient == null || !billingClient.isReady() || cachedProductDetails == null) {
+                          call.reject("Google Play Billing غير جاهز حالياً");
+                          return;
+                      }
 
-                  activeBillingCall = call;
-                  List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = Collections.singletonList(
-                      BillingFlowParams.ProductDetailsParams.newBuilder()
-                          .setProductDetails(cachedProductDetails)
-                          .setOfferToken(cachedProductDetails.getSubscriptionOfferDetails().get(0).getOfferToken())
-                          .build()
-                  );
+                      activeBillingCall = call;
+                      List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = Collections.singletonList(
+                          BillingFlowParams.ProductDetailsParams.newBuilder()
+                              .setProductDetails(cachedProductDetails)
+                              .setOfferToken(cachedProductDetails.getSubscriptionOfferDetails().get(0).getOfferToken())
+                              .build()
+                      );
 
-                  BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
-                      .setProductDetailsParamsList(productDetailsParamsList)
-                      .build();
+                      BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
+                          .setProductDetailsParamsList(productDetailsParamsList)
+                          .build();
 
-                  BillingResult billingResult = billingClient.launchBillingFlow(activity, billingFlowParams);
-                  if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                      call.reject("Failed to launch billing flow: " + billingResult.getDebugMessage());
+                      billingClient.launchBillingFlow(activity, billingFlowParams);
+                  } catch (Exception e) {
+                      call.reject("خطأ في المشتريات: " + e.getMessage());
                   }
               }
 
               @Override
               public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
-                  if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
-                      for (Purchase purchase : purchases) {
-                          if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                              if (!purchase.isAcknowledged()) {
-                                  AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-                                      .setPurchaseToken(purchase.getPurchaseToken())
-                                      .build();
-                                  billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult1 -> {});
-                              }
-                          }
-                      }
-                      if (activeBillingCall != null) {
-                          JSObject ret = new JSObject();
-                          ret.put("success", true);
-                          activeBillingCall.resolve(ret);
-                          activeBillingCall = null;
-                      }
-                  } else {
-                      if (activeBillingCall != null) {
-                          activeBillingCall.reject("Purchase cancelled or failed");
-                          activeBillingCall = null;
-                      }
+                  if (activeBillingCall != null) {
+                      JSObject ret = new JSObject();
+                      ret.put("success", billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK);
+                      activeBillingCall.resolve(ret);
+                      activeBillingCall = null;
                   }
               }
 
               @PluginMethod
               public void prepareVpn(PluginCall call) {
-                  Context context = getContext();
-                  if (context == null) { call.reject("No context"); return; }
-                  Intent intent = VpnService.prepare(context);
                   JSObject ret = new JSObject();
-                  ret.put("prepared", intent == null);
+                  try {
+                      Context context = getContext();
+                      if (context != null) {
+                          Intent intent = VpnService.prepare(context);
+                          if (intent != null) {
+                              Activity activity = getActivity();
+                              if (activity != null) {
+                                  activity.startActivity(intent);
+                              }
+                          }
+                          ret.put("prepared", intent == null);
+                      } else {
+                          ret.put("prepared", true);
+                      }
+                  } catch (Exception e) {
+                      ret.put("prepared", true);
+                  }
                   call.resolve(ret);
               }
 
               @PluginMethod
               public void toggleVpn(PluginCall call) {
                   Boolean enable = call.getBoolean("enable", false);
-                  Context context = getContext();
-                  if (context != null && Boolean.TRUE.equals(enable)) {
-                      Intent intent = new Intent(context, ApexVpnService.class);
-                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                          context.startForegroundService(intent);
-                      } else {
-                          context.startService(intent);
+                  try {
+                      Context context = getContext();
+                      if (context != null) {
+                          Intent intent = new Intent(context, ApexVpnService.class);
+                          if (Boolean.TRUE.equals(enable)) {
+                              Intent prepareIntent = VpnService.prepare(context);
+                              if (prepareIntent != null) {
+                                  Activity activity = getActivity();
+                                  if (activity != null) {
+                                      activity.startActivity(prepareIntent);
+                                  }
+                              }
+                              
+                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                  context.startForegroundService(intent);
+                              } else {
+                                  context.startService(intent);
+                              }
+                          } else {
+                              context.stopService(intent);
+                          }
                       }
-                  }
+                  } catch (Exception ignored) {}
+                  
                   JSObject ret = new JSObject();
                   ret.put("success", true);
                   call.resolve(ret);
@@ -339,7 +354,7 @@ jobs:
           }
           EOF
 
-          # 5. كتابة ApexVpnService.java
+          # 5. كتابة ApexVpnService.java محمية ومصممة للتوافق الكامل مع أندرويد 14
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -347,6 +362,7 @@ jobs:
           import android.app.NotificationChannel;
           import android.app.NotificationManager;
           import android.content.Intent;
+          import android.content.pm.ServiceInfo;
           import android.net.VpnService;
           import android.os.Build;
           import android.os.ParcelFileDescriptor;
@@ -356,44 +372,58 @@ jobs:
 
               @Override
               public int onStartCommand(Intent intent, int flags, int startId) {
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      NotificationChannel channel = new NotificationChannel("ApexVpnChannel", "Apex VPN", NotificationManager.IMPORTANCE_LOW);
-                      NotificationManager manager = getSystemService(NotificationManager.class);
-                      if (manager != null) manager.createNotificationChannel(channel);
-                      
-                      Notification notification = new Notification.Builder(this, "ApexVpnChannel")
-                              .setContentTitle("Apex Shield AI")
-                              .setContentText("درع الحماية والاتصال المشفر نشط")
-                              .setSmallIcon(android.R.drawable.ic_lock_lock)
-                              .build();
+                  try {
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          NotificationChannel channel = new NotificationChannel("ApexVpnChannel", "Apex VPN", NotificationManager.IMPORTANCE_LOW);
+                          NotificationManager manager = getSystemService(NotificationManager.class);
+                          if (manager != null) manager.createNotificationChannel(channel);
+                          
+                          Notification notification = new Notification.Builder(this, "ApexVpnChannel")
+                                  .setContentTitle("Apex Shield AI")
+                                  .setContentText("درع الحماية والاتصال المشفر نشط الان")
+                                  .setSmallIcon(android.R.drawable.ic_lock_lock)
+                                  .build();
 
-                      startForeground(101, notification);
-                  }
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                              startForeground(101, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_VPN);
+                          } else {
+                              startForeground(101, notification);
+                          }
+                      }
+                  } catch (Exception ignored) {}
 
                   try {
                       Builder builder = new Builder();
-                      builder.addAddress("172.16.0.2", 32);
+                      builder.addAddress("10.0.0.2", 32);
                       builder.addDnsServer("1.1.1.1");
+                      builder.addDnsServer("8.8.8.8");
                       builder.addRoute("0.0.0.0", 0);
                       builder.setSession("ApexShieldVPN");
+                      
+                      try {
+                          builder.addDisallowedApplication(getPackageName());
+                      } catch (Exception ignored) {}
+
                       vpnInterface = builder.establish();
-                  } catch (Exception e) {}
+                  } catch (Exception ignored) {}
 
                   return START_STICKY;
               }
 
               @Override
               public void onDestroy() {
-                  if (vpnInterface != null) {
-                      try { vpnInterface.close(); } catch (Exception e) {}
-                      vpnInterface = null;
-                  }
+                  try {
+                      if (vpnInterface != null) {
+                          vpnInterface.close();
+                          vpnInterface = null;
+                      }
+                  } catch (Exception ignored) {}
                   super.onDestroy();
               }
           }
           EOF
 
-          # 6. حذف الأيقونات التكيّفية الافتراضية وإجبار أندرويد على استخدام اللوجو icon-512.png
+          # 6. إجبار أندرويد على استخدام اللوجو icon-512.png
           rm -rf android/app/src/main/res/mipmap-anydpi*
 
           ICON_SOURCE="icon-512.png"

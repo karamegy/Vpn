@@ -21,13 +21,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # إعداد Node.js 22 الحديث رسمياً لمنع تحذيرات إيقاف الدعم
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # ترقية إجرائية Gradle إلى v4 لحل مشاكل الكاش ومحرك تنفيذ الأفعال
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: 1. Setup Node.js System Native & Web Assets
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y nodejs npm imagemagick
+          sudo apt-get install -y imagemagick
           node -v
           npm -v
 

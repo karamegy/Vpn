@@ -1,4 +1,4 @@
-name: Build Android Native APK & AAB (Apex Shield v19)
+name: Build Android Native APK & AAB (Apex Shield v20)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 1. Setup Node.js System Native & Web Assets
+      - name: 1. Setup Node.js & Dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y nodejs npm
@@ -50,16 +50,71 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android Platform & Adjust Gradle Settings
+      - name: 2. Prepare Android Platform & Safely Inject Code
         run: |
           export CI=true
           
-          rm -rf android
-          npx cap add android
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
+          # 1. تحديث AndroidManifest.xml لضمان مطابقة متطلبات واجهة 36 وخدمة VPN
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
+              package="io.github.karamegy.Vpn">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="com.android.vending.BILLING" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="Apex Shield AI"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:usesCleartextTraffic="true"
+                  android:theme="@style/AppTheme">
+
+                  <service
+                      android:name="io.github.karamegy.Vpn.ApexVpnService"
+                      android:permission="android.permission.BIND_VPN_SERVICE"
+                      android:exported="true"
+                      android:foregroundServiceType="specialUse">
+                      <intent-filter>
+                          <action android:name="android.net.VpnService" />
+                      </intent-filter>
+                      <property
+                          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                          android:value="Encrypted VPN tunnel service for private network access" />
+                  </service>
+
+                  <activity
+                      android:name="io.github.karamegy.Vpn.MainActivity"
+                      android:label="Apex Shield AI"
+                      android:exported="true"
+                      android:launchMode="singleTask"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+
+              </application>
+          </manifest>
+          EOF
+
+          # 2. ملف MainActivity.java
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
           import android.os.Bundle;
@@ -73,6 +128,7 @@ jobs:
           }
           EOF
 
+          # 3. ملف AndroidVPNBridgePlugin.java مع دعم الفوترة 7.1.1
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -271,6 +327,7 @@ jobs:
           }
           EOF
 
+          # 4. ملف ApexVpnService.java للخدمة في الخلفية
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/ApexVpnService.java
           package io.github.karamegy.Vpn;
 
@@ -329,7 +386,7 @@ jobs:
           }
           EOF
 
-          # تحديث إعدادات Gradle لرفع Play Billing إلى 7.1.1 وتثبيت الـ SDK على 36
+          # تحديث إعدادات build.gradle لضبط الـ SDK وتحديث Billing إلى 7.1.1
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:7.1.1"' android/app/build.gradle
@@ -337,8 +394,8 @@ jobs:
               sed -i 's/com\.android\.billingclient:billing:[^"]*/com.android.billingclient:billing:7.1.1/g' android/app/build.gradle
             fi
 
-            sed -i -E 's/versionCode [0-9]+/versionCode 38/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0"/' android/app/build.gradle
+            sed -i -E 's/versionCode [0-9]+/versionCode 39/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.1"/' android/app/build.gradle
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
             sed -i 's/compileSdk [0-9]+/compileSdk 36/g' android/app/build.gradle
@@ -361,7 +418,9 @@ jobs:
         run: |
           cd android
           
-          printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
+          if [ -n "$RELEASE_KEY" ]; then
+            printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
+          fi
           
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
@@ -372,16 +431,15 @@ jobs:
           AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
 
           APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
-
           if [ -z "$APKSIGNER" ]; then
             APKSIGNER="apksigner"
           fi
 
-          $APKSIGNER sign --ks signing.keystore --ks-pass pass:"$STORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASSWORD" "$APK_FILE"
-
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
-          
-          rm -f signing.keystore
+          if [ -f "signing.keystore" ]; then
+            $APKSIGNER sign --ks signing.keystore --ks-pass pass:"$STORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASSWORD" "$APK_FILE"
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+            rm -f signing.keystore
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

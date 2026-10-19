@@ -64,7 +64,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 1. ضبط متغيرات الإعدادات
+          # 1. ضبط متغيرات Target SDK 36 و Compile SDK 36
           cat << 'EOF' > android/variables.gradle
           ext {
               minSdkVersion = 24
@@ -80,63 +80,14 @@ jobs:
           }
           EOF
 
-          # 2. إعادة كتابة android/app/build.gradle بالكامل بنظافة لمنع أخطاء Gradle DSL
-          cat << 'EOF' > android/app/build.gradle
-          apply plugin: 'com.android.application'
-
-          android {
-              namespace "io.github.karamegy.Vpn"
-              compileSdk 36
-
-              defaultConfig {
-                  applicationId "io.github.karamegy.Vpn"
-                  minSdk 24
-                  targetSdk 36
-                  versionCode 35
-                  versionName "8.0.0.10"
-                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-                  aaptOptions {
-                      ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!<dir>_*:!*~'
-                  }
-              }
-
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-                  }
-              }
-
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-
-          repositories {
-              flatDir {
-                  dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
-              }
-          }
-
-          dependencies {
-              implementation fileTree(include: ['*.jar'], dir: 'libs')
-              implementation "androidx.appcompat:appcompat:1.6.1"
-              implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
-              implementation "androidx.core:core-splashscreen:1.0.1"
-              implementation project(':capacitor-android')
-              implementation "com.android.billingclient:billing:8.0.0"
-          }
-
-          try {
-              def servicesJSON = file('google-services.json')
-              if (servicesJSON.exists() && servicesJSON.text.trim()) {
-                  apply plugin: 'com.google.gms.google-services'
-              }
-          } catch(Exception e) {
-              logger.info("google-services.json check skipped")
-          }
-          EOF
+          # 2. تحديث build.gradle الأصلي بأمان وإضافة Play Billing 8.0.0 و VersionCode 36
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i -E 's/versionCode [0-9]+/versionCode 36/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.11"/' android/app/build.gradle
+            if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
+              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:8.0.0"' android/app/build.gradle
+            fi
+          fi
 
           # 3. إعداد gradle.properties
           cat << 'EOF' >> android/gradle.properties
@@ -330,7 +281,7 @@ jobs:
           }
           EOF
 
-          # 8. كتابة AndroidVPNBridgePlugin.java مع واجهات Play Billing 8.0.0 الصريحة
+          # 8. كتابة AndroidVPNBridgePlugin.java بكود الجافا المتوافق تماماً مع Play Billing 8.0.0
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -344,11 +295,8 @@ jobs:
           import android.os.Environment;
           import android.os.StatFs;
           import android.util.Log;
-          import androidx.annotation.NonNull;
-          import androidx.annotation.Nullable;
 
           import com.android.billingclient.api.AcknowledgePurchaseParams;
-          import com.android.billingclient.api.AcknowledgePurchaseResponseListener;
           import com.android.billingclient.api.BillingClient;
           import com.android.billingclient.api.BillingClientStateListener;
           import com.android.billingclient.api.BillingFlowParams;
@@ -356,7 +304,6 @@ jobs:
           import com.android.billingclient.api.PendingPurchasesParams;
           import com.android.billingclient.api.ProductDetails;
           import com.android.billingclient.api.Purchase;
-          import com.android.billingclient.api.PurchasesResponseListener;
           import com.android.billingclient.api.PurchasesUpdatedListener;
           import com.android.billingclient.api.QueryProductDetailsParams;
           import com.android.billingclient.api.QueryPurchasesParams;
@@ -375,23 +322,27 @@ jobs:
           @CapacitorPlugin(name = "AndroidVPNBridge")
           public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedListener {
               private static final String TAG = "AndroidVPNBridge";
-              private BillingClient billingClient;
+              private BillingClient billingClient = null;
               private PluginCall activeBillingCall = null;
               private ProductDetails cachedProductDetails = null;
 
               @Override
               public void load() {
                   super.load();
-                  Context context = getContext();
-                  if (context != null) {
-                      PendingPurchasesParams pendingParams = PendingPurchasesParams.newBuilder()
-                              .enableOneTimeProducts()
-                              .build();
-                      billingClient = BillingClient.newBuilder(context)
-                              .setListener(this)
-                              .enablePendingPurchases(pendingParams)
-                              .build();
-                      startBillingConnection();
+                  try {
+                      Context context = getContext();
+                      if (context != null) {
+                          PendingPurchasesParams pendingParams = PendingPurchasesParams.newBuilder()
+                                  .enableOneTimeProducts()
+                                  .build();
+                          billingClient = BillingClient.newBuilder(context)
+                                  .setListener(this)
+                                  .enablePendingPurchases(pendingParams)
+                                  .build();
+                          startBillingConnection();
+                      }
+                  } catch (Exception e) {
+                      Log.e(TAG, "Billing init error", e);
                   }
               }
 
@@ -399,15 +350,14 @@ jobs:
                   if (billingClient == null) return;
                   billingClient.startConnection(new BillingClientStateListener() {
                       @Override
-                      public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
-                          if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                      public void onBillingSetupFinished(BillingResult billingResult) {
+                          if (billingResult != null && billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
                               queryAvailableProducts("apex_pro_monthly");
                           }
                       }
 
                       @Override
                       public void onBillingServiceDisconnected() {
-                          startBillingConnection();
                       }
                   });
               }
@@ -416,19 +366,22 @@ jobs:
                   try {
                       if (billingClient == null || !billingClient.isReady()) return;
                       String productId = (targetProductId != null && !targetProductId.isEmpty()) ? targetProductId : "apex_pro_monthly";
-                      List<QueryProductDetailsParams.Product> productList = Collections.singletonList(
-                          QueryProductDetailsParams.Product.newBuilder()
+                      QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
                               .setProductId(productId)
                               .setProductType(BillingClient.ProductType.SUBS)
-                              .build()
-                      );
-                      QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(productList).build();
+                              .build();
+                      QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
+                              .setProductList(Collections.singletonList(product))
+                              .build();
+
                       billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
-                          if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
+                          if (billingResult != null && billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
                               cachedProductDetails = productDetailsList.get(0);
                           }
                       });
-                  } catch (Exception ignored) {}
+                  } catch (Exception e) {
+                      Log.e(TAG, "Query details error", e);
+                  }
               }
 
               @PluginMethod
@@ -454,7 +407,7 @@ jobs:
                           freeStorageBytes = availableBlocks * blockSize;
                           usedStorageBytes = totalStorageBytes - freeStorageBytes;
                       } catch (Exception e) {
-                          Log.w(TAG, "خطأ أثناء قراءة مساحة التخزين: ", e);
+                          Log.w(TAG, "Storage scan error: ", e);
                       }
 
                       double totalMB = totalStorageBytes / (1024.0 * 1024.0);
@@ -472,7 +425,7 @@ jobs:
                                   scannedAppsCount = apps.size();
                               }
                           } catch (Exception e) {
-                              Log.w(TAG, "خطأ أثناء جلب التطبيقات: ", e);
+                              Log.w(TAG, "Get apps error: ", e);
                           }
                       }
 
@@ -503,9 +456,9 @@ jobs:
 
               @PluginMethod
               public void checkSubscriptionStatus(PluginCall call) {
-                  JSObject ret = new JSObject();
                   try {
                       if (billingClient == null || !billingClient.isReady()) {
+                          JSObject ret = new JSObject();
                           ret.put("isPro", false);
                           call.resolve(ret);
                           return;
@@ -513,26 +466,22 @@ jobs:
                       QueryPurchasesParams queryParams = QueryPurchasesParams.newBuilder()
                               .setProductType(BillingClient.ProductType.SUBS)
                               .build();
-                      billingClient.queryPurchasesAsync(
-                          queryParams,
-                          new PurchasesResponseListener() {
-                              @Override
-                              public void onQueryPurchasesResponse(@NonNull BillingResult billingResult, @NonNull List<Purchase> purchases) {
-                                  boolean isPro = false;
-                                  if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
-                                      for (Purchase purchase : purchases) {
-                                          if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                              isPro = true;
-                                              break;
-                                          }
-                                      }
+                      billingClient.queryPurchasesAsync(queryParams, (billingResult, purchases) -> {
+                          boolean isPro = false;
+                          if (billingResult != null && billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                              for (Purchase purchase : purchases) {
+                                  if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                      isPro = true;
+                                      break;
                                   }
-                                  ret.put("isPro", isPro);
-                                  call.resolve(ret);
                               }
                           }
-                      );
+                          JSObject ret = new JSObject();
+                          ret.put("isPro", isPro);
+                          call.resolve(ret);
+                      });
                   } catch (Exception e) {
+                      JSObject ret = new JSObject();
                       ret.put("isPro", false);
                       call.resolve(ret);
                   }
@@ -564,17 +513,15 @@ jobs:
                       }
 
                       BillingFlowParams.ProductDetailsParams.Builder pdpBuilder = BillingFlowParams.ProductDetailsParams.newBuilder()
-                          .setProductDetails(cachedProductDetails);
+                              .setProductDetails(cachedProductDetails);
 
                       if (!offerToken.isEmpty()) {
                           pdpBuilder.setOfferToken(offerToken);
                       }
 
-                      List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = Collections.singletonList(pdpBuilder.build());
-
                       BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
-                          .setProductDetailsParamsList(productDetailsParamsList)
-                          .build();
+                              .setProductDetailsParamsList(Collections.singletonList(pdpBuilder.build()))
+                              .build();
 
                       billingClient.launchBillingFlow(activity, billingFlowParams);
                   } catch (Exception e) {
@@ -583,18 +530,15 @@ jobs:
               }
 
               @Override
-              public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
+              public void onPurchasesUpdated(BillingResult billingResult, List<Purchase> purchases) {
                   if (activeBillingCall != null) {
-                      if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                      if (billingResult != null && billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
                           for (Purchase purchase : purchases) {
                               if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged()) {
                                   AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-                                      .setPurchaseToken(purchase.getPurchaseToken())
-                                      .build();
-                                  billingClient.acknowledgePurchase(acknowledgePurchaseParams, new AcknowledgePurchaseResponseListener() {
-                                      @Override
-                                      public void onAcknowledgePurchaseResponse(@NonNull BillingResult billingResult) {}
-                                  });
+                                          .setPurchaseToken(purchase.getPurchaseToken())
+                                          .build();
+                                  billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult1 -> {});
                               }
                           }
                           JSObject ret = new JSObject();
@@ -610,14 +554,13 @@ jobs:
               @PluginMethod
               public void isPrepared(PluginCall call) {
                   Context context = getContext();
+                  JSObject ret = new JSObject();
                   if (context == null) {
-                      JSObject ret = new JSObject();
                       ret.put("prepared", true);
                       call.resolve(ret);
                       return;
                   }
                   Intent intent = VpnService.prepare(context);
-                  JSObject ret = new JSObject();
                   ret.put("prepared", intent == null);
                   call.resolve(ret);
               }
@@ -625,8 +568,8 @@ jobs:
               @PluginMethod
               public void prepareVpn(PluginCall call) {
                   Activity activity = getActivity();
+                  JSObject ret = new JSObject();
                   if (activity == null) {
-                      JSObject ret = new JSObject();
                       ret.put("prepared", true);
                       ret.put("success", true);
                       call.resolve(ret);
@@ -638,14 +581,12 @@ jobs:
                       try {
                           activity.startActivityForResult(intent, 0x8888);
                       } catch (Exception e) {
-                          JSObject ret = new JSObject();
                           ret.put("prepared", true);
                           ret.put("success", true);
                           call.resolve(ret);
                           return;
                       }
                   }
-                  JSObject ret = new JSObject();
                   ret.put("prepared", intent == null);
                   ret.put("success", true);
                   call.resolve(ret);
@@ -663,7 +604,6 @@ jobs:
 
               private void executeVpnServiceStart() {
                   Context context = getContext();
-
                   if (context != null) {
                       try {
                           Intent intent = new Intent(context, ApexVpnService.class);
@@ -683,7 +623,6 @@ jobs:
               @PluginMethod
               public void stopVpn(PluginCall call) {
                   Context context = getContext();
-
                   if (context != null) {
                       try {
                           Intent intent = new Intent(context, ApexVpnService.class);

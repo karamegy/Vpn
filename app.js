@@ -146,6 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
     // MODULE 00: نظام الاشتراكات المباشر عبر Google Play Billing الأصلي
     // ========================================================================
+    const GOOGLE_PLAY_LICENSE_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmxgdl9pF2Wa6OpHD7jQnmAKZ+1Z/TgyCo5WhWAcd1yVbsKW6/MeEk3wHECm/j8RNdqVTSpa5Gwle0uuiT+yNaIjZgVwg1CdjkPzu6F3TYiazdGTxTvK3bb5a+TYQB2B6di30vTP6BAVqRSFOiVuULEDH/DcLjWuqVGMgWRe4ni37yoHnBtRh5Lyj/Dg3jq01AeUg/xNlK7kUi/xY1zqCH3oXtou4uxTLBTWGrIvisrKVyj3Xx6npCrwAQRiVGC0rjUiYUltkqx5r2ZAWGOxOpH0ia6HqNveJjMbY9icRLrmfiemky107HCqEjB+QTGCR7Lw+5QjIFD1DARb1E/YJbwIDAQAB";
+
     let isProUser = localStorage.getItem('apex_pro_status') === 'true';
     const proModal = document.getElementById('pro-subscription-modal');
     const openProBtn = document.getElementById('open-pro-subscription-btn');
@@ -205,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const bridge = getNativeBridge();
         if (bridge && typeof bridge.launchBilling === 'function') {
             try {
-                const res = await bridge.launchBilling({ productId });
+                const res = await bridge.launchBilling({ productId, licenseKey: GOOGLE_PLAY_LICENSE_KEY });
                 if (res && res.success) {
                     activateProStatus(true);
                     return;

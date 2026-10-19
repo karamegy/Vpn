@@ -650,7 +650,7 @@ jobs:
           # إضافة مكتبة Google Play Billing وتحديد الإصدارات
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
-              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
+              sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:8.0.0"' android/app/build.gradle
             fi
 
             sed -i -E 's/versionCode [0-9]+/versionCode 31/' android/app/build.gradle

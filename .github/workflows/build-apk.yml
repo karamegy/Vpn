@@ -21,7 +21,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 1. Setup Node.js & Prepare Web Assets
+      - name: 1. Setup Node.js System Native & Web Assets
         run: |
           sudo apt-get update -y
           sudo apt-get install -y nodejs npm imagemagick
@@ -50,19 +50,14 @@ jobs:
           }
           EOF
 
-      - name: 2. Prepare Android Project & Inject Fixed Native Code
+      - name: 2. Prepare Android Platform & Custom Logo Icons
         run: |
           export CI=true
           
-          if [ ! -f "android/gradlew" ]; then
-            echo "⚠️ ملف gradlew غير موجود! جاري توليد مشروع أندرويد باستخدام Capacitor..."
-            rm -rf android
-            npx cap add android
-          fi
-
+          rm -rf android
+          npx cap add android
           npx cap sync android
 
-          # 1. تحويل وتوليد أيقونات التطبيق
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
             echo "🎨 جاري تحويل icon-512.png إلى أيقونات أندرويد..."
@@ -89,7 +84,7 @@ jobs:
             convert "$ICON_SOURCE" -resize 432x432 $RES_DIR/mipmap-xxxhdpi/ic_launcher_foreground.png
           fi
 
-          # 2. كتابة AndroidManifest.xml المشترط لأندرويد 14+
+          # كتابة AndroidManifest.xml المكتمل بالأذونات وتصريح الخدمة لأندرويد 14+
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -104,8 +99,6 @@ jobs:
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
               <uses-permission android:name="com.android.vending.BILLING" />
-              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-              <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
               <application
                   android:allowBackup="true"
@@ -122,20 +115,9 @@ jobs:
                       android:exported="true"
                       android:launchMode="singleTask"
                       android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode">
-
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-
-                      <intent-filter android:autoVerify="true">
-                          <action android:name="android.intent.action.VIEW" />
-                          <category android:name="android.intent.category.DEFAULT" />
-                          <category android:name="android.intent.category.BROWSABLE" />
-                          <data
-                              android:scheme="https"
-                              android:host="karamegy.github.io"
-                              android:pathPrefix="/Vpn/" />
                       </intent-filter>
                   </activity>
 
@@ -153,7 +135,6 @@ jobs:
           </manifest>
           EOF
 
-          # 3. إنشاء دليل Java وحقن الكود المصلح
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
           # MainActivity.java
@@ -161,6 +142,7 @@ jobs:
           package io.github.karamegy.Vpn;
           import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;
+
           public class MainActivity extends BridgeActivity {
               @Override
               public void onCreate(Bundle savedInstanceState) {
@@ -202,8 +184,6 @@ jobs:
           import com.getcapacitor.Plugin;
           import com.getcapacitor.PluginCall;
           import com.getcapacitor.PluginMethod;
-          import com.getcapacitor.ActivityResult;
-          import com.getcapacitor.annotation.ActivityCallback;
           import com.getcapacitor.annotation.CapacitorPlugin;
 
           import java.io.File;
@@ -214,6 +194,8 @@ jobs:
           @CapacitorPlugin(name = "AndroidVPNBridge")
           public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedListener {
               private static final String TAG = "AndroidVPNBridge";
+              private static final int VPN_REQUEST_CODE = 0x9999;
+              private PluginCall activeVpnCall = null;
               private BillingClient billingClient;
               private PluginCall activeBillingCall = null;
 
@@ -230,7 +212,7 @@ jobs:
                           startBillingConnection();
                       }
                   } catch (Exception e) {
-                      Log.e(TAG, "خطأ أثناء تهيئة نظام دفع جوجل بلاي: ", e);
+                      Log.e(TAG, "خطأ في تهيئة Billing: ", e);
                   }
               }
 
@@ -241,17 +223,17 @@ jobs:
                           @Override
                           public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
                               if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                                  Log.d(TAG, "تم الاتصال بنجاح بخدمة Google Play Billing.");
+                                  Log.d(TAG, "Google Play Billing connected.");
                               }
                           }
 
                           @Override
                           public void onBillingServiceDisconnected() {
-                              Log.w(TAG, "انقطع الاتصال بخدمة Google Play Billing. جاري إعادة المحاولة...");
+                              Log.w(TAG, "Billing disconnected.");
                           }
                       });
                   } catch (Exception e) {
-                      Log.e(TAG, "خطأ أثناء الاتصال بـ Billing: ", e);
+                      Log.e(TAG, "خطأ في الاتصال بـ Billing: ", e);
                   }
               }
 
@@ -348,7 +330,6 @@ jobs:
                               }
                       );
                   } catch (Exception e) {
-                      Log.e(TAG, "خطأ في التحقق من الاشتراكات: ", e);
                       JSObject ret = new JSObject();
                       ret.put("isPro", false);
                       call.resolve(ret);
@@ -361,12 +342,12 @@ jobs:
                       Activity activity = getActivity();
                       String productId = call.getString("productId", "");
                       if (activity == null || productId.isEmpty()) {
-                          call.reject("النشاط غير متوفر أو معرف المنتج (productId) مفقود");
+                          call.reject("النشاط غير متوفر أو معرف المنتج مفقود");
                           return;
                       }
 
                       if (billingClient == null || !billingClient.isReady()) {
-                          call.reject("خدمة Google Play Billing غير جاهزة حالياً. تأكد من تثبيت التطبيق كـ APK رسمي من المتجر.");
+                          call.reject("خدمة Google Play Billing غير جاهزة حالياً.");
                           return;
                       }
 
@@ -418,7 +399,6 @@ jobs:
                                   }
                               }
                           } catch (Exception e) {
-                              Log.e(TAG, "خطأ في معالجة تفاصيل الشراء: ", e);
                               if (activeBillingCall != null) {
                                   activeBillingCall.reject("حدث خطأ أثناء معالجة تفاصيل المنتج: " + e.getMessage());
                                   activeBillingCall = null;
@@ -426,7 +406,6 @@ jobs:
                           }
                       });
                   } catch (Exception e) {
-                      Log.e(TAG, "خطأ في launchBilling: ", e);
                       call.reject("حدث خطأ غير متوقع في عملية الشراء: " + e.getMessage());
                   }
               }
@@ -479,24 +458,6 @@ jobs:
               }
 
               @PluginMethod
-              public void isPrepared(PluginCall call) {
-                  try {
-                      Context context = getContext();
-                      if (context == null) {
-                          call.reject("السياق غير متوفر");
-                          return;
-                      }
-                      Intent intent = VpnService.prepare(context);
-                      JSObject ret = new JSObject();
-                      ret.put("prepared", intent == null);
-                      call.resolve(ret);
-                  } catch (Exception e) {
-                      Log.e(TAG, "خطأ في isPrepared: ", e);
-                      call.reject("تعذر التحقق من حالة إذن الـ VPN: " + e.getMessage());
-                  }
-              }
-
-              @PluginMethod
               public void prepareVpn(PluginCall call) {
                   Activity activity = getActivity();
                   if (activity == null) {
@@ -507,7 +468,8 @@ jobs:
                   try {
                       Intent intent = VpnService.prepare(activity);
                       if (intent != null) {
-                          startActivityForResult(call, intent, "handleVpnResult");
+                          activeVpnCall = call;
+                          activity.startActivityForResult(intent, VPN_REQUEST_CODE);
                       } else {
                           JSObject ret = new JSObject();
                           ret.put("prepared", true);
@@ -515,7 +477,6 @@ jobs:
                           call.resolve(ret);
                       }
                   } catch (Exception e) {
-                      Log.e(TAG, "خطأ أثناء طلب إذن VPN: ", e);
                       call.reject("فشل إطلاق إذن الـ VPN: " + e.getMessage());
                   }
               }
@@ -531,23 +492,30 @@ jobs:
                   try {
                       Intent intent = VpnService.prepare(activity);
                       if (intent != null) {
-                          startActivityForResult(call, intent, "handleVpnResult");
+                          activeVpnCall = call;
+                          activity.startActivityForResult(intent, VPN_REQUEST_CODE);
                           return;
                       }
                       executeVpnServiceStart(call);
                   } catch (Exception e) {
-                      Log.e(TAG, "خطأ أثناء تشغيل الـ VPN: ", e);
                       call.reject("فشل طلب إذن الـ VPN: " + e.getMessage());
                   }
               }
 
-              @ActivityCallback
-              public void handleVpnResult(PluginCall call, ActivityResult result) {
-                  if (call == null) return;
-                  if (result.getResultCode() == Activity.RESULT_OK) {
-                      executeVpnServiceStart(call);
-                  } else {
-                      call.reject("تم رفض إذن VPN من قبل المستخدم في نظام أندرويد");
+              @Override
+              protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.handleOnActivityResult(requestCode, resultCode, data);
+                  if (requestCode == VPN_REQUEST_CODE) {
+                      PluginCall pendingCall = activeVpnCall;
+                      activeVpnCall = null;
+
+                      if (pendingCall != null) {
+                          if (resultCode == Activity.RESULT_OK) {
+                              executeVpnServiceStart(pendingCall);
+                          } else {
+                              pendingCall.reject("تم رفض إذن VPN من قبل المستخدم في نظام أندرويد");
+                          }
+                      }
                   }
               }
 
@@ -606,7 +574,6 @@ jobs:
                       ret.put("status", "disconnected");
                       call.resolve(ret);
                   } catch (Exception e) {
-                      Log.e(TAG, "خطأ أثناء إيقاف خدمة الـ VPN: ", e);
                       call.reject("فشل إيقاف الخدمة: " + e.getMessage());
                   }
               }
@@ -632,7 +599,6 @@ jobs:
           import android.app.NotificationManager;
           import android.app.PendingIntent;
           import android.content.Intent;
-          import android.content.pm.PackageManager;
           import android.content.pm.ServiceInfo;
           import android.net.VpnService;
           import android.os.Build;
@@ -696,10 +662,8 @@ jobs:
                           
                           try {
                               builder.addDisallowedApplication(getPackageName());
-                          } catch (PackageManager.NameNotFoundException e) {
-                              Log.w(TAG, "تعذر إضافة التطبيق المستثنى: ", e);
                           } catch (Exception e) {
-                              Log.w(TAG, "خطأ عام أثناء إضافة الاستثناء: ", e);
+                              Log.w(TAG, "تعذر إضافة التطبيق المستثنى: ", e);
                           }
 
                           builder.setSession("ApexShieldVPN");
@@ -789,7 +753,7 @@ jobs:
           }
           EOF
 
-          # 4. تعديل وتكوين ملفات Gradle
+          # تعديل إعدادات Gradle
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.1.0"' android/app/build.gradle
@@ -807,8 +771,6 @@ jobs:
             sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
             sed -i -E 's/minSdkVersion = .*/minSdkVersion = 24/' android/variables.gradle
           fi
-
-          chmod +x android/gradlew || true
 
       - name: 3. Build & Sign APK & AAB Packages
         env:

@@ -651,7 +651,7 @@ jobs:
                               context.startService(intent);
                           }
                       } catch (Exception e) {
-                          Log.e(TAG, "خطأ في إيقاف خدمة الـ VPN: ", e);
+                      Log.e(TAG, "خطأ في إيقاف خدمة الـ VPN: ", e);
                       }
                   }
 
@@ -748,6 +748,7 @@ jobs:
           path: android/app/build/outputs/apk/release/*.apk
 
       - name: Upload AAB
+        uses: type: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: ApexShield-AAB-GooglePlay

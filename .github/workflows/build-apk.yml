@@ -64,12 +64,12 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 1. ضبط متغيرات Target SDK 36 و Compile SDK 36
+          # 1. ضبط متغيرات Target SDK 35 و Compile SDK 35 المتوافقين مع سحابة GitHub وجوجل بلاي
           cat << 'EOF' > android/variables.gradle
           ext {
               minSdkVersion = 24
-              compileSdkVersion = 36
-              targetSdkVersion = 36
+              compileSdkVersion = 35
+              targetSdkVersion = 35
               androidxActivityVersion = '1.8.0'
               androidxAppCompatVersion = '1.6.1'
               androidxCoordinatorLayoutVersion = '1.2.0'
@@ -80,10 +80,10 @@ jobs:
           }
           EOF
 
-          # 2. تحديث build.gradle الأصلي بأمان وإضافة Play Billing 8.0.0 و VersionCode 36
+          # 2. إضافة Play Billing 8.0.0 وضبط الاصدار على VersionCode 36
           if [ -f "android/app/build.gradle" ]; then
             sed -i -E 's/versionCode [0-9]+/versionCode 36/' android/app/build.gradle
-            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.11"/' android/app/build.gradle
+            sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.12"/' android/app/build.gradle
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:8.0.0"' android/app/build.gradle
             fi
@@ -100,7 +100,7 @@ jobs:
           # 4. إنشاء مجلدات Java
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # 5. كتابة AndroidManifest.xml متوافق مع Android 15 (API 36)
+          # 5. كتابة AndroidManifest.xml
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -173,16 +173,9 @@ jobs:
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/MainActivity.java
           package io.github.karamegy.Vpn;
 
-          import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;
 
-          public class MainActivity extends BridgeActivity {
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  registerPlugin(AndroidVPNBridgePlugin.class);
-                  super.onCreate(savedInstanceState);
-              }
-          }
+          public class MainActivity extends BridgeActivity {}
           EOF
 
           # 7. كتابة ApexVpnService.java
@@ -281,7 +274,7 @@ jobs:
           }
           EOF
 
-          # 8. كتابة AndroidVPNBridgePlugin.java بكود الجافا المتوافق تماماً مع Play Billing 8.0.0
+          # 8. كتابة AndroidVPNBridgePlugin.java باستخدام Anonymous Listeners صريحة
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Vpn/AndroidVPNBridgePlugin.java
           package io.github.karamegy.Vpn;
 
@@ -297,13 +290,16 @@ jobs:
           import android.util.Log;
 
           import com.android.billingclient.api.AcknowledgePurchaseParams;
+          import com.android.billingclient.api.AcknowledgePurchaseResponseListener;
           import com.android.billingclient.api.BillingClient;
           import com.android.billingclient.api.BillingClientStateListener;
           import com.android.billingclient.api.BillingFlowParams;
           import com.android.billingclient.api.BillingResult;
           import com.android.billingclient.api.PendingPurchasesParams;
           import com.android.billingclient.api.ProductDetails;
+          import com.android.billingclient.api.ProductDetailsResponseListener;
           import com.android.billingclient.api.Purchase;
+          import com.android.billingclient.api.PurchasesResponseListener;
           import com.android.billingclient.api.PurchasesUpdatedListener;
           import com.android.billingclient.api.QueryProductDetailsParams;
           import com.android.billingclient.api.QueryPurchasesParams;
@@ -374,9 +370,12 @@ jobs:
                               .setProductList(Collections.singletonList(product))
                               .build();
 
-                      billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
-                          if (billingResult != null && billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
-                              cachedProductDetails = productDetailsList.get(0);
+                      billingClient.queryProductDetailsAsync(params, new ProductDetailsResponseListener() {
+                          @Override
+                          public void onProductDetailsResponse(BillingResult billingResult, List<ProductDetails> productDetailsList) {
+                              if (billingResult != null && billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && productDetailsList != null && !productDetailsList.isEmpty()) {
+                                  cachedProductDetails = productDetailsList.get(0);
+                              }
                           }
                       });
                   } catch (Exception e) {
@@ -466,19 +465,22 @@ jobs:
                       QueryPurchasesParams queryParams = QueryPurchasesParams.newBuilder()
                               .setProductType(BillingClient.ProductType.SUBS)
                               .build();
-                      billingClient.queryPurchasesAsync(queryParams, (billingResult, purchases) -> {
-                          boolean isPro = false;
-                          if (billingResult != null && billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
-                              for (Purchase purchase : purchases) {
-                                  if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                      isPro = true;
-                                      break;
+                      billingClient.queryPurchasesAsync(queryParams, new PurchasesResponseListener() {
+                          @Override
+                          public void onQueryPurchasesResponse(BillingResult billingResult, List<Purchase> purchases) {
+                              boolean isPro = false;
+                              if (billingResult != null && billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
+                                  for (Purchase purchase : purchases) {
+                                      if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                          isPro = true;
+                                          break;
+                                      }
                                   }
                               }
+                              JSObject ret = new JSObject();
+                              ret.put("isPro", isPro);
+                              call.resolve(ret);
                           }
-                          JSObject ret = new JSObject();
-                          ret.put("isPro", isPro);
-                          call.resolve(ret);
                       });
                   } catch (Exception e) {
                       JSObject ret = new JSObject();
@@ -538,7 +540,10 @@ jobs:
                                   AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
                                           .setPurchaseToken(purchase.getPurchaseToken())
                                           .build();
-                                  billingClient.acknowledgePurchase(acknowledgePurchaseParams, billingResult1 -> {});
+                                  billingClient.acknowledgePurchase(acknowledgePurchaseParams, new AcknowledgePurchaseResponseListener() {
+                                      @Override
+                                      public void onAcknowledgePurchaseResponse(BillingResult billingResult1) {}
+                                  });
                               }
                           }
                           JSObject ret = new JSObject();

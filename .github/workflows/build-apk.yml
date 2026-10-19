@@ -80,11 +80,8 @@ jobs:
 
           mkdir -p android/app/src/main/java/io/github/karamegy/Vpn
 
-          # تعديل Gradle لإضافة مكتبة WireGuard وضبط الإصدارات
+          # ضبط إعدادات الإصدار في Gradle وتجنب مشاكل التبعيات الخارجية
           if [ -f "android/app/build.gradle" ]; then
-            if ! grep -q "com.wireguard.android:tunnel" android/app/build.gradle; then
-              sed -i '/dependencies {/a \    implementation "com.wireguard.android:tunnel:1.0.20230707"' android/app/build.gradle
-            fi
             sed -i -E 's/versionCode [0-9]+/versionCode 35/' android/app/build.gradle
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.0.11"/' android/app/build.gradle
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
@@ -107,18 +104,18 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          cd android
-          
-          # التحقق مما إذا كان مفتاح Secrets موجوداً أم سيتم استخدام الملف المرفوع في المستودع
+          # التحقق من مكان وجود ملف الـ Keystore
           if [ -n "$RELEASE_KEY" ]; then
-            echo "🔑 جاري فك تشفيره من GitHub Secrets..."
-            printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
-          elif [ -f "../../signing.keystore" ]; then
-            echo "📁 العثور على signing.keystore في المستودع، جاري نسخه..."
-            cp ../../signing.keystore signing.keystore
+            echo "🔑 فك تشفير المفتاح من GitHub Secrets..."
+            printf "%s" "$RELEASE_KEY" | base64 --decode > android/signing.keystore
+          elif [ -f "signing.keystore" ]; then
+            echo "📁 نسخ ملف signing.keystore من مجلد المشروع..."
+            cp signing.keystore android/signing.keystore
           else
-            echo "❌ تحذير: لم يتم العثور على ملف المفتاح ولا الـ Secret!"
+            echo "⚠️ تنبيه: سيتم البناء بدون توقيع."
           fi
+
+          cd android
           
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
@@ -146,13 +143,11 @@ jobs:
             APKSIGNER="apksigner"
           fi
 
-          # إتمام التوقيع
           if [ -f "signing.keystore" ]; then
+            echo "✍️ جاري توقيع APK و AAB..."
             $APKSIGNER sign --ks signing.keystore --ks-pass pass:"$STORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASSWORD" "$APK_FILE"
             jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
             rm -f signing.keystore
-          else
-            echo "⚠️ تنبيه: تم بناء الحزم بدون توقيع لعدم توفر ملف الـ Keystore."
           fi
 
       - name: Upload APK

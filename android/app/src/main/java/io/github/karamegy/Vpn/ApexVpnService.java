@@ -72,8 +72,7 @@ public class ApexVpnService extends VpnService {
                 builder.setSession("Apex Shield AdBlock")
                        .addAddress("10.0.0.2", 32)
                        .setMtu(1500)
-                       .addDnsServer(ADGUARD_DNS)
-                       .addRoute(ADGUARD_DNS, 32);
+                       .addDnsServer(ADGUARD_DNS);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     try {
@@ -87,8 +86,8 @@ public class ApexVpnService extends VpnService {
                     return;
                 }
 
-                Log.i(TAG, "✅ تم تشغيل نفق الـ VPN بنجاح عبر: " + serverName);
-                runDnsLoop();
+                Log.i(TAG, "✅ تم تشغيل النفق بنجاح عبر: " + serverName);
+                runPacketLoop();
 
             } catch (Exception ex) {
                 Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
@@ -98,32 +97,46 @@ public class ApexVpnService extends VpnService {
         vpnThread.start();
     }
 
-    private void runDnsLoop() {
+    private void runPacketLoop() {
         DatagramSocket dnsSocket = null;
         try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor());
              FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
 
             dnsSocket = new DatagramSocket();
             protect(dnsSocket);
-            dnsSocket.setSoTimeout(3000);
+            dnsSocket.setSoTimeout(2500);
 
-            byte[] buffer = new byte[32767];
-            InetAddress dnsTarget = InetAddress.getByName(ADGUARD_DNS);
+            byte[] packetBuffer = new byte[32767];
+            InetAddress targetDns = InetAddress.getByName(ADGUARD_DNS);
 
             while (isRunning && !Thread.currentThread().isInterrupted()) {
-                int length = in.read(buffer);
-                if (length > 0) {
+                int length = in.read(packetBuffer);
+                if (length > 28) { // التحقق من وجود IP + UDP headers
                     try {
-                        DatagramPacket outPacket = new DatagramPacket(buffer, length, dnsTarget, 53);
-                        dnsSocket.send(outPacket);
+                        int ipHeaderLen = (packetBuffer[0] & 0x0F) * 4;
+                        int udpHeaderLen = 8;
+                        int dnsPayloadOffset = ipHeaderLen + udpHeaderLen;
+                        int dnsPayloadLen = length - dnsPayloadOffset;
 
-                        byte[] respBuffer = new byte[32767];
-                        DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
-                        dnsSocket.receive(inPacket);
+                        // التحقق من أن الحزمة هي بروتوكول UDP (رقم 17)
+                        if (dnsPayloadLen > 0 && packetBuffer[9] == 17) {
+                            DatagramPacket outPacket = new DatagramPacket(
+                                packetBuffer, dnsPayloadOffset, dnsPayloadLen, targetDns, 53
+                            );
+                            dnsSocket.send(outPacket);
 
-                        out.write(inPacket.getData(), 0, inPacket.getLength());
+                            byte[] respBuffer = new byte[32767];
+                            DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
+                            dnsSocket.receive(inPacket);
+
+                            // إعادة بناء ترويسة IP + UDP مع الرد وإرسالها إلى الـ TUN
+                            byte[] responseIpPacket = buildIpUdpResponse(packetBuffer, inPacket.getData(), inPacket.getLength());
+                            if (responseIpPacket != null) {
+                                out.write(responseIpPacket);
+                            }
+                        }
                     } catch (Exception reqErr) {
-                        Log.w(TAG, "حزمة غير متوافقة أو تجاوز الوقت المحدد للـ DNS");
+                        // يتجاوز الحزم غير المتوافقة دون إيقاف الخدمة
                     }
                 }
             }
@@ -135,6 +148,45 @@ public class ApexVpnService extends VpnService {
             if (dnsSocket != null && !dnsSocket.isClosed()) {
                 dnsSocket.close();
             }
+        }
+    }
+
+    private byte[] buildIpUdpResponse(byte[] requestPacket, byte[] dnsResponsePayload, int dnsResponseLen) {
+        try {
+            int ipHeaderLen = (requestPacket[0] & 0x0F) * 4;
+            int totalLen = ipHeaderLen + 8 + dnsResponseLen;
+            byte[] ipPacket = new byte[totalLen];
+
+            // نسخ ترويسة IP وتبديل عناوين المصدر والوجهة
+            System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
+            System.arraycopy(requestPacket, 16, ipPacket, 12, 4); // Source IP -> Dest IP
+            System.arraycopy(requestPacket, 12, ipPacket, 16, 4); // Dest IP -> Source IP
+
+            // تحديث طول الحزمة الكلي
+            ipPacket[2] = (byte) (totalLen >> 8);
+            ipPacket[3] = (byte) (totalLen & 0xFF);
+
+            // ترويسة UDP: تبديل المنافذ
+            int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
+            int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
+
+            ipPacket[ipHeaderLen] = (byte) (dstPort >> 8);
+            ipPacket[ipHeaderLen + 1] = (byte) (dstPort & 0xFF);
+            ipPacket[ipHeaderLen + 2] = (byte) (srcPort >> 8);
+            ipPacket[ipHeaderLen + 3] = (byte) (srcPort & 0xFF);
+
+            int udpLen = 8 + dnsResponseLen;
+            ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
+            ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
+            ipPacket[ipHeaderLen + 6] = 0; // Checksum
+            ipPacket[ipHeaderLen + 7] = 0;
+
+            // دمج حمولة الـ DNS
+            System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
+
+            return ipPacket;
+        } catch (Exception e) {
+            return null;
         }
     }
 

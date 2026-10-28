@@ -28,12 +28,12 @@ public class ApexVpnService extends VpnService {
 
     private ParcelFileDescriptor vpnInterface = null;
     private volatile boolean isRunning = false;
-    private Thread vpnWorkerThread;
+    private Thread vpnWorkerThread = null;
     private Thread vpnThread = null;
 
     private static final String ADGUARD_DNS = "94.140.14.14";
-
     private static final String ADGUARD_DNS_1 = "94.140.14.14";
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : "";
@@ -68,7 +68,6 @@ public class ApexVpnService extends VpnService {
         if (isRunning) return;
         isRunning = true;
 
-        vpnWorkerThread = new Thread(() -> {
         vpnThread = new Thread(() -> {
             try {
                 Builder builder = new Builder();
@@ -76,27 +75,31 @@ public class ApexVpnService extends VpnService {
                        .addAddress("10.0.0.2", 32)
                        .setMtu(1500)
                        .addDnsServer(ADGUARD_DNS_1)
-                       .addRoute(ADGUARD_DNS_1, 32); // اقتصار التوجيه على سيرفر الـ DNS فقط
+                       .addRoute(ADGUARD_DNS_1, 32)
                        .addDnsServer(ADGUARD_DNS)
                        .addRoute(ADGUARD_DNS, 32);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     try {
-@@ -42,39 +87,65 @@ private synchronized void startVpnConnection(String serverIp, String serverName)
+                        builder.addDisallowedApplication(getPackageName());
+                    } catch (Exception ignored) {}
+                }
+
+                vpnInterface = builder.establish();
+                if (vpnInterface == null) {
+                    stopVpnConnection();
                     return;
                 }
 
-                isRunning = true;
                 Log.i(TAG, "✅ تم تشغيل نفق الـ VPN بنجاح عبر: " + serverName);
                 runDnsLoop();
 
             } catch (Exception ex) {
-                Log.e(TAG, "فشل إنشاء واجهة الـ VPN:", ex);
                 Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
                 stopVpnConnection();
             }
         });
-        vpnWorkerThread.start();
+        vpnWorkerThread = vpnThread;
         vpnThread.start();
     }
 
@@ -105,21 +108,16 @@ public class ApexVpnService extends VpnService {
         try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor());
              FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
 
-            DatagramSocket dnsSocket = new DatagramSocket();
-            protect(dnsSocket); // حماية السوكت لمنع توجيه حزمه داخل نفق الـ VPN
             dnsSocket = new DatagramSocket();
-            protect(dnsSocket);
+            protect(dnsSocket); // حماية السوكت لمنع توجيه حزمه داخل نفق الـ VPN
             dnsSocket.setSoTimeout(3000);
 
             byte[] buffer = new byte[32767];
-            while (isRunning) {
             InetAddress dnsTarget = InetAddress.getByName(ADGUARD_DNS);
 
             while (isRunning && !Thread.currentThread().isInterrupted()) {
                 int length = in.read(buffer);
                 if (length > 0) {
-                    // قراءة حزمة الـ DNS وإعادة توجيهها للخادم عبر dnsSocket
-                    // ثم كتابة الرد إلى out.write()
                     try {
                         DatagramPacket outPacket = new DatagramPacket(buffer, length, dnsTarget, 53);
                         dnsSocket.send(outPacket);
@@ -135,7 +133,6 @@ public class ApexVpnService extends VpnService {
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, "خطأ في حلقة معالجة الحزم:", e);
             if (isRunning) {
                 Log.e(TAG, "إغلاق حلقة معالجة الحزم:", e);
             }
@@ -153,11 +150,15 @@ public class ApexVpnService extends VpnService {
         if (vpnThread != null) {
             vpnThread.interrupt();
         }
+        if (vpnWorkerThread != null) {
+            vpnWorkerThread.interrupt();
+        }
 
         try {
             if (vpnInterface != null) {
                 vpnInterface.close();
-@@ -83,6 +154,54 @@ private synchronized void stopVpnConnection() {
+                vpnInterface = null;
+            }
         } catch (Exception e) {
             Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
         }
@@ -211,4 +212,4 @@ public class ApexVpnService extends VpnService {
         stopVpnConnection();
         super.onDestroy();
     }
-                }
+}

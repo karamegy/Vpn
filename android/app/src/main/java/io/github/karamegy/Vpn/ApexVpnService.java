@@ -1,5 +1,3 @@
-// ApexVpnService.java[span_0](start_span)[span_0](end_span)
-
 package io.github.karamegy.Vpn;[span_1](start_span)[span_1](end_span)
 
 import android.app.Notification;[span_2](start_span)[span_2](end_span)

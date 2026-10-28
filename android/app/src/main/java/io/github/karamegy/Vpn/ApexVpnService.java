@@ -5,11 +5,11 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
-
 import androidx.core.app.NotificationCompat;
 
 import java.io.FileInputStream;
@@ -23,14 +23,17 @@ import java.util.concurrent.Executors;
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
     private static final String CHANNEL_ID = "ApexVpnChannel";
-    private static final int NOTIFICATION_ID = 1;
-    public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.CONNECT";
-    private static final String ADGUARD_DNS = "94.140.14.14";
+    private static final int NOTIFICATION_ID = 101;
+
+    public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START_VPN";
+    public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP_VPN";
 
     private ParcelFileDescriptor vpnInterface = null;
     private volatile boolean isRunning = false;
     private Thread vpnThread = null;
     private ExecutorService dnsThreadPool;
+
+    private static final String ADGUARD_DNS = "94.140.14.14";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -41,18 +44,33 @@ public class ApexVpnService extends VpnService {
         if (ACTION_CONNECT.equals(action) || "START".equals(action) || "START_VPN".equals(action)) {
             startForegroundNotification(serverName);
             startVpnConnection(serverIp, serverName);
-        } else if ("STOP".equals(action) || "STOP_VPN".equals(action)) {
+        } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action) || "STOP_VPN".equals(action)) {
             stopVpnConnection();
         }
+
         return START_STICKY;
+    }
+
+    private void startForegroundNotification(String serverName) {
+        createNotificationChannel();
+        Notification notification = buildNotification(serverName);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "خطأ في بدء الخدمة الأمامية: ", e);
+        }
     }
 
     private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
         isRunning = true;
-
         // إنشاء مجمع خيوط معالج لـ DNS لضمان سرعة الاستجابة
         dnsThreadPool = Executors.newFixedThreadPool(8);
+
         vpnThread = new Thread(() -> {
             try {
                 Builder builder = new Builder();
@@ -64,17 +82,21 @@ public class ApexVpnService extends VpnService {
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     try {
-                        builder.setMetered(false);
+                        builder.addDisallowedApplication(getPackageName());
                     } catch (Exception ignored) {}
                 }
 
                 vpnInterface = builder.establish();
-                if (vpnInterface != null) {
-                    runPacketLoop();
+                if (vpnInterface == null) {
+                    stopVpnConnection();
+                    return;
                 }
-            } catch (Exception e) {
-                Log.e(TAG, "خطأ أثناء إنشاء اتصال VPN: ", e);
-            } finally {
+
+                Log.i(TAG, "✅ تم تشغيل النفق بنجاح عبر: " + serverName);
+                runPacketLoop();
+
+            } catch (Exception ex) {
+                Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
                 stopVpnConnection();
             }
         });
@@ -128,7 +150,9 @@ public class ApexVpnService extends VpnService {
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, "إغلاق حلقة معالجة الحزم:", e);
+            if (isRunning) {
+                Log.e(TAG, "إغلاق حلقة معالجة الحزم:", e);
+            }
         } finally {
             if (dnsThreadPool != null) {
                 dnsThreadPool.shutdownNow();
@@ -151,22 +175,24 @@ public class ApexVpnService extends VpnService {
             ipPacket[2] = (byte) (totalLen >> 8);
             ipPacket[3] = (byte) (totalLen & 0xFF);
 
-            // تبديل منافذ UDP
-            ipPacket[ipHeaderLen] = requestPacket[ipHeaderLen + 2];
-            ipPacket[ipHeaderLen + 1] = requestPacket[ipHeaderLen + 3];
-            ipPacket[ipHeaderLen + 2] = requestPacket[ipHeaderLen];
-            ipPacket[ipHeaderLen + 3] = requestPacket[ipHeaderLen + 1];
+            // ترويسة UDP: تبديل المنافذ
+            int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
+            int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
 
-            // طول UDP
+            ipPacket[ipHeaderLen] = (byte) (dstPort >> 8);
+            ipPacket[ipHeaderLen + 1] = (byte) (dstPort & 0xFF);
+            ipPacket[ipHeaderLen + 2] = (byte) (srcPort >> 8);
+            ipPacket[ipHeaderLen + 3] = (byte) (srcPort & 0xFF);
+
             int udpLen = 8 + dnsResponseLen;
             ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
             ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
-
             ipPacket[ipHeaderLen + 6] = 0; // Checksum
             ipPacket[ipHeaderLen + 7] = 0;
 
             // دمج حمولة الـ DNS في الحزمة الأخيرة
             System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
+
             return ipPacket;
         } catch (Exception e) {
             return null;
@@ -199,12 +225,6 @@ public class ApexVpnService extends VpnService {
         Log.i(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
     }
 
-    private void startForegroundNotification(String serverName) {
-        createNotificationChannel();
-        Notification notification = buildNotification(serverName);
-        startForeground(NOTIFICATION_ID, notification);
-    }
-
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
@@ -221,7 +241,7 @@ public class ApexVpnService extends VpnService {
     }
 
     private Notification buildNotification(String serverName) {
-        Intent notificationIntent = new Intent();
+        Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, 0, notificationIntent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT

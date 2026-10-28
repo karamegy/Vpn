@@ -1,103 +1,269 @@
+
 package io.github.karamegy.Vpn;
 
-import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.net.VpnService;
+import android.os.Build;
+import android.os.ParcelFileDescriptor;
+import android.util.Log;
+import androidx.core.app.NotificationCompat;
 
-import androidx.activity.result.ActivityResult;
-import androidx.core.content.ContextCompat;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import com.getcapacitor.JSObject;
-import com.getcapacitor.Plugin;
-import com.getcapacitor.PluginCall;
-import com.getcapacitor.PluginMethod;
-import com.getcapacitor.annotation.ActivityCallback;
-import com.getcapacitor.annotation.CapacitorPlugin;
+public class ApexVpnService extends VpnService {
+    private static final String TAG = "ApexVpnService";
+    private static final String CHANNEL_ID = "ApexVpnChannel";
+    private static final int NOTIFICATION_ID = 101;
 
-@CapacitorPlugin(name = "AndroidVPNBridge")
-public class AndroidVPNBridgePlugin extends Plugin {
+    public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START_VPN";
+    public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP_VPN";
 
-    // مفتاح الترخيص الخاص بـ Google Play Console
-    public static final String BASE64_LICENSE_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmxgdl9pF2Wa6OpHD7jQnmAKZ+1Z/TgyCo5WhWAcd1yVbsKW6/MeEk3wHECm/j8RNdqVTSpa5Gwle0uuiT+yNaIjZgVwg1CdjkPzu6F3TYiazdGTxTvK3bb5a+TYQB2B6di30vTP6BAVqRSFOiVuULEDH/DcLjWuqVGMgWRe4ni37yoHnBtRh5Lyj/Dg3jq01AeUg/xNlK7kUi/xY1zqCH3oXtou4uxTLBTWGrIvisrKVyj3Xx6npCrwAQRiVGC0rjUiYUltkqx5r2ZAWGOxOpH0ia6HqNveJjMbY9icRLrmfiemky107HCqEjB+QTGCR7Lw+5QjIFD1DARb1E/YJbwIDAQAB";
+    private ParcelFileDescriptor vpnInterface = null;
+    private volatile boolean isRunning = false;
+    private Thread vpnThread = null;
+    private ExecutorService dnsThreadPool;
 
-    @PluginMethod
-    public void prepareVpn(PluginCall call) {
-        Intent intent = VpnService.prepare(getContext());
-        if (intent != null) {
-            startActivityForResult(call, intent, "handleVpnPermissionResult");
-        } else {
-            JSObject ret = new JSObject();
-            ret.put("prepared", true);
-            call.resolve(ret);
+    private static final String ADGUARD_DNS = "94.140.14.14";
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        String action = intent != null ? intent.getAction() : "";
+        String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Shield Node";
+        String serverIp = intent != null ? intent.getStringExtra("serverIp") : ADGUARD_DNS;
+
+        if (ACTION_CONNECT.equals(action) || "START".equals(action) || "START_VPN".equals(action)) {
+            startForegroundNotification(serverName);
+            startVpnConnection(serverIp, serverName);
+        } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action) || "STOP_VPN".equals(action)) {
+            stopVpnConnection();
+        }
+
+        return START_STICKY;
+    }
+
+    private void startForegroundNotification(String serverName) {
+        createNotificationChannel();
+        Notification notification = buildNotification(serverName);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "خطأ في بدء الخدمة الأمامية: ", e);
         }
     }
 
-    @ActivityCallback
-    private void handleVpnPermissionResult(PluginCall call, ActivityResult result) {
-        JSObject ret = new JSObject();
-        if (result.getResultCode() == Activity.RESULT_OK) {
-            ret.put("prepared", true);
-            call.resolve(ret);
-        } else {
-            ret.put("prepared", false);
-            call.reject("المستخدم رفض منح إذن الـ VPN");
+    private synchronized void startVpnConnection(String serverIp, String serverName) {
+        if (isRunning) return;
+        isRunning = true;
+        dnsThreadPool = Executors.newFixedThreadPool(4);
+
+        vpnThread = new Thread(() -> {
+            try {
+                Builder builder = new Builder();
+                builder.setSession("Apex Shield Protection")
+                       .addAddress("10.0.0.2", 32)
+                       .addDnsServer(ADGUARD_DNS)
+                       .addRoute(ADGUARD_DNS, 32) // توجيه مسار الـ DNS فقط لحماية تصفح الإنترنت من الانقطاع
+                       .setMtu(1500);
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    try {
+                        builder.addDisallowedApplication(getPackageName());
+                    } catch (Exception ignored) {}
+                }
+
+                vpnInterface = builder.establish();
+                if (vpnInterface == null) {
+                    stopVpnConnection();
+                    return;
+                }
+
+                Log.i(TAG, "✅ تم تشغيل النفق بنجاح عبر: " + serverName);
+                runPacketLoop();
+
+            } catch (Exception ex) {
+                Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
+                stopVpnConnection();
+            }
+        });
+        vpnThread.start();
+    }
+
+    private void runPacketLoop() {
+        DatagramSocket dnsSocket = null;
+        try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor());
+             FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
+
+            dnsSocket = new DatagramSocket();
+            protect(dnsSocket);
+            dnsSocket.setSoTimeout(2000);
+
+            byte[] packetBuffer = new byte[32767];
+            InetAddress targetDns = InetAddress.getByName(ADGUARD_DNS);
+
+            while (isRunning && !Thread.currentThread().isInterrupted()) {
+                int length = in.read(packetBuffer);
+                if (length > 28) {
+                    int ipHeaderLen = (packetBuffer[0] & 0x0F) * 4;
+                    int udpHeaderLen = 8;
+                    int dnsPayloadOffset = ipHeaderLen + udpHeaderLen;
+                    int dnsPayloadLen = length - dnsPayloadOffset;
+
+                    if (dnsPayloadLen > 0 && packetBuffer[9] == 17) {
+                        byte[] requestCopy = new byte[length];
+                        System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
+
+                        final DatagramSocket socketRef = dnsSocket;
+                        dnsThreadPool.execute(() -> {
+                            try {
+                                DatagramPacket outPacket = new DatagramPacket(
+                                    requestCopy, dnsPayloadOffset, dnsPayloadLen, targetDns, 53
+                                );
+                                synchronized (socketRef) {
+                                    socketRef.send(outPacket);
+                                    byte[] respBuffer = new byte[4096];
+                                    DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
+                                    socketRef.receive(inPacket);
+
+                                    byte[] responseIpPacket = buildIpUdpResponse(requestCopy, inPacket.getData(), inPacket.getLength());
+                                    if (responseIpPacket != null) {
+                                        synchronized (out) {
+                                            out.write(responseIpPacket);
+                                        }
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+                        });
+                    }
+                }
+            }
+        } catch (Exception e) {
+            if (isRunning) {
+                Log.e(TAG, "إغلاق حلقة معالجة الحزم:", e);
+            }
+        } finally {
+            if (dnsSocket != null && !dnsSocket.isClosed()) {
+                dnsSocket.close();
+            }
+            if (dnsThreadPool != null) {
+                dnsThreadPool.shutdownNow();
+            }
         }
     }
 
-    @PluginMethod
-    public void toggleVpn(PluginCall call) {
-        boolean enable = call.getBoolean("enable", false);
-        String serverIp = call.getString("serverIp", "1.1.1.1");
-        String serverName = call.getString("serverName", "Apex Cloud Server");
+    private byte[] buildIpUdpResponse(byte[] requestPacket, byte[] dnsResponsePayload, int dnsResponseLen) {
+        try {
+            int ipHeaderLen = (requestPacket[0] & 0x0F) * 4;
+            int totalLen = ipHeaderLen + 8 + dnsResponseLen;
+            byte[] ipPacket = new byte[totalLen];
 
-        Intent intent = new Intent(getContext(), ApexVpnService.class);
+            System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
+            System.arraycopy(requestPacket, 16, ipPacket, 12, 4);
+            System.arraycopy(requestPacket, 12, ipPacket, 16, 4);
 
-        if (enable) {
-            intent.setAction(ApexVpnService.ACTION_CONNECT);
-            intent.putExtra("serverIp", serverIp);
-            intent.putExtra("serverName", serverName);
-            ContextCompat.startForegroundService(getContext(), intent);
-        } else {
-            intent.setAction(ApexVpnService.ACTION_DISCONNECT);
-            getContext().startService(intent);
+            ipPacket[2] = (byte) (totalLen >> 8);
+            ipPacket[3] = (byte) (totalLen & 0xFF);
+
+            int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
+            int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
+
+            ipPacket[ipHeaderLen] = (byte) (dstPort >> 8);
+            ipPacket[ipHeaderLen + 1] = (byte) (dstPort & 0xFF);
+            ipPacket[ipHeaderLen + 2] = (byte) (srcPort >> 8);
+            ipPacket[ipHeaderLen + 3] = (byte) (srcPort & 0xFF);
+
+            int udpLen = 8 + dnsResponseLen;
+            ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
+            ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
+            ipPacket[ipHeaderLen + 6] = 0;
+            ipPacket[ipHeaderLen + 7] = 0;
+
+            System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
+
+            return ipPacket;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private synchronized void stopVpnConnection() {
+        if (!isRunning && vpnInterface == null) return;
+        isRunning = false;
+
+        if (vpnThread != null) {
+            vpnThread.interrupt();
         }
 
-        JSObject ret = new JSObject();
-        ret.put("success", true);
-        ret.put("status", enable ? "connected" : "disconnected");
-        call.resolve(ret);
+        try {
+            if (vpnInterface != null) {
+                vpnInterface.close();
+                vpnInterface = null;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } else {
+            stopForeground(true);
+        }
+        stopSelf();
+        Log.i(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
     }
 
-    @PluginMethod
-    public void performNativeScan(PluginCall call) {
-        JSObject ret = new JSObject();
-        ret.put("scannedMB", "450.5");
-        ret.put("totalMB", "8192");
-        ret.put("scannedApps", 42);
-        call.resolve(ret);
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Apex Shield VPN Protection",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            channel.setDescription("حالة الاتصال بالشبكة المشفرة");
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
     }
 
-    @PluginMethod
-    public void checkSubscriptionStatus(PluginCall call) {
-        JSObject ret = new JSObject();
-        ret.put("isPro", false);
-        call.resolve(ret);
+    private Notification buildNotification(String serverName) {
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 0, notificationIntent,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+        );
+
+        int appIcon = getApplicationInfo().icon != 0 ? getApplicationInfo().icon : android.R.drawable.ic_lock_lock;
+        String contentText = (serverName != null && !serverName.isEmpty()) ? "متصل بالدرع عبر: " + serverName : "درع الحماية المشفرة نشط الآن";
+
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Apex Shield AI")
+                .setContentText(contentText)
+                .setSmallIcon(appIcon)
+                .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOngoing(true)
+                .build();
     }
 
-    @PluginMethod
-    public void getLicenseKey(PluginCall call) {
-        JSObject ret = new JSObject();
-        ret.put("licenseKey", BASE64_LICENSE_KEY);
-        call.resolve(ret);
-    }
-
-    @PluginMethod
-    public void launchBilling(PluginCall call) {
-        String productId = call.getString("productId", "");
-        
-        JSObject ret = new JSObject();
-        ret.put("success", true);
-        ret.put("productId", productId);
-        call.resolve(ret);
+    @Override
+    public void onDestroy() {
+        stopVpnConnection();
+        super.onDestroy();
     }
 }

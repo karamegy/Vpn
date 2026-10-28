@@ -68,8 +68,7 @@ public class ApexVpnService extends VpnService {
     private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
         isRunning = true;
-        // إنشاء مجمع خيوط معالج لـ DNS لضمان سرعة الاستجابة
-        dnsThreadPool = Executors.newFixedThreadPool(8);
+        dnsThreadPool = Executors.newFixedThreadPool(12);
 
         vpnThread = new Thread(() -> {
             try {
@@ -77,7 +76,7 @@ public class ApexVpnService extends VpnService {
                 builder.setSession("Apex Shield Protection")
                        .addAddress("10.0.0.2", 32)
                        .addDnsServer(ADGUARD_DNS)
-                       .addRoute(ADGUARD_DNS, 32) // توجيه مسار سيرفر الـ DNS فقط لحماية تصفح الـ TCP العام من الانقطاع
+                       .addRoute(ADGUARD_DNS, 32) // توجيه مسار سيرفر الـ DNS فقط
                        .setMtu(1500);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -123,11 +122,10 @@ public class ApexVpnService extends VpnService {
                         byte[] requestCopy = new byte[length];
                         System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
 
-                        // تمرير الطلب لخيط مستقل مع DatagramSocket منفصل لتجنب أي تعليق
                         dnsThreadPool.execute(() -> {
                             try (DatagramSocket taskSocket = new DatagramSocket()) {
-                                protect(taskSocket); // استثناء السوكت المباشر من التوجيه عبر TUN
-                                taskSocket.setSoTimeout(2000);
+                                protect(taskSocket); // استثناء السوكت من التوجيه عبر TUN
+                                taskSocket.setSoTimeout(2500);
 
                                 DatagramPacket outPacket = new DatagramPacket(
                                     requestCopy, dnsPayloadOffset, dnsPayloadLen, targetDns, 53
@@ -175,6 +173,9 @@ public class ApexVpnService extends VpnService {
             ipPacket[2] = (byte) (totalLen >> 8);
             ipPacket[3] = (byte) (totalLen & 0xFF);
 
+            // إعادة حساب الـ Checksum الصحيح لترويسة الـ IP لكي لا يرفضها أندرويد
+            calculateIpChecksum(ipPacket, ipHeaderLen);
+
             // ترويسة UDP: تبديل المنافذ
             int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
             int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
@@ -187,16 +188,33 @@ public class ApexVpnService extends VpnService {
             int udpLen = 8 + dnsResponseLen;
             ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
             ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
-            ipPacket[ipHeaderLen + 6] = 0; // Checksum
+            ipPacket[ipHeaderLen + 6] = 0; // Checksum مسموح بـ 0 في IPv4 UDP
             ipPacket[ipHeaderLen + 7] = 0;
 
-            // دمج حمولة الـ DNS في الحزمة الأخيرة
+            // دمج حمولة الـ DNS
             System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
 
             return ipPacket;
         } catch (Exception e) {
             return null;
         }
+    }
+
+    // دالة حساب مجموع التحقق لترويسة IP لضمان قبول الحزمة من النواة
+    private void calculateIpChecksum(byte[] buf, int ipHeaderLen) {
+        buf[10] = 0;
+        buf[11] = 0;
+        long sum = 0;
+        for (int i = 0; i < ipHeaderLen; i += 2) {
+            int word = ((buf[i] & 0xFF) << 8) | (buf[i + 1] & 0xFF);
+            sum += word;
+        }
+        while ((sum >> 16) > 0) {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        int checksum = (int) (~sum & 0xFFFF);
+        buf[10] = (byte) (checksum >> 8);
+        buf[11] = (byte) (checksum & 0xFF);
     }
 
     private synchronized void stopVpnConnection() {

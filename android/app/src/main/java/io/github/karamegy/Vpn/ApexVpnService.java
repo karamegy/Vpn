@@ -9,235 +9,169 @@ import android.content.pm.ServiceInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.util.Base64;
 import android.util.Log;
-import androidx.core.app.NotificationCompat;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.wireguard.android.backend.GoBackend;
+import com.wireguard.android.backend.Tunnel;
+import com.wireguard.config.Config;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 
 public class ApexVpnService extends VpnService {
     private static final String TAG = "ApexVpnService";
     private static final String CHANNEL_ID = "ApexVpnChannel";
     private static final int NOTIFICATION_ID = 101;
+    private static final String TUNNEL_NAME = "ApexWarpTunnel";
 
-    public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START_VPN";
-    public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP_VPN";
+    public static final String ACTION_CONNECT = "io.github.karamegy.Vpn.START";
+    public static final String ACTION_DISCONNECT = "io.github.karamegy.Vpn.STOP";
 
+    private GoBackend backend;
+    private boolean isTunnelRunning = false;
     private ParcelFileDescriptor vpnInterface = null;
-    private volatile boolean isRunning = false;
-    private Thread vpnThread = null;
-    private ExecutorService dnsThreadPool;
 
-    private static final String ADGUARD_DNS = "94.140.14.14";
-    private static final String TUN_DNS_SERVER = "10.0.0.1";
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        try {
+            backend = new GoBackend(getApplicationContext());
+        } catch (Exception e) {
+            Log.e(TAG, "فشل تهيئة محرك WireGuard GoBackend", e);
+        }
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : "";
-        String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Shield Node";
-        String serverIp = intent != null ? intent.getStringExtra("serverIp") : ADGUARD_DNS;
 
-        if (ACTION_CONNECT.equals(action) || "START".equals(action) || "START_VPN".equals(action)) {
-            startForegroundNotification(serverName);
-            startVpnConnection(serverIp, serverName);
-        } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action) || "STOP_VPN".equals(action)) {
+        if (ACTION_CONNECT.equals(action) || "START".equals(action)) {
+            String serverName = intent != null ? intent.getStringExtra("serverName") : "Cloudflare WARP";
+            String warpClientIp = intent != null ? intent.getStringExtra("warpClientIp") : "172.16.0.2/32";
+            String warpEndpoint = intent != null ? intent.getStringExtra("warpEndpoint") : "162.159.192.1:2408";
+            String warpPrivateKey = intent != null ? intent.getStringExtra("warpPrivateKey") : "";
+
+            createNotificationChannel();
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, buildNotification(serverName), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification(serverName));
+            }
+
+            startVpnConnection(warpClientIp, warpEndpoint, serverName, warpPrivateKey);
+        } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action)) {
             stopVpnConnection();
         }
 
         return START_STICKY;
     }
 
-    private void startForegroundNotification(String serverName) {
-        createNotificationChannel();
-        Notification notification = buildNotification(serverName);
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_VPN);
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
-            } else {
-                startForeground(NOTIFICATION_ID, notification);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "خطأ في بدء الخدمة الأمامية: ", e);
-        }
-    }
+    private void startVpnConnection(String clientIpStr, String endpointStr, String serverName, String privateKeyBase64) {
+        if (isTunnelRunning) return;
 
-    private synchronized void startVpnConnection(String serverIp, String serverName) {
-        if (isRunning) return;
-        isRunning = true;
-        dnsThreadPool = Executors.newFixedThreadPool(8);
-
-        vpnThread = new Thread(() -> {
+        new Thread(() -> {
             try {
-                Builder builder = new Builder();
-                builder.setSession("Apex Shield Protection")
-                       .addAddress("10.0.0.2", 32)
-                       .addDnsServer(TUN_DNS_SERVER)
-                       .addRoute(TUN_DNS_SERVER, 32)
-                       .addRoute(ADGUARD_DNS, 32)
-                       .setMtu(1500);
+                if (backend != null) {
+                    String privateKey;
+                    if (privateKeyBase64 != null && !privateKeyBase64.trim().isEmpty()) {
+                        privateKey = privateKeyBase64.trim();
+                    } else {
+                        byte[] randomBytes = new byte[32];
+                        new SecureRandom().nextBytes(randomBytes);
+                        privateKey = Base64.encodeToString(randomBytes, Base64.NO_WRAP);
+                    }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    try {
-                        builder.addDisallowedApplication(getPackageName());
-                    } catch (Exception ignored) {}
-                }
+                    String formattedClientIp = (clientIpStr != null && !clientIpStr.isEmpty()) ? clientIpStr : "172.16.0.2/32";
+                    if (!formattedClientIp.contains("/")) {
+                        formattedClientIp += "/32";
+                    }
 
-                vpnInterface = builder.establish();
-                if (vpnInterface == null) {
-                    stopVpnConnection();
+                    String targetEndpoint = (endpointStr != null && !endpointStr.isEmpty()) ? endpointStr : "162.159.192.1:2408";
+
+                    String wgConfigStr = "[Interface]\n" +
+                            "PrivateKey = " + privateKey + "\n" +
+                            "Address = " + formattedClientIp + ", fd00::2/128\n" +
+                            "DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111\n" +
+                            "MTU = 1280\n\n" +
+                            "[Peer]\n" +
+                            "PublicKey = bmXOC+F1FxEMF9mTpdM6yWp166bNQA3JV4G2F2LAKkc=\n" +
+                            "Endpoint = " + targetEndpoint + "\n" +
+                            "AllowedIPs = 0.0.0.0/0, ::/0\n";
+
+                    Config config = Config.parse(new ByteArrayInputStream(wgConfigStr.getBytes(StandardCharsets.UTF_8)));
+
+                    backend.setState(new Tunnel() {
+                        @Override
+                        public String getName() {
+                            return TUNNEL_NAME;
+                        }
+
+                        @Override
+                        public void onStateChange(State state) {
+                            Log.d(TAG, "حالة نفق WireGuard تغيرت إلى: " + state.name());
+                        }
+                    }, Tunnel.State.UP, config);
+
+                    isTunnelRunning = true;
+                    Log.d(TAG, "✅ تم تشغيل نفق WireGuard/WARP وتوجيه البيانات بنجاح!");
                     return;
                 }
+            } catch (Exception e) {
+                Log.e(TAG, "فشل WireGuard GoBackend، جاري المحاولة بواسطة واجهة VpnService النظام:", e);
+            }
 
-                Log.i(TAG, "✅ تم تشغيل النفق بنجاح عبر: " + serverName);
-                runPacketLoop();
-
+            try {
+                Builder builder = new Builder();
+                builder.addAddress("172.16.0.2", 32);
+                builder.addDnsServer("1.1.1.1");
+                builder.addDnsServer("1.0.0.1");
+                builder.addRoute("0.0.0.0", 0);
+                builder.setSession("ApexShieldVPN");
+                vpnInterface = builder.establish();
+                isTunnelRunning = true;
+                Log.d(TAG, "✅ تم تشغيل واجهة VPN النظام بنجاح!");
             } catch (Exception ex) {
-                Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
+                Log.e(TAG, "❌ فشل إنشاء واجهة VPN النظام:", ex);
                 stopVpnConnection();
             }
-        });
-        vpnThread.start();
+        }).start();
     }
 
-    private void runPacketLoop() {
-        try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor());
-             FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
+    private void stopVpnConnection() {
+        new Thread(() -> {
+            try {
+                if (backend != null && isTunnelRunning) {
+                    backend.setState(new Tunnel() {
+                        @Override
+                        public String getName() {
+                            return TUNNEL_NAME;
+                        }
 
-            byte[] packetBuffer = new byte[32767];
-            InetAddress targetDns = InetAddress.getByName(ADGUARD_DNS);
-
-            while (isRunning && !Thread.currentThread().isInterrupted()) {
-                int length = in.read(packetBuffer);
-                if (length > 28) {
-                    int ipHeaderLen = (packetBuffer[0] & 0x0F) * 4;
-                    int udpHeaderLen = 8;
-                    int dnsPayloadOffset = ipHeaderLen + udpHeaderLen;
-                    int dnsPayloadLen = length - dnsPayloadOffset;
-
-                    if (dnsPayloadLen > 0 && packetBuffer[9] == 17) {
-                        byte[] requestCopy = new byte[length];
-                        System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
-
-                        dnsThreadPool.execute(() -> {
-                            try (DatagramSocket taskSocket = new DatagramSocket()) {
-                                protect(taskSocket);
-                                taskSocket.setSoTimeout(2500);
-
-                                DatagramPacket outPacket = new DatagramPacket(
-                                    requestCopy, dnsPayloadOffset, dnsPayloadLen, targetDns, 53
-                                );
-                                taskSocket.send(outPacket);
-
-                                byte[] respBuffer = new byte[4096];
-                                DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
-                                taskSocket.receive(inPacket);
-
-                                byte[] responseIpPacket = buildIpUdpResponse(requestCopy, inPacket.getData(), inPacket.getLength());
-                                if (responseIpPacket != null) {
-                                    synchronized (out) {
-                                        out.write(responseIpPacket);
-                                    }
-                                }
-                            } catch (Exception ignored) {}
-                        });
-                    }
+                        @Override
+                        public void onStateChange(State state) {}
+                    }, Tunnel.State.DOWN, null);
                 }
+            } catch (Exception e) {
+                Log.e(TAG, "خطأ أثناء إيقاف WireGuard backend:", e);
             }
-        } catch (Exception e) {
-            if (isRunning) {
-                Log.e(TAG, "إغلاق حلقة معالجة الحزم:", e);
+
+            try {
+                if (vpnInterface != null) {
+                    vpnInterface.close();
+                    vpnInterface = null;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "خطأ أثناء إغلاق vpnInterface:", e);
             }
-        } finally {
-            if (dnsThreadPool != null) {
-                dnsThreadPool.shutdownNow();
-            }
-        }
-    }
 
-    private byte[] buildIpUdpResponse(byte[] requestPacket, byte[] dnsResponsePayload, int dnsResponseLen) {
-        try {
-            int ipHeaderLen = (requestPacket[0] & 0x0F) * 4;
-            int totalLen = ipHeaderLen + 8 + dnsResponseLen;
-            byte[] ipPacket = new byte[totalLen];
-
-            System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
-            System.arraycopy(requestPacket, 16, ipPacket, 12, 4);
-            System.arraycopy(requestPacket, 12, ipPacket, 16, 4);
-
-            ipPacket[2] = (byte) (totalLen >> 8);
-            ipPacket[3] = (byte) (totalLen & 0xFF);
-
-            updateIpChecksum(ipPacket, ipHeaderLen);
-
-            int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
-            int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
-
-            ipPacket[ipHeaderLen] = (byte) (dstPort >> 8);
-            ipPacket[ipHeaderLen + 1] = (byte) (dstPort & 0xFF);
-            ipPacket[ipHeaderLen + 2] = (byte) (srcPort >> 8);
-            ipPacket[ipHeaderLen + 3] = (byte) (srcPort & 0xFF);
-
-            int udpLen = 8 + dnsResponseLen;
-            ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
-            ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
-            ipPacket[ipHeaderLen + 6] = 0;
-            ipPacket[ipHeaderLen + 7] = 0;
-
-            System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
-
-            return ipPacket;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private void updateIpChecksum(byte[] ipHeader, int ipHeaderLen) {
-        ipHeader[10] = 0;
-        ipHeader[11] = 0;
-        int sum = 0;
-        for (int i = 0; i < ipHeaderLen; i += 2) {
-            int word = ((ipHeader[i] & 0xFF) << 8) | (ipHeader[i + 1] & 0xFF);
-            sum += word;
-        }
-        while ((sum >> 16) > 0) {
-            sum = (sum & 0xFFFF) + (sum >> 16);
-        }
-        sum = ~sum & 0xFFFF;
-        ipHeader[10] = (byte) (sum >> 8);
-        ipHeader[11] = (byte) (sum & 0xFF);
-    }
-
-    private synchronized void stopVpnConnection() {
-        if (!isRunning && vpnInterface == null) return;
-        isRunning = false;
-
-        if (vpnThread != null) {
-            vpnThread.interrupt();
-        }
-
-        try {
-            if (vpnInterface != null) {
-                vpnInterface.close();
-                vpnInterface = null;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "خطأ أثناء إغلاق الواجهة: ", e);
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE);
-        } else {
+            isTunnelRunning = false;
             stopForeground(true);
-        }
-        stopSelf();
-        Log.i(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
+            stopSelf();
+            Log.d(TAG, "🔒 تم إيقاف خدمة الـ VPN وإعادة الـ IP الأصلي.");
+        }).start();
     }
 
     private void createNotificationChannel() {
@@ -247,7 +181,7 @@ public class ApexVpnService extends VpnService {
                     "Apex Shield VPN Protection",
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("حالة الاتصال بالشبكة المشفرة");
+            channel.setDescription("حالة الاتصال بالشبكة الافتراضية المشفرة");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
@@ -258,19 +192,25 @@ public class ApexVpnService extends VpnService {
     private Notification buildNotification(String serverName) {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
-                this, 0, notificationIntent,
+                this,
+                0,
+                notificationIntent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
         );
 
-        int appIcon = getApplicationInfo().icon != 0 ? getApplicationInfo().icon : android.R.drawable.ic_lock_lock;
-        String contentText = (serverName != null && !serverName.isEmpty()) ? "متصل بالدرع عبر: " + serverName : "درع الحماية المشفرة نشط الآن";
+        Notification.Builder builder = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                ? new Notification.Builder(this, CHANNEL_ID)
+                : new Notification.Builder(this);
 
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+        String contentText = (serverName != null && !serverName.isEmpty())
+                ? "متصل بالدرع عبر: " + serverName
+                : "درع الحماية وخدمة Cloudflare WARP المشفرة نشطة الآن";
+
+        return builder
                 .setContentTitle("Apex Shield AI")
                 .setContentText(contentText)
-                .setSmallIcon(appIcon)
+                .setSmallIcon(android.R.drawable.ic_lock_lock)
                 .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(true)
                 .build();
     }

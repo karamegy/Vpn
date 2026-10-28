@@ -79,8 +79,8 @@ public class ApexVpnService extends VpnService {
                 builder.setSession("Apex Shield Protection")
                        .addAddress("10.0.0.2", 32)
                        .addDnsServer(TUN_DNS_SERVER)
-                       // توجيه حركة الـ DNS فقط لإبقاء الإنترنت يعمل بدون انقطاع
                        .addRoute(TUN_DNS_SERVER, 32)
+                       .addRoute(ADGUARD_DNS, 32)
                        .setMtu(1500);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -95,8 +95,8 @@ public class ApexVpnService extends VpnService {
                     return;
                 }
 
-                Log.i(TAG, "✅ تم تشغيل درع الـ VPN بنجاح عبر: " + serverName);
-                runPacketLoop(serverIp);
+                Log.i(TAG, "✅ تم تشغيل النفق بنجاح عبر: " + serverName);
+                runPacketLoop();
 
             } catch (Exception ex) {
                 Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
@@ -106,14 +106,12 @@ public class ApexVpnService extends VpnService {
         vpnThread.start();
     }
 
-    private void runPacketLoop(String upstreamDnsIp) {
+    private void runPacketLoop() {
         try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor());
              FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
 
             byte[] packetBuffer = new byte[32767];
-            InetAddress targetDns = InetAddress.getByName(
-                (upstreamDnsIp != null && !upstreamDnsIp.isEmpty()) ? upstreamDnsIp : ADGUARD_DNS
-            );
+            InetAddress targetDns = InetAddress.getByName(ADGUARD_DNS);
 
             while (isRunning && !Thread.currentThread().isInterrupted()) {
                 int length = in.read(packetBuffer);
@@ -123,14 +121,13 @@ public class ApexVpnService extends VpnService {
                     int dnsPayloadOffset = ipHeaderLen + udpHeaderLen;
                     int dnsPayloadLen = length - dnsPayloadOffset;
 
-                    // معالجة حزم UDP الموجهة للبورت 53 (DNS)
                     if (dnsPayloadLen > 0 && packetBuffer[9] == 17) {
                         byte[] requestCopy = new byte[length];
                         System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
 
                         dnsThreadPool.execute(() -> {
                             try (DatagramSocket taskSocket = new DatagramSocket()) {
-                                protect(taskSocket); // استثناء السوكت المباشر ليمر عبر الإنترنت الحقيقي
+                                protect(taskSocket);
                                 taskSocket.setSoTimeout(2500);
 
                                 DatagramPacket outPacket = new DatagramPacket(
@@ -170,18 +167,15 @@ public class ApexVpnService extends VpnService {
             int totalLen = ipHeaderLen + 8 + dnsResponseLen;
             byte[] ipPacket = new byte[totalLen];
 
-            // نسخ ترويسة IP وتبديل عنوان المصدر والوجهة
             System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
-            System.arraycopy(requestPacket, 16, ipPacket, 12, 4); // Dst IP -> Src IP (10.0.0.1)
-            System.arraycopy(requestPacket, 12, ipPacket, 16, 4); // Src IP -> Dst IP (10.0.0.2)
+            System.arraycopy(requestPacket, 16, ipPacket, 12, 4);
+            System.arraycopy(requestPacket, 12, ipPacket, 16, 4);
 
             ipPacket[2] = (byte) (totalLen >> 8);
             ipPacket[3] = (byte) (totalLen & 0xFF);
 
-            // حساب Checksum لترويسة الـ IP
             updateIpChecksum(ipPacket, ipHeaderLen);
 
-            // تبديل المنافذ (UDP Ports)
             int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
             int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
 
@@ -193,7 +187,7 @@ public class ApexVpnService extends VpnService {
             int udpLen = 8 + dnsResponseLen;
             ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
             ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
-            ipPacket[ipHeaderLen + 6] = 0; // Clear Checksum
+            ipPacket[ipHeaderLen + 6] = 0;
             ipPacket[ipHeaderLen + 7] = 0;
 
             System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
@@ -243,7 +237,7 @@ public class ApexVpnService extends VpnService {
             stopForeground(true);
         }
         stopSelf();
-        Log.i(TAG, "🔒 تم إيقاف الخدمة واستعادة الاتصال العادي.");
+        Log.i(TAG, "🔒 تم إيقاف خدمة الـ VPN واستعادة الاتصال العادي.");
     }
 
     private void createNotificationChannel() {

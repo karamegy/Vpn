@@ -69,6 +69,8 @@ public class ApexVpnService extends VpnService {
     private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
         isRunning = true;
+        
+        // استخدام الـ IP الممرر من الجسر أو الافتراضي
         this.activeDnsIp = (serverIp != null && !serverIp.trim().isEmpty()) ? serverIp : DEFAULT_DNS;
         dnsThreadPool = Executors.newFixedThreadPool(8);
 
@@ -78,7 +80,7 @@ public class ApexVpnService extends VpnService {
                 builder.setSession("Apex Shield Protection")
                        .addAddress("10.0.0.2", 32)
                        .addDnsServer(activeDnsIp)
-                       .addRoute(activeDnsIp, 32)
+                       .addRoute(activeDnsIp, 32) // توجيه مسار الـ DNS المختار فقط لحماية الاتصال
                        .setMtu(1500);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -94,7 +96,7 @@ public class ApexVpnService extends VpnService {
                 }
 
                 Log.i(TAG, "✅ تم تشغيل النفق بنجاح عبر: " + serverName + " (DNS: " + activeDnsIp + ")");
-                runDnsLoop();
+                runPacketLoop();
 
             } catch (Exception ex) {
                 Log.e(TAG, "❌ فشل إنشاء واجهة الـ VPN:", ex);
@@ -104,7 +106,7 @@ public class ApexVpnService extends VpnService {
         vpnThread.start();
     }
 
-    private void runDnsLoop() {
+    private void runPacketLoop() {
         try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor());
              FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
 
@@ -119,14 +121,15 @@ public class ApexVpnService extends VpnService {
                     int dnsPayloadOffset = ipHeaderLen + udpHeaderLen;
                     int dnsPayloadLen = length - dnsPayloadOffset;
 
-                    // التحقق من بروتوكول UDP (17)
+                    // التحقق من أن الحزمة هي UDP (Protocol 17) وتحتوي على حمولة DNS
                     if (dnsPayloadLen > 0 && packetBuffer[9] == 17) {
                         byte[] requestCopy = new byte[length];
                         System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
 
                         dnsThreadPool.execute(() -> {
+                            // إنشاء سوكت منفصل لكل طلب لمنع الاختناق (Non-blocking parallel execution)
                             try (DatagramSocket querySocket = new DatagramSocket()) {
-                                protect(querySocket);
+                                protect(querySocket); // حماية السوكت من العودة للنفق
                                 querySocket.setSoTimeout(3000);
 
                                 DatagramPacket outPacket = new DatagramPacket(
@@ -166,13 +169,18 @@ public class ApexVpnService extends VpnService {
             int totalLen = ipHeaderLen + 8 + dnsResponseLen;
             byte[] ipPacket = new byte[totalLen];
 
+            // نسخ ترويسة IP الحالية
             System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
-            System.arraycopy(requestPacket, 16, ipPacket, 12, 4); // Source IP -> Dest IP
-            System.arraycopy(requestPacket, 12, ipPacket, 16, 4); // Dest IP -> Source IP
+            
+            // تبديل عناوين المصدر والوجهة (Source IP <-> Destination IP)
+            System.arraycopy(requestPacket, 16, ipPacket, 12, 4);
+            System.arraycopy(requestPacket, 12, ipPacket, 16, 4);
 
+            // تحديث الطول الكلي للحزمة (Total Length)
             ipPacket[2] = (byte) (totalLen >> 8);
             ipPacket[3] = (byte) (totalLen & 0xFF);
 
+            // تبديل الموانئ (Ports)
             int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
             int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
 
@@ -181,15 +189,17 @@ public class ApexVpnService extends VpnService {
             ipPacket[ipHeaderLen + 2] = (byte) (srcPort >> 8);
             ipPacket[ipHeaderLen + 3] = (byte) (srcPort & 0xFF);
 
+            // طول حمولة UDP
             int udpLen = 8 + dnsResponseLen;
             ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
             ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
-            ipPacket[ipHeaderLen + 6] = 0;
+            ipPacket[ipHeaderLen + 6] = 0; // إلغاء Checksum الخاص بـ UDP
             ipPacket[ipHeaderLen + 7] = 0;
 
+            // نسخ حمولة الـ DNS العائدة
             System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
 
-            // حساب IPv4 Header Checksum
+            // حساب المجموع التفحصي لترويسة IPv4 (IPv4 Header Checksum Calculation - RFC 791)
             ipPacket[10] = 0;
             ipPacket[11] = 0;
             int sum = 0;

@@ -111,7 +111,7 @@ jobs:
           android.useAndroidX=true
           EOF
 
-          # حقن مكتبة Google Play Billing، تعطيل R8 Minification لمنع حذف الجسر، وتحديث قواعد ProGuard
+          # حقن مكتبة Google Play Billing وضبط الإعدادات
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:8.0.0"' android/app/build.gradle
@@ -120,22 +120,7 @@ jobs:
             sed -i -E 's/versionName "[^"]*"/versionName "8.0.1.1"/' android/app/build.gradle
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
-            
-            # تعطيل تقليص الكود وحذف الجسر المخصص لنسخة AAB
-            sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle || true
-            sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle || true
           fi
-
-          # إدراج قواعد ProGuard المخصصة لمنع حذف كلاسات الجسر ومكتبة جوجل بلاي
-          cat << 'PROGUARD_EOF' >> android/app/proguard-rules.pro
-          -keep class **.AndroidVPNBridge { *; }
-          -keep class io.github.karamegy.Vpn.** { *; }
-          -keepclasseswithmembers class * {
-              @com.getcapacitor.annotation.CapacitorPlugin <methods>;
-              @com.getcapacitor.PluginMethod <methods>;
-          }
-          -keep class com.android.billingclient.** { *; }
-          PROGUARD_EOF
 
           if [ -f "android/variables.gradle" ]; then
             sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
@@ -153,21 +138,26 @@ jobs:
           cd android
           
           if [ -n "$RELEASE_KEY" ]; then
-            printf "%s" "$RELEASE_KEY" | base64 --decode > app/signing.keystore
+            printf "%s" "$RELEASE_KEY" | base64 --decode > signing.keystore
           fi
           
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           
-          # البناء والتوقيع المباشر بداخل نظام Gradle لضمان سلامة حزم AAB و APK
-          ./gradlew assembleRelease bundleRelease \
-            -Pandroid.injected.signing.store.file=signing.keystore \
-            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
-            -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease --no-daemon
+          ./gradlew assembleRelease bundleRelease -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease --no-daemon
 
-          rm -f app/signing.keystore
+          APK_FILE=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+          AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
+
+          APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
+          [ -z "$APKSIGNER" ] && APKSIGNER="apksigner"
+
+          if [ -f "$APK_FILE" ] && [ -n "$RELEASE_KEY" ]; then
+            $APKSIGNER sign --ks signing.keystore --ks-pass pass:"$STORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASSWORD" "$APK_FILE"
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore signing.keystore -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" "$AAB_FILE" "$KEY_ALIAS"
+          fi
+          
+          rm -f signing.keystore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

@@ -187,11 +187,26 @@ public class ApexVpnService extends VpnService {
             int udpLen = 8 + dnsResponseLen;
             ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
             ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
-            ipPacket[ipHeaderLen + 6] = 0; // Checksum
+            ipPacket[ipHeaderLen + 6] = 0; // إلغاء Checksum الخاص بـ UDP
             ipPacket[ipHeaderLen + 7] = 0;
 
             // دمج حمولة الـ DNS في الحزمة الأخيرة
             System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
+
+            // حساب المجموع التفحصي لترويسة IPv4 (RFC 791) لمنع رفض الحزمة
+            ipPacket[10] = 0;
+            ipPacket[11] = 0;
+            int sum = 0;
+            for (int i = 0; i < ipHeaderLen; i += 2) {
+                int word = ((ipPacket[i] & 0xFF) << 8) | (ipPacket[i + 1] & 0xFF);
+                sum += word;
+            }
+            while ((sum >> 16) > 0) {
+                sum = (sum & 0xFFFF) + (sum >> 16);
+            }
+            int checksum = ~sum & 0xFFFF;
+            ipPacket[10] = (byte) (checksum >> 8);
+            ipPacket[11] = (byte) (checksum & 0xFF);
 
             return ipPacket;
         } catch (Exception e) {

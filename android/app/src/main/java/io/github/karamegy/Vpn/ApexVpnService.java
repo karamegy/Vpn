@@ -68,8 +68,7 @@ public class ApexVpnService extends VpnService {
     private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
         isRunning = true;
-        // إنشاء مجمع خيوط معالج لـ DNS لضمان سرعة الاستجابة
-        dnsThreadPool = Executors.newFixedThreadPool(8);
+        dnsThreadPool = Executors.newFixedThreadPool(4);
 
         vpnThread = new Thread(() -> {
             try {
@@ -77,7 +76,7 @@ public class ApexVpnService extends VpnService {
                 builder.setSession("Apex Shield Protection")
                        .addAddress("10.0.0.2", 32)
                        .addDnsServer(ADGUARD_DNS)
-                       .addRoute(ADGUARD_DNS, 32) // توجيه مسار سيرفر الـ DNS فقط لحماية تصفح الـ TCP العام من الانقطاع
+                       .addRoute(ADGUARD_DNS, 32) // توجيه مسار الـ DNS فقط لحماية تصفح الإنترنت من الانقطاع
                        .setMtu(1500);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -104,8 +103,13 @@ public class ApexVpnService extends VpnService {
     }
 
     private void runPacketLoop() {
+        DatagramSocket dnsSocket = null;
         try (FileInputStream in = new FileInputStream(vpnInterface.getFileDescriptor());
              FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
+
+            dnsSocket = new DatagramSocket();
+            protect(dnsSocket);
+            dnsSocket.setSoTimeout(2000);
 
             byte[] packetBuffer = new byte[32767];
             InetAddress targetDns = InetAddress.getByName(ADGUARD_DNS);
@@ -118,30 +122,27 @@ public class ApexVpnService extends VpnService {
                     int dnsPayloadOffset = ipHeaderLen + udpHeaderLen;
                     int dnsPayloadLen = length - dnsPayloadOffset;
 
-                    // التحقق من أن الحزمة هي UDP (البروتوكول 17)
                     if (dnsPayloadLen > 0 && packetBuffer[9] == 17) {
                         byte[] requestCopy = new byte[length];
                         System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
 
-                        // تمرير الطلب لخيط مستقل مع DatagramSocket منفصل لتجنب أي تعليق
+                        final DatagramSocket socketRef = dnsSocket;
                         dnsThreadPool.execute(() -> {
-                            try (DatagramSocket taskSocket = new DatagramSocket()) {
-                                protect(taskSocket); // استثناء السوكت المباشر من التوجيه عبر TUN
-                                taskSocket.setSoTimeout(2000);
-
+                            try {
                                 DatagramPacket outPacket = new DatagramPacket(
                                     requestCopy, dnsPayloadOffset, dnsPayloadLen, targetDns, 53
                                 );
-                                taskSocket.send(outPacket);
+                                synchronized (socketRef) {
+                                    socketRef.send(outPacket);
+                                    byte[] respBuffer = new byte[4096];
+                                    DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
+                                    socketRef.receive(inPacket);
 
-                                byte[] respBuffer = new byte[4096];
-                                DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
-                                taskSocket.receive(inPacket);
-
-                                byte[] responseIpPacket = buildIpUdpResponse(requestCopy, inPacket.getData(), inPacket.getLength());
-                                if (responseIpPacket != null) {
-                                    synchronized (out) {
-                                        out.write(responseIpPacket);
+                                    byte[] responseIpPacket = buildIpUdpResponse(requestCopy, inPacket.getData(), inPacket.getLength());
+                                    if (responseIpPacket != null) {
+                                        synchronized (out) {
+                                            out.write(responseIpPacket);
+                                        }
                                     }
                                 }
                             } catch (Exception ignored) {}
@@ -154,6 +155,9 @@ public class ApexVpnService extends VpnService {
                 Log.e(TAG, "إغلاق حلقة معالجة الحزم:", e);
             }
         } finally {
+            if (dnsSocket != null && !dnsSocket.isClosed()) {
+                dnsSocket.close();
+            }
             if (dnsThreadPool != null) {
                 dnsThreadPool.shutdownNow();
             }
@@ -166,16 +170,13 @@ public class ApexVpnService extends VpnService {
             int totalLen = ipHeaderLen + 8 + dnsResponseLen;
             byte[] ipPacket = new byte[totalLen];
 
-            // نسخ ترويسة IP وتبديل المصدر والوجهة
             System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
-            System.arraycopy(requestPacket, 16, ipPacket, 12, 4); // Source IP -> Dest IP
-            System.arraycopy(requestPacket, 12, ipPacket, 16, 4); // Dest IP -> Source IP
+            System.arraycopy(requestPacket, 16, ipPacket, 12, 4);
+            System.arraycopy(requestPacket, 12, ipPacket, 16, 4);
 
-            // تحديث إجمالي طول الحزمة
             ipPacket[2] = (byte) (totalLen >> 8);
             ipPacket[3] = (byte) (totalLen & 0xFF);
 
-            // ترويسة UDP: تبديل المنافذ
             int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
             int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
 
@@ -187,10 +188,9 @@ public class ApexVpnService extends VpnService {
             int udpLen = 8 + dnsResponseLen;
             ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
             ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
-            ipPacket[ipHeaderLen + 6] = 0; // Checksum
+            ipPacket[ipHeaderLen + 6] = 0;
             ipPacket[ipHeaderLen + 7] = 0;
 
-            // دمج حمولة الـ DNS في الحزمة الأخيرة
             System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
 
             return ipPacket;

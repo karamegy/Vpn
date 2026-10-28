@@ -34,6 +34,7 @@ public class ApexVpnService extends VpnService {
     private ExecutorService dnsThreadPool;
 
     private static final String ADGUARD_DNS = "94.140.14.14";
+    private static final String TUN_DNS_SERVER = "10.0.0.1";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -55,7 +56,9 @@ public class ApexVpnService extends VpnService {
         createNotificationChannel();
         Notification notification = buildNotification(serverName);
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_VPN);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
             } else {
                 startForeground(NOTIFICATION_ID, notification);
@@ -68,7 +71,6 @@ public class ApexVpnService extends VpnService {
     private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
         isRunning = true;
-        // إنشاء مجمع خيوط معالج لـ DNS لضمان سرعة الاستجابة
         dnsThreadPool = Executors.newFixedThreadPool(8);
 
         vpnThread = new Thread(() -> {
@@ -76,8 +78,9 @@ public class ApexVpnService extends VpnService {
                 Builder builder = new Builder();
                 builder.setSession("Apex Shield Protection")
                        .addAddress("10.0.0.2", 32)
-                       .addDnsServer(ADGUARD_DNS)
-                       .addRoute(ADGUARD_DNS, 32) // توجيه مسار سيرفر الـ DNS فقط لحماية تصفح الـ TCP العام من الانقطاع
+                       .addDnsServer(TUN_DNS_SERVER)
+                       .addRoute(TUN_DNS_SERVER, 32)
+                       .addRoute(ADGUARD_DNS, 32)
                        .setMtu(1500);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -118,16 +121,14 @@ public class ApexVpnService extends VpnService {
                     int dnsPayloadOffset = ipHeaderLen + udpHeaderLen;
                     int dnsPayloadLen = length - dnsPayloadOffset;
 
-                    // التحقق من أن الحزمة هي UDP (البروتوكول 17)
                     if (dnsPayloadLen > 0 && packetBuffer[9] == 17) {
                         byte[] requestCopy = new byte[length];
                         System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
 
-                        // تمرير الطلب لخيط مستقل مع DatagramSocket منفصل لتجنب أي تعليق
                         dnsThreadPool.execute(() -> {
                             try (DatagramSocket taskSocket = new DatagramSocket()) {
-                                protect(taskSocket); // استثناء السوكت المباشر من التوجيه عبر TUN
-                                taskSocket.setSoTimeout(2000);
+                                protect(taskSocket);
+                                taskSocket.setSoTimeout(2500);
 
                                 DatagramPacket outPacket = new DatagramPacket(
                                     requestCopy, dnsPayloadOffset, dnsPayloadLen, targetDns, 53
@@ -166,16 +167,15 @@ public class ApexVpnService extends VpnService {
             int totalLen = ipHeaderLen + 8 + dnsResponseLen;
             byte[] ipPacket = new byte[totalLen];
 
-            // نسخ ترويسة IP وتبديل المصدر والوجهة
             System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
-            System.arraycopy(requestPacket, 16, ipPacket, 12, 4); // Source IP -> Dest IP
-            System.arraycopy(requestPacket, 12, ipPacket, 16, 4); // Dest IP -> Source IP
+            System.arraycopy(requestPacket, 16, ipPacket, 12, 4);
+            System.arraycopy(requestPacket, 12, ipPacket, 16, 4);
 
-            // تحديث إجمالي طول الحزمة
             ipPacket[2] = (byte) (totalLen >> 8);
             ipPacket[3] = (byte) (totalLen & 0xFF);
 
-            // ترويسة UDP: تبديل المنافذ
+            updateIpChecksum(ipPacket, ipHeaderLen);
+
             int srcPort = ((requestPacket[ipHeaderLen] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 1] & 0xFF);
             int dstPort = ((requestPacket[ipHeaderLen + 2] & 0xFF) << 8) | (requestPacket[ipHeaderLen + 3] & 0xFF);
 
@@ -187,31 +187,31 @@ public class ApexVpnService extends VpnService {
             int udpLen = 8 + dnsResponseLen;
             ipPacket[ipHeaderLen + 4] = (byte) (udpLen >> 8);
             ipPacket[ipHeaderLen + 5] = (byte) (udpLen & 0xFF);
-            ipPacket[ipHeaderLen + 6] = 0; // إلغاء Checksum الخاص بـ UDP
+            ipPacket[ipHeaderLen + 6] = 0;
             ipPacket[ipHeaderLen + 7] = 0;
 
-            // دمج حمولة الـ DNS في الحزمة الأخيرة
             System.arraycopy(dnsResponsePayload, 0, ipPacket, ipHeaderLen + 8, dnsResponseLen);
-
-            // حساب المجموع التفحصي لترويسة IPv4 (RFC 791) لمنع رفض الحزمة
-            ipPacket[10] = 0;
-            ipPacket[11] = 0;
-            int sum = 0;
-            for (int i = 0; i < ipHeaderLen; i += 2) {
-                int word = ((ipPacket[i] & 0xFF) << 8) | (ipPacket[i + 1] & 0xFF);
-                sum += word;
-            }
-            while ((sum >> 16) > 0) {
-                sum = (sum & 0xFFFF) + (sum >> 16);
-            }
-            int checksum = ~sum & 0xFFFF;
-            ipPacket[10] = (byte) (checksum >> 8);
-            ipPacket[11] = (byte) (checksum & 0xFF);
 
             return ipPacket;
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private void updateIpChecksum(byte[] ipHeader, int ipHeaderLen) {
+        ipHeader[10] = 0;
+        ipHeader[11] = 0;
+        int sum = 0;
+        for (int i = 0; i < ipHeaderLen; i += 2) {
+            int word = ((ipHeader[i] & 0xFF) << 8) | (ipHeader[i + 1] & 0xFF);
+            sum += word;
+        }
+        while ((sum >> 16) > 0) {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        sum = ~sum & 0xFFFF;
+        ipHeader[10] = (byte) (sum >> 8);
+        ipHeader[11] = (byte) (sum & 0xFF);
     }
 
     private synchronized void stopVpnConnection() {

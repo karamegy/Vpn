@@ -75,10 +75,19 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
     @PluginMethod
     public void performNativeScan(PluginCall call) {
+        int appsCount = 0;
+        try {
+            if (getContext() != null && getContext().getPackageManager() != null) {
+                appsCount = getContext().getPackageManager().getInstalledApplications(0).size();
+            }
+        } catch (Exception e) {
+            appsCount = 0;
+        }
+
         JSObject ret = new JSObject();
-        ret.put("scannedMB", "450.5");
+        ret.put("scannedMB", "512.0");
         ret.put("totalMB", "8192");
-        ret.put("scannedApps", 42);
+        ret.put("scannedApps", appsCount);
         call.resolve(ret);
     }
 

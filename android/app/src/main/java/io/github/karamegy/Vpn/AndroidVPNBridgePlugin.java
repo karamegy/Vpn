@@ -7,7 +7,6 @@ import android.net.VpnService;
 import androidx.activity.result.ActivityResult;
 import androidx.core.content.ContextCompat;
 
-import com.android.billingclient.api.*;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -15,14 +14,11 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-import java.util.Collections;
-
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin {
 
+    // مفتاح الترخيص الخاص بـ Google Play Console
     public static final String BASE64_LICENSE_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmxgdl9pF2Wa6OpHD7jQnmAKZ+1Z/TgyCo5WhWAcd1yVbsKW6/MeEk3wHECm/j8RNdqVTSpa5Gwle0uuiT+yNaIjZgVwg1CdjkPzu6F3TYiazdGTxTvK3bb5a+TYQB2B6di30vTP6BAVqRSFOiVuULEDH/DcLjWuqVGMgWRe4ni37yoHnBtRh5Lyj/Dg3jq01AeUg/xNlK7kUi/xY1zqCH3oXtou4uxTLBTWGrIvisrKVyj3Xx6npCrwAQRiVGC0rjUiYUltkqx5r2ZAWGOxOpH0ia6HqNveJjMbY9icRLrmfiemky107HCqEjB+QTGCR7Lw+5QjIFD1DARb1E/YJbwIDAQAB";
-
-    private BillingClient billingClient;
 
     @PluginMethod
     public void prepareVpn(PluginCall call) {
@@ -37,7 +33,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
     }
 
     @ActivityCallback
-    public void handleVpnPermissionResult(PluginCall call, ActivityResult result) {
+    private void handleVpnPermissionResult(PluginCall call, ActivityResult result) {
         JSObject ret = new JSObject();
         if (result.getResultCode() == Activity.RESULT_OK) {
             ret.put("prepared", true);
@@ -83,11 +79,9 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
     @PluginMethod
     public void checkSubscriptionStatus(PluginCall call) {
-        if (billingClient == null || !billingClient.isReady()) {
-            initBillingClient(call, null, false);
-        } else {
-            queryActivePurchases(call);
-        }
+        JSObject ret = new JSObject();
+        ret.put("isPro", false);
+        call.resolve(ret);
     }
 
     @PluginMethod
@@ -99,18 +93,15 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
     @PluginMethod
     public void launchBilling(PluginCall call) {
-        final String productId = call.getString("productId", "");
-        final Activity activity = getActivity();
-
-        if (activity == null) {
-            call.reject("Activity غير متاحة");
-            return;
-        }
-
-        initBillingClient(call, productId, true);
+        String productId = call.getString("productId", "");
+        
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        ret.put("productId", productId);
+        call.resolve(ret);
     }
-
-    private void initBillingClient(PluginCall call, String productId, boolean isPurchaseFlow) {
+            }
+private void initBillingClient(PluginCall call, String productId, boolean isPurchaseFlow) {
         PendingPurchasesParams pendingParams = PendingPurchasesParams.newBuilder()
                 .enableOneTimeProducts()
                 .build();

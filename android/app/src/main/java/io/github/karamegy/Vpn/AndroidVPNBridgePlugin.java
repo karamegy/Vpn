@@ -111,6 +111,10 @@ public class AndroidVPNBridgePlugin extends Plugin {
     }
 
     private void initBillingClient(PluginCall call, String productId, boolean isPurchaseFlow) {
+        PendingPurchasesParams pendingPurchasesParams = PendingPurchasesParams.newBuilder()
+                .enableOneTimeProducts()
+                .build();
+
         billingClient = BillingClient.newBuilder(getContext())
             .setListener((billingResult, purchases) -> {
                 if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
@@ -141,7 +145,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
                 }
                 call.reject("تم إلغاء عملية الشراء أو فشلها");
             })
-            .enablePendingPurchases()
+            .enablePendingPurchases(pendingPurchasesParams)
             .build();
 
         billingClient.startConnection(new BillingClientStateListener() {

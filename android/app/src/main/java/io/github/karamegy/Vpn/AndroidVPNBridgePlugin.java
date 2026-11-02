@@ -49,19 +49,14 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
 
     private synchronized void initBillingClient() {
         if (billingClient == null) {
-            BillingClient.Builder builder = BillingClient.newBuilder(getContext())
-                    .setListener(this);
+            PendingPurchasesParams pendingParams = PendingPurchasesParams.newBuilder()
+                    .enableOneTimeProducts()
+                    .build();
 
-            try {
-                PendingPurchasesParams pendingParams = PendingPurchasesParams.newBuilder()
-                        .enableOneTimeProducts()
-                        .build();
-                builder.enablePendingPurchases(pendingParams);
-            } catch (Exception e) {
-                builder.enablePendingPurchases();
-            }
-
-            billingClient = builder.build();
+            billingClient = BillingClient.newBuilder(getContext())
+                    .setListener(this)
+                    .enablePendingPurchases(pendingParams)
+                    .build();
         }
     }
 

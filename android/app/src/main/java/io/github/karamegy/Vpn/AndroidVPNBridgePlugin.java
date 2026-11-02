@@ -49,11 +49,15 @@ public class AndroidVPNBridgePlugin extends Plugin {
         }
     }
 
+    // ✅ الدالة المحدثة لتمرير بيانات التشفير و WireGuard إلى الخدمة
     @PluginMethod
     public void toggleVpn(PluginCall call) {
         boolean enable = call.getBoolean("enable", false);
-        String serverIp = call.getString("serverIp", "1.1.1.1");
-        String serverName = call.getString("serverName", "Apex Cloud Server");
+        String serverIp = call.getString("serverIp", "162.159.192.1");
+        String serverName = call.getString("serverName", "Apex WireGuard Shield");
+        String warpPrivateKey = call.getString("warpPrivateKey", "");
+        String warpClientIp = call.getString("warpClientIp", "10.0.0.2/32");
+        String warpEndpoint = call.getString("warpEndpoint", "");
 
         Intent intent = new Intent(getContext(), ApexVpnService.class);
 
@@ -61,6 +65,9 @@ public class AndroidVPNBridgePlugin extends Plugin {
             intent.setAction(ApexVpnService.ACTION_CONNECT);
             intent.putExtra("serverIp", serverIp);
             intent.putExtra("serverName", serverName);
+            intent.putExtra("warpPrivateKey", warpPrivateKey);
+            intent.putExtra("warpClientIp", warpClientIp);
+            intent.putExtra("warpEndpoint", warpEndpoint);
             ContextCompat.startForegroundService(getContext(), intent);
         } else {
             intent.setAction(ApexVpnService.ACTION_DISCONNECT);
@@ -174,7 +181,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
             @Override
             public void onBillingServiceDisconnected() {
-                // إعادة الاتصال تلقائياً عند الحاجة
             }
         });
     }

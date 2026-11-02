@@ -71,7 +71,6 @@ public class ApexVpnService extends VpnService {
         if (isRunning) return;
         isRunning = true;
         
-        // رفع أداء المعالجة المتزامنة إلى 16 Thread لسرعة جلب استجابات DNS
         dnsThreadPool = Executors.newFixedThreadPool(16);
 
         vpnThread = new Thread(() -> {
@@ -81,7 +80,6 @@ public class ApexVpnService extends VpnService {
                        .addAddress("10.0.0.2", 32)
                        .addDnsServer(ADGUARD_DNS)
                        .addDnsServer(SECONDARY_DNS)
-                       // توجيه سيرفرات الـ DNS المحمية فقط لمنع تدمير ترافيك الـ TCP في أندرويد
                        .addRoute(ADGUARD_DNS, 32)
                        .addRoute(SECONDARY_DNS, 32)
                        .setMtu(1500);
@@ -118,46 +116,56 @@ public class ApexVpnService extends VpnService {
             while (isRunning && !Thread.currentThread().isInterrupted()) {
                 int length = in.read(packetBuffer);
                 if (length > 28) {
+                    int ipVersion = (packetBuffer[0] >> 4) & 0x0F;
+                    if (ipVersion != 4) continue; // فحص IPv4
+
                     int ipHeaderLen = (packetBuffer[0] & 0x0F) * 4;
-                    int udpHeaderLen = 8;
-                    int dnsPayloadOffset = ipHeaderLen + udpHeaderLen;
-                    int dnsPayloadLen = length - dnsPayloadOffset;
+                    int protocol = packetBuffer[9] & 0xFF;
 
-                    // معالجة حزم UDP (البروتوكول 17) الموجهة للـ DNS
-                    if (dnsPayloadLen > 0 && packetBuffer[9] == 17) {
-                        byte[] requestCopy = new byte[length];
-                        System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
+                    // معالجة حزم UDP (البروتوكول 17)
+                    if (protocol == 17 && length >= ipHeaderLen + 8) {
+                        int dstPort = ((packetBuffer[ipHeaderLen + 2] & 0xFF) << 8) | (packetBuffer[ipHeaderLen + 3] & 0xFF);
+                        
+                        // التحقق من أن منفذ الوجهة هو DNS (Port 53)
+                        if (dstPort == 53) {
+                            int dnsPayloadOffset = ipHeaderLen + 8;
+                            int dnsPayloadLen = length - dnsPayloadOffset;
 
-                        dnsThreadPool.execute(() -> {
-                            try (DatagramSocket taskSocket = new DatagramSocket()) {
-                                protect(taskSocket); // استثناء السوكت من التوجيه التكراري
-                                taskSocket.setSoTimeout(2000);
+                            if (dnsPayloadLen > 0) {
+                                byte[] requestCopy = new byte[length];
+                                System.arraycopy(packetBuffer, 0, requestCopy, 0, length);
 
-                                DatagramPacket outPacket = new DatagramPacket(
-                                    requestCopy, dnsPayloadOffset, dnsPayloadLen, primaryDns, 53
-                                );
-                                
-                                byte[] respBuffer = new byte[4096];
-                                DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
-                                
-                                try {
-                                    taskSocket.send(outPacket);
-                                    taskSocket.receive(inPacket);
-                                } catch (SocketTimeoutException ste) {
-                                    // إعادة المحاولة تلقائياً عبر السيرفر الاحتياطي 1.1.1.1 عند انشغال السيرفر الرئيسي
-                                    outPacket.setAddress(fallbackDns);
-                                    taskSocket.send(outPacket);
-                                    taskSocket.receive(inPacket);
-                                }
+                                dnsThreadPool.execute(() -> {
+                                    try (DatagramSocket taskSocket = new DatagramSocket()) {
+                                        protect(taskSocket); // استثناء السوكت من التوجيه التكراري
+                                        taskSocket.setSoTimeout(1500);
 
-                                byte[] responseIpPacket = buildIpUdpResponse(requestCopy, inPacket.getData(), inPacket.getLength());
-                                if (responseIpPacket != null) {
-                                    synchronized (out) {
-                                        out.write(responseIpPacket);
-                                    }
-                                }
-                            } catch (Exception ignored) {}
-                        });
+                                        DatagramPacket outPacket = new DatagramPacket(
+                                            requestCopy, dnsPayloadOffset, dnsPayloadLen, primaryDns, 53
+                                        );
+                                        
+                                        byte[] respBuffer = new byte[4096];
+                                        DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
+                                        
+                                        try {
+                                            taskSocket.send(outPacket);
+                                            taskSocket.receive(inPacket);
+                                        } catch (SocketTimeoutException ste) {
+                                            outPacket.setAddress(fallbackDns);
+                                            taskSocket.send(outPacket);
+                                            taskSocket.receive(inPacket);
+                                        }
+
+                                        byte[] responseIpPacket = buildIpUdpResponse(requestCopy, inPacket.getData(), inPacket.getLength());
+                                        if (responseIpPacket != null) {
+                                            synchronized (out) {
+                                                out.write(responseIpPacket);
+                                            }
+                                        }
+                                    } catch (Exception ignored) {}
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -166,7 +174,7 @@ public class ApexVpnService extends VpnService {
                 Log.e(TAG, "إغلاق حلقة معالجة الحزم:", e);
             }
         } finally {
-            if (dnsThreadPool != null) {
+            if (dnsThreadPool != null && !dnsThreadPool.isShutdown()) {
                 dnsThreadPool.shutdownNow();
             }
         }
@@ -231,6 +239,10 @@ public class ApexVpnService extends VpnService {
 
         if (vpnThread != null) {
             vpnThread.interrupt();
+        }
+
+        if (dnsThreadPool != null && !dnsThreadPool.isShutdown()) {
+            dnsThreadPool.shutdownNow();
         }
 
         try {

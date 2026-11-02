@@ -67,12 +67,12 @@ jobs:
             cp android/app/src/main/AndroidManifest.xml /tmp/native_backup/ 2>/dev/null || true
           fi
 
-          # 2. حذف المجلد وإعادة إنشاء مشروع أندرويد
+          # 2. حذف المجلد الناقص وإعادة إنشاء مشروع أندرويد كامل بملف gradlew الرسمي
           rm -rf android
           npx cap add android
           npx cap sync android
 
-          # 3. استعادة ملفات الكود والجسر المخصص
+          # 3. استعادة ملفات الكود والجسر المخصص داخل مشروع أندرويد المكتمل
           if [ -d "/tmp/native_backup/java" ]; then
             cp -r /tmp/native_backup/java/* android/app/src/main/java/ 2>/dev/null || true
           fi
@@ -80,7 +80,7 @@ jobs:
             cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
           fi
 
-          # 🎨 توليد أيقونات التطبيق
+          # 🎨 توليد أيقونات التطبيق تلقائياً وحذف المجلد التكيفي الافتراضي
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
             RES_DIR="android/app/src/main/res"
@@ -110,7 +110,7 @@ jobs:
           android.useAndroidX=true
           EOF
 
-          # حقن مكتبة Google Play Billing بالإصدار 6.2.1 لضمان تنزيلها
+          # حقن مكتبة Google Play Billing وتثبيت إعدادات منع حذف الجسر
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               sed -i '/dependencies {/a \    implementation "com.android.billingclient:billing:6.2.1"' android/app/build.gradle
@@ -120,6 +120,7 @@ jobs:
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
             
+            # منع R8 من حذف كلاسات الجسر في نسخة AAB
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle || true
             sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle || true
           fi
@@ -135,7 +136,6 @@ jobs:
           -keep class com.android.billingclient.** { *; }
           PROGUARD_EOF
 
-          # الإبقاء على API 36 لمطابقة شروط جوجل بلاي
           if [ -f "android/variables.gradle" ]; then
             sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
             sed -i -E 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
@@ -158,6 +158,7 @@ jobs:
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           
+          # البناء والتوقيع المباشر عبر Gradle لضمان سلامة AAB
           ./gradlew assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file="$(pwd)/app/signing.keystore" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \

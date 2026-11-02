@@ -116,17 +116,25 @@ public class AndroidVPNBridgePlugin extends Plugin {
                 if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
                     for (Purchase purchase : purchases) {
                         if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                            String activeProductId = (purchase.getProducts() != null && !purchase.getProducts().isEmpty()) 
+                                ? purchase.getProducts().get(0) : productId;
+
                             if (!purchase.isAcknowledged()) {
                                 AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
                                     .setPurchaseToken(purchase.getPurchaseToken())
                                     .build();
-                                billingClient.acknowledgePurchase(acknowledgePurchaseParams, ackResult -> {});
+                                billingClient.acknowledgePurchase(acknowledgePurchaseParams, ackResult -> {
+                                    JSObject ret = new JSObject();
+                                    ret.put("success", true);
+                                    ret.put("productId", activeProductId);
+                                    call.resolve(ret);
+                                });
+                            } else {
+                                JSObject ret = new JSObject();
+                                ret.put("success", true);
+                                ret.put("productId", activeProductId);
+                                call.resolve(ret);
                             }
-
-                            JSObject ret = new JSObject();
-                            ret.put("success", true);
-                            ret.put("productId", productId);
-                            call.resolve(ret);
                             return;
                         }
                     }
@@ -161,6 +169,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
         if (billingClient == null || !billingClient.isReady()) {
             JSObject ret = new JSObject();
             ret.put("isPro", false);
+            ret.put("activeProductId", "");
             call.resolve(ret);
             return;
         }
@@ -169,25 +178,30 @@ public class AndroidVPNBridgePlugin extends Plugin {
             QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
             (billingResult, purchases) -> {
                 boolean isPro = false;
+                String activeProductId = "";
+
                 if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && purchases != null) {
                     for (Purchase purchase : purchases) {
                         if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
                             isPro = true;
+                            if (purchase.getProducts() != null && !purchase.getProducts().isEmpty()) {
+                                activeProductId = purchase.getProducts().get(0);
+                            }
                             break;
                         }
                     }
                 }
                 JSObject ret = new JSObject();
                 ret.put("isPro", isPro);
+                ret.put("activeProductId", activeProductId);
+                ret.put("isYearly", "apex_pro_yearly".equalsIgnoreCase(activeProductId));
                 call.resolve(ret);
             }
         );
     }
 
     private void queryProduct(Activity activity, String rawProductId, String productType, PluginCall call) {
-        // Product ID الرئيسي في جوجل بلاي (يستخدم _ )
         final String targetProductId = rawProductId != null ? rawProductId.replace("-", "_") : "";
-        // Base Plan ID للخطة الأساسية (يستخدم - )
         final String targetBasePlanId = rawProductId != null ? rawProductId.replace("_", "-") : "";
 
         QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
@@ -213,7 +227,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
                     
                     String selectedOfferToken = null;
 
-                    // البحث عن العرض الذي يطابق Base Plan ID المعرف في الكونسول
                     for (ProductDetails.SubscriptionOfferDetails offerDetails : productDetails.getSubscriptionOfferDetails()) {
                         if (targetBasePlanId.equalsIgnoreCase(offerDetails.getBasePlanId()) 
                             || targetProductId.equalsIgnoreCase(offerDetails.getBasePlanId())) {
@@ -222,7 +235,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
                         }
                     }
 
-                    // في حال لم يجد مطابقة اسمية، يتم أخذ أول Offer Token أوتوماتيكياً
                     if (selectedOfferToken == null) {
                         selectedOfferToken = productDetails.getSubscriptionOfferDetails().get(0).getOfferToken();
                     }

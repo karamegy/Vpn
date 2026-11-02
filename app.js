@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         document.getElementById('buy-monthly-btn')?.addEventListener('click', () => purchaseProSubscription('apex_pro_monthly'));
-        document.getElementById('buy-yearly-btn')?.addEventListener('click', () => purchaseProSubscription('apex_pro_yearly'));
+        document.getElementById('buy-yearly-btn')?.addEventListener('click', () => purchaseProSubscription('apex-pro-yearly'));
     }
 
     async function purchaseProSubscription(productId) {

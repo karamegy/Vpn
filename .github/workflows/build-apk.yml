@@ -56,31 +56,18 @@ jobs:
           }
           EOF
 
-      - name: 2. Backup Native Code, Rebuild Clean Android Platform & Merge
+      - name: 2. Sync Web Assets & Inject Dependencies safely
         run: |
           export CI=true
           
-          # 1. أخذ نسخة احتياطية من ملفات الجافا والـ Manifest المخصصة
-          mkdir -p /tmp/native_backup
-          if [ -d "android/app/src/main" ]; then
-            cp -r android/app/src/main/java /tmp/native_backup/ 2>/dev/null || true
-            cp android/app/src/main/AndroidManifest.xml /tmp/native_backup/ 2>/dev/null || true
+          # إنشائه إن لم يكن موجوداً، أو مزامنة الملفات دون حذف الأكواد المخصصة
+          if [ ! -d "android" ]; then
+            npx cap add android
           fi
-
-          # 2. حذف المجلد الناقص وإعادة إنشاء مشروع أندرويد كامل بملف gradlew الرسمي
-          rm -rf android
-          npx cap add android
+          
           npx cap sync android
 
-          # 3. استعادة ملفات الكود والجسر المخصص داخل مشروع أندرويد المكتمل
-          if [ -d "/tmp/native_backup/java" ]; then
-            cp -r /tmp/native_backup/java/* android/app/src/main/java/ 2>/dev/null || true
-          fi
-          if [ -f "/tmp/native_backup/AndroidManifest.xml" ]; then
-            cp /tmp/native_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
-          fi
-
-          # 🎨 توليد أيقونات التطبيق تلقائياً وحذف المجلد التكيفي الافتراضي
+          # 🎨 توليد أيقونات التطبيق تلقائياً
           ICON_SOURCE="icon-512.png"
           if [ -f "$ICON_SOURCE" ]; then
             RES_DIR="android/app/src/main/res"
@@ -102,7 +89,13 @@ jobs:
             convert "$ICON_SOURCE" -resize 192x192 $RES_DIR/mipmap-xxxhdpi/ic_launcher_round.png || true
           fi
 
-          # تعديل إعدادات gradle.properties
+          # إعداد خيارات gradle.properties دون تكرار
+          touch android/gradle.properties
+          sed -i '/android.lint.checkReleaseBuilds/d' android/gradle.properties || true
+          sed -i '/android.lint.abortOnError/d' android/gradle.properties || true
+          sed -i '/android.enableJetifier/d' android/gradle.properties || true
+          sed -i '/android.useAndroidX/d' android/gradle.properties || true
+
           cat << 'EOF' >> android/gradle.properties
           android.lint.checkReleaseBuilds=false
           android.lint.abortOnError=false
@@ -110,7 +103,7 @@ jobs:
           android.useAndroidX=true
           EOF
 
-          # حقن مكتبة Google Play Billing الإصدار 8.0.0 وتثبيت إعدادات منع حذف الجسر
+          # حقن مكتبة Google Play Billing
           if [ -f "android/app/build.gradle" ]; then
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               printf "\ndependencies {\n    implementation \"com.android.billingclient:billing:8.0.0\"\n}\n" >> android/app/build.gradle
@@ -122,13 +115,14 @@ jobs:
             sed -i 's/minSdk [0-9]+/minSdk 24/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]+/minSdkVersion 24/g' android/app/build.gradle
             
-            # منع R8 من حذف كلاسات الجسر في نسخة AAB
             sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle || true
             sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle || true
           fi
 
           # حماية كلاسات الجسر ومكتبات الدفع في ProGuard
-          cat << 'PROGUARD_EOF' >> android/app/proguard-rules.pro
+          touch android/app/proguard-rules.pro
+          if ! grep -q "AndroidVPNBridge" android/app/proguard-rules.pro; then
+            cat << 'PROGUARD_EOF' >> android/app/proguard-rules.pro
           -keep class **.AndroidVPNBridge { *; }
           -keep class io.github.karamegy.Vpn.** { *; }
           -keepclasseswithmembers class * {
@@ -137,6 +131,7 @@ jobs:
           }
           -keep class com.android.billingclient.** { *; }
           PROGUARD_EOF
+          fi
 
           if [ -f "android/variables.gradle" ]; then
             sed -i -E 's/compileSdkVersion = .*/compileSdkVersion = 36/' android/variables.gradle
@@ -160,7 +155,6 @@ jobs:
           chmod +x gradlew
           export GRADLE_OPTS="-Dfile.encoding=UTF-8"
           
-          # البناء والتوقيع المباشر عبر Gradle لضمان سلامة AAB
           ./gradlew assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file="$(pwd)/app/signing.keystore" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \

@@ -184,9 +184,14 @@ public class AndroidVPNBridgePlugin extends Plugin {
         );
     }
 
-    private void queryProduct(Activity activity, String productId, String productType, PluginCall call) {
+    private void queryProduct(Activity activity, String rawProductId, String productType, PluginCall call) {
+        // Product ID الرئيسي في جوجل بلاي (يستخدم _ )
+        final String targetProductId = rawProductId != null ? rawProductId.replace("-", "_") : "";
+        // Base Plan ID للخطة الأساسية (يستخدم - )
+        final String targetBasePlanId = rawProductId != null ? rawProductId.replace("_", "-") : "";
+
         QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
-            .setProductId(productId)
+            .setProductId(targetProductId)
             .setProductType(productType)
             .build();
 
@@ -205,8 +210,24 @@ public class AndroidVPNBridgePlugin extends Plugin {
                 if (BillingClient.ProductType.SUBS.equals(productType) 
                     && productDetails.getSubscriptionOfferDetails() != null 
                     && !productDetails.getSubscriptionOfferDetails().isEmpty()) {
-                    String offerToken = productDetails.getSubscriptionOfferDetails().get(0).getOfferToken();
-                    productParamsBuilder.setOfferToken(offerToken);
+                    
+                    String selectedOfferToken = null;
+
+                    // البحث عن العرض الذي يطابق Base Plan ID المعرف في الكونسول
+                    for (ProductDetails.SubscriptionOfferDetails offerDetails : productDetails.getSubscriptionOfferDetails()) {
+                        if (targetBasePlanId.equalsIgnoreCase(offerDetails.getBasePlanId()) 
+                            || targetProductId.equalsIgnoreCase(offerDetails.getBasePlanId())) {
+                            selectedOfferToken = offerDetails.getOfferToken();
+                            break;
+                        }
+                    }
+
+                    // في حال لم يجد مطابقة اسمية، يتم أخذ أول Offer Token أوتوماتيكياً
+                    if (selectedOfferToken == null) {
+                        selectedOfferToken = productDetails.getSubscriptionOfferDetails().get(0).getOfferToken();
+                    }
+
+                    productParamsBuilder.setOfferToken(selectedOfferToken);
                 }
 
                 BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
@@ -215,9 +236,9 @@ public class AndroidVPNBridgePlugin extends Plugin {
 
                 activity.runOnUiThread(() -> billingClient.launchBillingFlow(activity, billingFlowParams));
             } else if (BillingClient.ProductType.SUBS.equals(productType)) {
-                queryProduct(activity, productId, BillingClient.ProductType.INAPP, call);
+                queryProduct(activity, targetProductId, BillingClient.ProductType.INAPP, call);
             } else {
-                call.reject("المُنتج غير معرّف داخل Google Play Console");
+                call.reject("المُنتج (" + targetProductId + ") غير معرّف أو غير مفعل داخل Google Play Console");
             }
         });
     }

@@ -16,6 +16,7 @@ import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.util.Collections;
+import java.util.List;
 
 @CapacitorPlugin(name = "AndroidVPNBridge")
 public class AndroidVPNBridgePlugin extends Plugin {
@@ -217,8 +218,14 @@ public class AndroidVPNBridgePlugin extends Plugin {
             .setProductList(Collections.singletonList(product))
             .build();
 
-        billingClient.queryProductDetailsAsync(params, (result, productDetailsList) -> {
-            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK && !productDetailsList.isEmpty()) {
+        billingClient.queryProductDetailsAsync(params, (result, queryProductDetailsResult) -> {
+            List<ProductDetails> productDetailsList = (queryProductDetailsResult != null) 
+                ? queryProductDetailsResult.getProductDetailsList() 
+                : null;
+
+            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK 
+                    && productDetailsList != null 
+                    && !productDetailsList.isEmpty()) {
                 ProductDetails productDetails = productDetailsList.get(0);
                 
                 BillingFlowParams.ProductDetailsParams.Builder productParamsBuilder = 

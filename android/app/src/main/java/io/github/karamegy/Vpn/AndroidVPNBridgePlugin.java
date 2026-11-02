@@ -48,11 +48,15 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
         initBillingClient();
     }
 
-    private void initBillingClient() {
+    private synchronized void initBillingClient() {
         if (billingClient == null) {
+            PendingPurchasesParams pendingPurchasesParams = PendingPurchasesParams.newBuilder()
+                    .enableOneTimeProducts()
+                    .build();
+
             billingClient = BillingClient.newBuilder(getContext())
                     .setListener(this)
-                    .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+                    .enablePendingPurchases(pendingPurchasesParams)
                     .build();
         }
     }
@@ -255,7 +259,7 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
                     ProductDetails productDetails = productDetailsList.get(0);
 
                     List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = new ArrayList<>();
-                    
+
                     BillingFlowParams.ProductDetailsParams.Builder builder = BillingFlowParams.ProductDetailsParams.newBuilder()
                             .setProductDetails(productDetails);
 
@@ -272,7 +276,18 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
 
                     Activity activity = getActivity();
                     if (activity != null) {
-                        billingClient.launchBillingFlow(activity, billingFlowParams);
+                        activity.runOnUiThread(() -> {
+                            BillingResult launchResult = billingClient.launchBillingFlow(activity, billingFlowParams);
+                            if (launchResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                                if (activeBillingCall != null) {
+                                    JSObject ret = new JSObject();
+                                    ret.put("success", false);
+                                    ret.put("message", "فشل إطلاق نافذة الشراء: " + launchResult.getDebugMessage());
+                                    activeBillingCall.resolve(ret);
+                                    activeBillingCall = null;
+                                }
+                            }
+                        });
                     } else {
                         call.reject("تعذر الحصول على نشاط الشاشة (Activity)");
                     }

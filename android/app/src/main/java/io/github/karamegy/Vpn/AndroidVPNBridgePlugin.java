@@ -36,7 +36,6 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
 
     private static final String TAG = "AndroidVPNBridgePlugin";
 
-    // مفتاح الترخيص الخاص بـ Google Play Console
     public static final String BASE64_LICENSE_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmxgdl9pF2Wa6OpHD7jQnmAKZ+1Z/TgyCo5WhWAcd1yVbsKW6/MeEk3wHECm/j8RNdqVTSpa5Gwle0uuiT+yNaIjZgVwg1CdjkPzu6F3TYiazdGTxTvK3bb5a+TYQB2B6di30vTP6BAVqRSFOiVuULEDH/DcLjWuqVGMgWRe4ni37yoHnBtRh5Lyj/Dg3jq01AeUg/xNlK7kUi/xY1zqCH3oXtou4uxTLBTWGrIvisrKVyj3Xx6npCrwAQRiVGC0rjUiYUltkqx5r2ZAWGOxOpH0ia6HqNveJjMbY9icRLrmfiemky107HCqEjB+QTGCR7Lw+5QjIFD1DARb1E/YJbwIDAQAB";
 
     private BillingClient billingClient;
@@ -50,14 +49,19 @@ public class AndroidVPNBridgePlugin extends Plugin implements PurchasesUpdatedLi
 
     private synchronized void initBillingClient() {
         if (billingClient == null) {
-            PendingPurchasesParams pendingPurchasesParams = PendingPurchasesParams.newBuilder()
-                    .enableOneTimeProducts()
-                    .build();
+            BillingClient.Builder builder = BillingClient.newBuilder(getContext())
+                    .setListener(this);
 
-            billingClient = BillingClient.newBuilder(getContext())
-                    .setListener(this)
-                    .enablePendingPurchases(pendingPurchasesParams)
-                    .build();
+            try {
+                PendingPurchasesParams pendingParams = PendingPurchasesParams.newBuilder()
+                        .enableOneTimeProducts()
+                        .build();
+                builder.enablePendingPurchases(pendingParams);
+            } catch (Exception e) {
+                builder.enablePendingPurchases();
+            }
+
+            billingClient = builder.build();
         }
     }
 

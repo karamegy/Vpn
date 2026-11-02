@@ -6,7 +6,7 @@
  * Chrono-Photonic Anti-CCTV Engine, Acoustic STT Jammer, Quantum Swarm Core,
  * AES-GCM 256 Vault, Real Network Diagnostics, Native Traffic Inspection,
  * Stalkerware & Spyware Detector, Wi-Fi Security Auditor (Anti-MITM).
- * Fully Integrated with Android Native VpnService Bridge & Capacitor.
+ * Fully Integrated with Android Native VpnService Bridge & Capacitor 6.
  * ============================================================================
  */
 
@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Cloudflare WARP Anycast 1 (الرئيسي العالمي)', ip: '162.159.192.1', flag: '⚡', country: 'Global' },
         { name: 'Cloudflare WARP Anycast 2 (السريع)', ip: '162.159.193.1', flag: '⚡', country: 'Global' },
         { name: 'Cloudflare WARP Anycast 3 (المستقر)', ip: '188.114.96.1', flag: '⚡', country: 'Global' },
+        { name: 'AdGuard Family DNS Filter (المانع الفعّال)', ip: '94.140.14.14', flag: '🛡️', country: 'Security Node' },
         { name: 'أمريكا - نيويورك (US East Relay Node)', ip: '162.159.195.1', flag: '🇺🇸', country: 'United States' },
         { name: 'أمريكا - سان خوسيه (US West Gateway)', ip: '162.159.192.10', flag: '🇺🇸', country: 'United States' },
         { name: 'ألمانيا - فرانکفورت (EU Central Hub)', ip: '162.159.193.10', flag: '🇩🇪', country: 'Germany' },

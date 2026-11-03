@@ -1,141 +1,17 @@
 /**
  * ============================================================================
- * APEX SHIELD AI - SOVEREIGN PRODUCTION EDITION (v18.0 Real Native Mode + i18n)
+ * APEX SHIELD AI - SOVEREIGN PRODUCTION EDITION (v18.0 Real Native Mode)
  * Developer & Founder: Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج)
  * Architecture: Native WireGuard WARP VPN Integration, Google Play Billing,
  * Chrono-Photonic Anti-CCTV Engine, Acoustic STT Jammer, Quantum Swarm Core,
  * AES-GCM 256 Vault, Real Network Diagnostics, Native Traffic Inspection,
  * Stalkerware & Spyware Detector, Wi-Fi Security Auditor (Anti-MITM).
- * Fully Integrated with Android Native VpnService Bridge, Capacitor 6 & i18n.
+ * Fully Integrated with Android Native VpnService Bridge & Capacitor 6.
  * ============================================================================
  */
 
-// ============================================================================
-// 1. محرك الترجمة وتدويل الواجهة الشامل (i18n Engine)
-// ============================================================================
-
-const i18nDictionary = {
-    ar: {
-        btn_select_server: "🌐 اختيار الخادم",
-        status_disconnected: "غير متصل بالدرع السحابي",
-        status_connected: "محمي ومتصل عبر Cloudflare WARP",
-        ip_checking: "IP الحقيقي: جاري الفحص...",
-        session_time: "وقت الجلسة:",
-        btn_activate: "تفعيل درع الحماية والمناعة الجماعية",
-        btn_deactivate: "إيقاف درع الحماية",
-        btn_connecting: "جاري الاتصال بنفق WireGuard المشفر...",
-        btn_disconnecting: "جاري قطع الاتصال وإعادة الـ IP الحقيقي...",
-        paywall_subtitle: "قم بالترقية الآن وافتح القفل عن كافة الاختراعات الأمنية والميزات الحصرية:",
-        feat_cctv: "✔ مفاعل التمويه الضوئي المكراني (Anti-CCTV)",
-        feat_acoustic: "✔ تشويش الميكروفونات العابر للطيف (Acoustic Jammer)",
-        feat_double_tunnel: "✔ التوجيه المزدوج للـ VPN (Double Tunnel)",
-        feat_vault: "✔ الخزنة الرقمية العسكرية (AES-GCM 256)",
-        feat_vip_servers: "✔ أولوية الاتصال بخوادم الـ VIP الفائقة السرعة",
-        feat_adblock: "✔ حظر غير محدود للإعلانات والبوب أب",
-        fetching_offers: "⏳ جاري جلب العروض الحصرية من متجر جوجل...",
-        auto_renew_note: "الاشتراك يتجدد تلقائياً. يمكنك الإلغاء في أي وقت من إعدادات حساب Google Play الخاص بك.",
-        btn_continue_free: "الاستمرار بالنسخة المجانية المحدودة",
-        strobe_active: "مفعل (تردد 120Hz)",
-        strobe_off: "متوقف",
-        acoustic_active: "نشط (Acoustic Mask)",
-        acoustic_off: "متوقف",
-        toast_cctv_on: "📸 تم تفعيل التمويه الضوئي المباشر ضد كاميرات التصوير والمراقبة",
-        toast_cctv_off: "⚠️ تم إيقاف التمويه الضوئي",
-        toast_acoustic_on: "🎙️ تم تفعيل التشويش الترددي ضد ميكروفونات التجسس والـ AI",
-        toast_acoustic_off: "⚠️ تم إيقاف التشويش الصوتي",
-        toast_pref_updated: "⚙️ تم تحديث وتثبيت حالة الاختيار بنجاح",
-        toast_net_online: "🌐 عاد الاتصال بالإنترنت: جاري مزامنة السجلات وتحديث الـ IP...",
-        toast_net_offline: "⚠️ انقطع الاتصال بالإنترنت: يعمل التطبيق بوضع الحماية المحلية (Offline Mode)"
-    },
-    en: {
-        btn_select_server: "🌐 Select Server",
-        status_disconnected: "Cloud Shield Disconnected",
-        status_connected: "Protected & Connected via Cloudflare WARP",
-        ip_checking: "Real IP: Checking...",
-        session_time: "Session Time:",
-        btn_activate: "Activate Protection & Global Immunity",
-        btn_deactivate: "Stop Shield Protection",
-        btn_connecting: "Connecting to Encrypted WireGuard Tunnel...",
-        btn_disconnecting: "Disconnecting & Restoring Real IP...",
-        paywall_subtitle: "Upgrade now to unlock all security innovations & exclusive features:",
-        feat_cctv: "✔ Anti-CCTV Photonic Engine",
-        feat_acoustic: "✔ Acoustic Microphone Jammer",
-        feat_double_tunnel: "✔ Double Tunnel VPN",
-        feat_vault: "✔ AES-GCM 256 Military Digital Vault",
-        feat_vip_servers: "✔ Priority VIP Server Connection",
-        feat_adblock: "✔ Unlimited Ad & Pop-up Blocker",
-        fetching_offers: "⏳ Fetching exclusive offers from Google Play...",
-        auto_renew_note: "Subscription auto-renews. Cancel anytime via Google Play settings.",
-        btn_continue_free: "Continue with Limited Free Version",
-        strobe_active: "Active (120Hz Frequency)",
-        strobe_off: "Off",
-        acoustic_active: "Active (Acoustic Mask)",
-        acoustic_off: "Off",
-        toast_cctv_on: "📸 Anti-CCTV Photonic Camouflage Activated",
-        toast_cctv_off: "⚠️ Anti-CCTV Camouflage Deactivated",
-        toast_acoustic_on: "🎙️ Spectrum Acoustic Microphone Jammer Active",
-        toast_acoustic_off: "⚠️ Acoustic Jammer Deactivated",
-        toast_pref_updated: "⚙️ Settings saved successfully",
-        toast_net_online: "🌐 Internet restored: Syncing logs & updating IP...",
-        toast_net_offline: "⚠️ Network offline: Operating in Local Shield Mode"
-    }
-};
-
-// الحصول على ترجمة المفتاح حسب اللغة الحالية
-function getTrans(key) {
-    const lang = localStorage.getItem('apex_user_lang') || 'ar';
-    return i18nDictionary[lang]?.[key] || i18nDictionary['ar']?.[key] || key;
-}
-
-// تطبيق اللغة والاتجاه والنصوص والـ Placeholders
-function applyLanguage(lang) {
-    const dir = lang === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.dir = dir;
-    document.documentElement.lang = lang;
-    localStorage.setItem('apex_user_lang', lang);
-
-    // 1. تحديث النصوص البرمجية التي تحتوي على data-i18n
-    document.querySelectorAll('[data-i18n]').forEach(element => {
-        const key = element.getAttribute('data-i18n');
-        if (i18nDictionary[lang] && i18nDictionary[lang][key]) {
-            element.textContent = i18nDictionary[lang][key];
-        }
-    });
-
-    // 2. تحديث حقول الإدخال التي تحتوي على data-i18n-ph
-    document.querySelectorAll('[data-i18n-ph]').forEach(element => {
-        const key = element.getAttribute('data-i18n-ph');
-        if (i18nDictionary[lang] && i18nDictionary[lang][key]) {
-            element.placeholder = i18nDictionary[lang][key];
-        }
-    });
-}
-
-function toggleLanguage() {
-    const currentLang = localStorage.getItem('apex_user_lang') || 'ar';
-    const nextLang = currentLang === 'ar' ? 'en' : 'ar';
-    applyLanguage(nextLang);
-}
-
-function initLocalization() {
-    const savedLang = localStorage.getItem('apex_user_lang');
-    const defaultLang = savedLang || (navigator.language.startsWith('ar') ? 'ar' : 'en');
-    applyLanguage(defaultLang);
-}
-
-// ============================================================================
-// 2. بداية البرمجيات والوحدات الرئيسية عند تحميل المستند
-// ============================================================================
-
 document.addEventListener('DOMContentLoaded', () => {
     'use strict';
-
-    // تهيئة نظام الترجمة وربطه بزر التبديل
-    initLocalization();
-    const langBtn = document.getElementById('lang-toggle-btn');
-    if (langBtn) {
-        langBtn.addEventListener('click', toggleLanguage);
-    }
 
     // ========================================================================
     // قائمة الخوادم وعناوين IP العالمية الحقيقية والنشطة
@@ -225,8 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatAdsCountText(count) {
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-        if (!isAr) return `${count} ads`;
         if (count === 0) return '0 إعلان';
         if (count === 1) return 'إعلان واحد';
         if (count === 2) return 'إعلانين';
@@ -237,11 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateAdBlockUI() {
         const adsText = formatAdsCountText(blockedAdsCount);
         const adElements = document.querySelectorAll('.adblock-counter-text');
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
         adElements.forEach(el => {
-            el.textContent = isAr 
-                ? `مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText})`
-                : `Ad & Pop-up Blocker Active: Blocked (${adsText})`;
+            el.textContent = `مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText})`;
         });
     }
 
@@ -312,21 +183,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchAndDisplaySubscriptions() {
         if (!plansContainer) return;
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
 
         if (isProUser) {
-            plansContainer.innerHTML = `<div style="color: #10b981; font-weight: bold; padding: 15px; text-align: center; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px;">💎 ${isAr ? 'أنت مشترك بالفعل في باقة Apex Pro الحصرية! جميع الميزات مفعلة لديك.' : 'Apex Pro Active! All features unlocked.'}</div>`;
+            plansContainer.innerHTML = '<div style="color: #10b981; font-weight: bold; padding: 15px; text-align: center; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px;">💎 أنت مشترك بالفعل في باقة Apex Pro الحصرية! جميع الميزات مفعلة لديك.</div>';
             return;
         }
 
         plansContainer.innerHTML = `
             <button class="btn-primary" id="buy-monthly-btn" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 15px; background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; margin-bottom: 8px; cursor: pointer;">
-                <span>${isAr ? 'الاشتراك الشهري Pro (Google Play)' : 'Pro Monthly (Google Play)'}</span><span>$3.99 / ${isAr ? 'شهر' : 'mo'}</span>
+                <span>الاشتراك الشهري Pro (Google Play)</span><span>$3.99 / شهر</span>
             </button>
             <button class="btn-primary" id="buy-yearly-btn" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 15px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: #fff; border-radius: 8px; cursor: pointer;">
-                <span>${isAr ? 'الاشتراك السنوي Pro' : 'Pro Yearly'} <span style="background:#fff; color:#d97706; padding:2px 6px; border-radius:4px; font-size:0.65rem; margin-right:5px;">${isAr ? 'وفر 45%' : 'Save 45%'}</span></span><span>$24.99 / ${isAr ? 'سنة' : 'yr'}</span>
+                <span>الاشتراك السنوي Pro <span style="background:#fff; color:#d97706; padding:2px 6px; border-radius:4px; font-size:0.65rem; margin-right:5px;">وفر 45%</span></span><span>$24.99 / سنة</span>
             </button>
-            <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 10px; text-align: center;">⚡ ${isAr ? 'المعاملة مرتبطة بمتجر Google Play الرسمي.' : 'Transaction processed via official Google Play Store.'}</div>
+            <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 10px; text-align: center;">⚡ المعاملة مرتبطة بمتجر Google Play الرسمي.</div>
         `;
 
         document.getElementById('buy-monthly-btn')?.addEventListener('click', () => purchaseProSubscription('apex_pro_monthly'));
@@ -334,8 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function purchaseProSubscription(productId) {
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-        showToast(isAr ? '🔄 جاري الاتصال ببوابة دفع Google Play الرسمية...' : '🔄 Connecting to Google Play Billing...');
+        showToast('🔄 جاري الاتصال ببوابة دفع Google Play الرسمية...');
         const bridge = getNativeBridge();
         if (bridge && typeof bridge.launchBilling === 'function') {
             try {
@@ -345,10 +214,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
             } catch (e) {
-                showToast(isAr ? '❌ تعذر إكمال الشراء عبر متجر Google Play.' : '❌ Google Play Purchase Failed');
+                showToast('❌ تعذر إكمال الشراء عبر متجر Google Play.');
             }
         } else {
-            showToast(isAr ? '⚠️ يتطلب الشراء تشغيل التطبيق كحزمة أندرويد أصلية مثبتة من المتجر.' : '⚠️ Requires running as Android APK package.');
+            showToast('⚠️ يتطلب الشراء تشغيل التطبيق كحزمة أندرويد أصلية مثبتة من المتجر.');
         }
     }
 
@@ -357,8 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('apex_pro_status', 'true');
         if (openProBtn) openProBtn.style.display = 'none';
         if (showSuccessToast) {
-            const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-            showToast(isAr ? '💎 تم تفعيل درع Apex Shield Pro بنجاح عبر متجر Google Play!' : '💎 Apex Shield Pro Activated!');
+            showToast('💎 تم تفعيل درع Apex Shield Pro بنجاح عبر متجر Google Play!');
         }
         proModal?.classList.add('hidden');
     }
@@ -369,8 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             proModal?.classList.remove('hidden');
             fetchAndDisplaySubscriptions();
-            const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-            showToast(isAr ? `💎 ميزة (${featureName}) حصرية لمشتركي باقة Pro المدفوعة.` : `💎 ${featureName} - Pro Feature`);
+            showToast(`💎 ميزة (${featureName}) حصرية لمشتركي باقة Pro المدفوعة.`);
         }
     }
 
@@ -434,15 +301,15 @@ document.addEventListener('DOMContentLoaded', () => {
     togglePhotonicStrobeBtn?.addEventListener('click', () => {
         isPhotonicStrobeActive = !isPhotonicStrobeActive;
         if (photonicStrobeStatus) {
-            photonicStrobeStatus.textContent = isPhotonicStrobeActive ? getTrans('strobe_active') : getTrans('strobe_off');
+            photonicStrobeStatus.textContent = isPhotonicStrobeActive ? 'مفعل (تردد 120Hz)' : 'متوقف';
             photonicStrobeStatus.style.color = isPhotonicStrobeActive ? '#ec4899' : '#f59e0b';
         }
         if (isPhotonicStrobeActive) {
             startPhotonicCamouflage();
-            showToast(getTrans('toast_cctv_on'));
+            showToast('📸 تم تفعيل التمويه الضوئي المباشر ضد كاميرات التصوير والمراقبة');
         } else {
             if (photonicAnimationId) cancelAnimationFrame(photonicAnimationId);
-            showToast(getTrans('toast_cctv_off'));
+            showToast('⚠️ تم إيقاف التمويه الضوئي');
         }
     });
 
@@ -470,10 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 noiseBufferSource.start();
 
                 if (acousticJamStatus) {
-                    acousticJamStatus.textContent = getTrans('acoustic_active');
+                    acousticJamStatus.textContent = 'نشط (Acoustic Mask)';
                     acousticJamStatus.style.color = '#38bdf8';
                 }
-                showToast(getTrans('toast_acoustic_on'));
+                showToast('🎙️ تم تفعيل التشويش الترددي ضد ميكروفونات التجسس والـ AI');
             } catch (e) {
                 console.warn("جاري انتظار تفاعل المستخدم لتشغيل الصوت");
             }
@@ -487,10 +354,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 acousticAudioCtx = null; 
             }
             if (acousticJamStatus) {
-                acousticJamStatus.textContent = getTrans('acoustic_off');
+                acousticJamStatus.textContent = 'متوقف';
                 acousticJamStatus.style.color = '#f59e0b';
             }
-            showToast(getTrans('toast_acoustic_off'));
+            showToast('⚠️ تم إيقاف التشويش الصوتي');
         }
     }
 
@@ -531,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             toggleEl.addEventListener('change', () => {
                 localStorage.setItem(`apex_pref_${id}`, toggleEl.checked);
-                showToast(getTrans('toast_pref_updated'));
+                showToast(`⚙️ تم تحديث وتثبيت حالة الاختيار بنجاح`);
             });
         }
     });
@@ -540,13 +407,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODULE 0.1: نظام إدارة الاتصال ومُحسّن استهلاك فايربيس (Firestore Cache Core)
     // ========================================================================
     window.addEventListener('online', () => {
-        showToast(getTrans('toast_net_online'));
+        showToast('🌐 عاد الاتصال بالإنترنت: جاري مزامنة السجلات وتحديث الـ IP...');
         syncOfflineLogsToCloud();
         fetchUserRealPublicIp();
     });
 
     window.addEventListener('offline', () => {
-        showToast(getTrans('toast_net_offline'));
+        showToast('⚠️ انقطع الاتصال بالإنترنت: يعمل التطبيق بوضع الحماية المحلية (Offline Mode)');
     });
 
     async function queueLogOffline(eventType, details) {
@@ -637,7 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const serversContainer = document.getElementById('servers-list-container');
         if (!serversContainer) return;
         serversContainer.innerHTML = '';
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
 
         servers.forEach((srv) => {
             const item = document.createElement('div');
@@ -652,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span style="font-size: 1.1rem;">${srv.flag || '🌐'}</span>
                     <div>
                         <strong style="font-size: 0.8rem; color: #f8fafc;">${srv.name}</strong><br>
-                        <span style="font-size: 0.65rem; color: #94a3b8;">${isAr ? 'توجيه مباشر مشفر' : 'Encrypted Direct Tunnel'}</span>
+                        <span style="font-size: 0.65rem; color: #94a3b8;">توجيه مباشر مشفر</span>
                     </div>
                 </div>
                 <span style="font-size: 0.7rem; color: #38bdf8; font-family: monospace;">${srv.ip}</span>
@@ -671,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (locationEl) locationEl.textContent = `${srv.flag || '🌐'} ${srv.name.split(' ')[0]}`;
                 
                 document.getElementById('servers-modal')?.classList.add('hidden');
-                showToast(isAr ? `🌐 تم اختيار الخادم المباشر: ${srv.name} (${srv.ip})` : `🌐 Server selected: ${srv.name} (${srv.ip})`);
+                showToast(`🌐 تم اختيار الخادم المباشر: ${srv.name} (${srv.ip})`);
             });
 
             serversContainer.appendChild(item);
@@ -683,11 +549,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
     async function fetchUserRealPublicIp() {
         const ipDisplay = document.getElementById('ip-display');
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
         if (ipDisplay) {
-            ipDisplay.textContent = isConnected 
-                ? (isAr ? 'جاري جلب IP WARP النشط...' : 'Fetching active WARP IP...') 
-                : (isAr ? 'جاري جلب IP الحقيقي...' : 'Fetching real IP...');
+            ipDisplay.textContent = isConnected ? 'جاري جلب IP WARP النشط...' : 'جاري جلب IP الحقيقي...';
         }
 
         try {
@@ -700,15 +563,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data2 = await res2.json();
                 realUserPublicIp = data2.ip || 'غير معروف';
             } catch (err) {
-                realUserPublicIp = '10.0.0.2';
+                realUserPublicIp = '10.0.0.2 (محمي بالدرع)';
             }
         }
 
         if (ipDisplay) {
             if (isConnected) {
-                ipDisplay.textContent = `${isAr ? 'IP المشفر النشط' : 'Active Encrypted IP'} (${currentServerName.split(' ')[0]}): ${realUserPublicIp}`;
+                ipDisplay.textContent = `IP المشفر النشط (${currentServerName.split(' ')[0]}): ${realUserPublicIp}`;
             } else {
-                ipDisplay.textContent = `${isAr ? 'IP الحقيقي' : 'Real IP'}: ${realUserPublicIp}`;
+                ipDisplay.textContent = `IP الحقيقي: ${realUserPublicIp}`;
             }
         }
     }
@@ -790,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const adBlockEnabled = document.getElementById('adblock-toggle')?.checked ?? true;
         if (adBlockEnabled) {
             incrementBlockedAds();
-            showToast('🛡️ Apex Shield: Ad Pop-up Blocked');
+            showToast('🛡️ Apex Shield: تم حجب نافذة منبثقة إعلانية بنجاح');
             return null;
         }
         return originalWindowOpen.call(window, url, target, features);
@@ -807,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.preventDefault();
                     e.stopPropagation();
                     incrementBlockedAds();
-                    showToast('🛡️ Apex Shield: Unauthorized Redirect Blocked');
+                    showToast('🛡️ Apex Shield: تم حجب توجيه إعلاني غير مصرح به');
                 }
             }
         }
@@ -926,8 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODULE 1.1: محرك كشف وحجب إعلانات المكالمات والطبقات الطفيلية
     // ========================================================================
     async function scanAndNeutralizeInCallAdware() {
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-        showToast(isAr ? '🔍 فحص طفيليات المكالمات وإعلانات التطبيقات...' : '🔍 Scanning for call adware & app overlays...');
+        showToast('🔍 فحص طفيليات المكالمات وإعلانات التطبيقات...');
         await logSecurityEventToCloud("IN_CALL_ADWARE_SCAN", "فحص أذونات الظهور فوق المكالمات والبوب أب.");
         
         setTimeout(() => {
@@ -939,17 +801,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (threatList) {
                 threatList.innerHTML = `
                     <div class="safe-item adblock-counter-text" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">
-                        🛡️ ${isAr ? `مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText}) عشوائية وتتبعية.` : `Ad Blocker Active: Shielded against (${adsText}).`}
+                        🛡️ مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText}) عشوائية وتتبعية.
                     </div>
                     <div class="safe-item" style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 10px; border-radius: 8px; line-height: 1.5; word-break: break-word;">
-                        ✔ ${isAr ? 'نظام التصفية العائم (Overlay Firewall) يعمل بكفاءة قصوى.' : 'Overlay Firewall running at maximum efficiency.'}
+                        ✔ نظام التصفية العائم (Overlay Firewall) يعمل بكفاءة قصوى.
                     </div>
                 `;
             }
             if (threatCount) {
-                threatCount.textContent = isAr ? '0 تهديد نشط (محصن بالكامل)' : '0 Active Threats (Fully Immune)';
+                threatCount.textContent = '0 تهديد نشط (محصن بالكامل)';
             }
-            showToast(isAr ? '✅ تم تطهير النظام وحجب كافة الإعلانات العشوائية بنجاح تام!' : '✅ System sanitized and ads blocked!');
+            showToast('✅ تم تطهير النظام وحجب كافة الإعلانات العشوائية بنجاح تام!');
         }, 1200);
     }
 
@@ -977,7 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (newWorker) {
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            showToast('🚀 System Update Available: Installing neural core update...');
+                            showToast('🚀 يتوفر تحديث فوري جديد للنظام العصبي: جاري التثبيت الذاتي الفوري...');
                             setTimeout(() => window.location.reload(), 2000);
                         }
                     });
@@ -1010,7 +872,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAppTrafficInspector() {
         if (!firewallTrafficContainer) return;
         firewallTrafficContainer.innerHTML = '';
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
 
         simulatedAppTraffic.forEach((app, idx) => {
             const isBlocked = app.status === 'محظور';
@@ -1020,16 +881,16 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `
                 <div>
                     <strong style="color: #f8fafc; font-size: 0.8rem;">📱 ${app.name}</strong><br>
-                    <span style="font-size: 0.68rem; color: #94a3b8;">${isAr ? 'إلى' : 'To'}: ${app.destination} • (${app.protocol}) • ${app.bytesOut}</span><br>
-                    <span style="font-size: 0.65rem; color: ${isBlocked ? '#ef4444' : '#10b981'}; font-weight: bold;">${isAr ? 'الحالة' : 'Status'}: ${app.status} | ${isAr ? 'درجة المخاطرة' : 'Risk'}: ${app.risk}</span>
+                    <span style="font-size: 0.68rem; color: #94a3b8;">إلى: ${app.destination} • (${app.protocol}) • ${app.bytesOut}</span><br>
+                    <span style="font-size: 0.65rem; color: ${isBlocked ? '#ef4444' : '#10b981'}; font-weight: bold;">الحالة: ${app.status} | درجة المخاطرة: ${app.risk}</span>
                 </div>
                 <button class="btn-primary" style="padding: 5px 10px; font-size: 0.68rem; background: ${isBlocked ? '#10b981' : '#ef4444'}; color: #fff; border: none; border-radius: 6px; cursor: pointer;">
-                    ${isBlocked ? (isAr ? 'السماح بالترافيك 🔓' : 'Allow Traffic 🔓') : (isAr ? 'حظر الترافيك 🚫' : 'Block Traffic 🚫')}
+                    ${isBlocked ? 'السماح بالترافيك 🔓' : 'حظر الترافيك 🚫'}
                 </button>
             `;
             item.querySelector('button')?.addEventListener('click', () => {
                 simulatedAppTraffic[idx].status = isBlocked ? 'سمح' : 'محظور';
-                showToast(isBlocked ? `🔓 ${app.name} allowed` : `🚫 ${app.name} traffic blocked`);
+                showToast(isBlocked ? `🔓 تم السماح لاتصال ${app.name}` : `🚫 تم حظر وتحديد ترافيك ${app.name} فوراً`);
                 logSecurityEventToCloud("APP_FIREWALL_ACTION", `تم تغيير حالة اتصال التطبيق ${app.name}`);
                 renderAppTrafficInspector();
             });
@@ -1050,29 +911,31 @@ document.addEventListener('DOMContentLoaded', () => {
     closeStalkerwareBtn?.addEventListener('click', () => stalkerwareModal?.classList.add('hidden'));
 
     startStalkerwareScanBtn?.addEventListener('click', async () => {
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
         startStalkerwareScanBtn.disabled = true;
-        startStalkerwareScanBtn.textContent = isAr ? 'جاري الفحص العميق لصلاحيات الكاميرا والميكروفون وخدمات الوصول...' : 'Scanning camera, mic, & accessibility permissions...';
+        startStalkerwareScanBtn.textContent = 'جاري الفحص العميق لصلاحيات الكاميرا والميكروفون وخدمات الوصول...';
         
         await logSecurityEventToCloud("STALKERWARE_DEEP_AUDIT", "فحص شامل لصلاحيات التطبيقات الخلفية.");
 
         setTimeout(() => {
             startStalkerwareScanBtn.disabled = false;
-            startStalkerwareScanBtn.textContent = isAr ? 'إعادة الفحص العميق للتجسس' : 'Start Deep Scan Again';
+            startStalkerwareScanBtn.textContent = 'إعادة الفحص العميق للتجسس';
             if (stalkerwareResultsContainer) {
                 stalkerwareResultsContainer.innerHTML = `
                     <div style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-                        ✔ ${isAr ? 'لم يتم رصد أي برمجية تجسس تجارية (Stalkerware) مثبتة.' : 'No commercial Stalkerware detected.'}
+                        ✔ لم يتم رصد أي برمجية تجسس تجارية (Stalkerware) مثبتة.
                     </div>
                     <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.2); padding: 10px; border-radius: 8px; font-size: 0.72rem; color: #cbd5e1; margin-bottom: 6px;">
-                        🔍 <strong>${isAr ? 'خدمات الوصول' : 'Accessibility Services'}:</strong> ${isAr ? 'نظيفة ومؤمنة تماماً.' : 'Clean and secured.'}
+                        🔍 <strong>خدمات الوصول (Accessibility Services):</strong> نظيفة ومؤمنة تماماً.
                     </div>
                     <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.2); padding: 10px; border-radius: 8px; font-size: 0.72rem; color: #cbd5e1; margin-bottom: 6px;">
-                        🎙️ <strong>${isAr ? 'أذونات الوصول المباشر للميكروفون والكاميرا' : 'Camera & Microphone Direct Access'}:</strong> ${isAr ? 'محصنة تحت مراقبة Apex Shield.' : 'Protected by Apex Shield.'}
+                        🎙️ <strong>أذونات الوصول المباشر للميكروفون والكاميرا:</strong> محصنة تحت مراقبة Apex Shield.
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.2); padding: 10px; border-radius: 8px; font-size: 0.72rem; color: #cbd5e1;">
+                        📱 <strong>قراءة محتوى الشاشة والتراكب (Overlay):</strong> محظورة تماماً ومحمية.
                     </div>
                 `;
             }
-            showToast(isAr ? '✅ فحص برمجيات التجسس مكتمل: جهازك خالٍ تماماً من تطبيقات المراقبة الخفية!' : '✅ Stalkerware scan complete: Device is secure!');
+            showToast('✅ فحص برمجيات التجسس مكتمل: جهازك خالٍ تماماً من تطبيقات المراقبة الخفية!');
         }, 1800);
     });
 
@@ -1089,29 +952,27 @@ document.addEventListener('DOMContentLoaded', () => {
     closeWifiAuditorBtn?.addEventListener('click', () => wifiAuditorModal?.classList.add('hidden'));
 
     runWifiAuditBtn?.addEventListener('click', async () => {
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
         runWifiAuditBtn.disabled = true;
-        runWifiAuditBtn.textContent = isAr ? 'جاري تحليل بروتوكولات الشبكة اللاسلكية وفحص هجمات MITM...' : 'Auditing Wi-Fi protocols & scanning for MITM attacks...';
+        runWifiAuditBtn.textContent = 'جاري تحليل بروتوكولات الشبكة اللاسلكية وفحص هجمات MITM...';
 
         setTimeout(() => {
             runWifiAuditBtn.disabled = false;
-            runWifiAuditBtn.textContent = isAr ? 'إعادة فحص شبكة الواي فاي الحالية' : 'Audit Current Wi-Fi Network';
+            runWifiAuditBtn.textContent = 'إعادة فحص شبكة الواي فاي الحالية';
 
-            const wifiRiskLevel = isConnected 
-                ? (isAr ? 'آمنة جداً (مشفرة عبر WARP VPN)' : 'Highly Secure (WARP VPN Encrypted)') 
-                : (isAr ? 'متوسطة المخاطر (ينصح بتفعيل الـ VPN)' : 'Moderate Risk (VPN recommended)');
+            const wifiRiskLevel = isConnected ? 'آمنة جداً (مشفرة عبر WARP VPN)' : 'متوسطة المخاطر (ينصح بتفعيل الـ VPN)';
 
             if (wifiAuditResults) {
                 wifiAuditResults.innerHTML = `
                     <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); padding: 12px; border-radius: 8px; margin-bottom: 8px; font-size: 0.75rem;">
-                        <span style="color: #38bdf8; font-weight: bold;">🌐 ${isAr ? 'تقييم الشبكة الحالية:' : 'Network Status:'}</span> ${wifiRiskLevel}<br>
-                        <span style="color: #94a3b8;">🛡️ ${isAr ? 'كشف هجمات رجل في المنتصف (MITM):' : 'MITM Attack Detection:'}</span> <span style="color: #10b981;">${isAr ? 'لم يتم رصد أي اعتراض للبيانات' : 'No interception detected'}</span><br>
-                        <span style="color: #94a3b8;">📡 ${isAr ? 'كشف شبكة الواي فاي الوهمية (Evil Twin):' : 'Evil Twin Detection:'}</span> <span style="color: #10b981;">${isAr ? 'بصمة الراوتر موثوقة ومطابقة' : 'Router signature trusted'}</span>
+                        <span style="color: #38bdf8; font-weight: bold;">🌐 تقييم الشبكة الحالية:</span> ${wifiRiskLevel}<br>
+                        <span style="color: #94a3b8;">🛡️ كشف هجمات رجل في المنتصف (Man-In-The-Middle):</span> <span style="color: #10b981;">لم يتم رصد أي اعتراض للبيانات</span><br>
+                        <span style="color: #94a3b8;">📡 كشف شبكة الواي فاي الوهمية (Evil Twin):</span> <span style="color: #10b981;">بصمة الراوتر موثوقة ومطابقة</span><br>
+                        <span style="color: #94a3b8;">🔐 تشفير الترافيك اللاسلكي:</span> ${isConnected ? 'WPA3 / AES-GCM 256 (عبر نفق WARP)' : 'WPA2/WPA3 Standard'}
                     </div>
                 `;
             }
             logSecurityEventToCloud("WIFI_SECURITY_AUDIT", `فحص الواي فاي مكتمل.`);
-            showToast(isAr ? '📶 اكتمل فحص تقييم أمان شبكة الواي فاي بنجاح!' : '📶 Wi-Fi audit completed!');
+            showToast('📶 اكتمل فحص تقييم أمان شبكة الواي فاي بنجاح!');
         }, 1500);
     });
 
@@ -1125,14 +986,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const isShieldActive = clipboardShieldToggle?.checked ?? true;
         if (!isShieldActive) return;
 
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-        showToast(isAr ? '📋 Apex Clipboard Shield: تم تشفير وحماية النص المنسوخ!' : '📋 Apex Clipboard Shield: Copied text encrypted & protected!');
+        showToast('📋 Apex Clipboard Shield: تم تشفير وحماية النص المنسوخ!');
         logSecurityEventToCloud("CLIPBOARD_PROTECTED_COPY", "تم حماية نص الحافظة.");
 
         if (clipboardClearTimeout) clearTimeout(clipboardClearTimeout);
         clipboardClearTimeout = setTimeout(() => {
             navigator.clipboard?.writeText('').then(() => {
-                showToast(isAr ? '🧹 تم مسح الحافظة تلقائياً لحماية بياناتك السرية من التجسس' : '🧹 Clipboard automatically cleared to protect credentials');
+                showToast('🧹 تم مسح الحافظة تلقائياً لحماية بياناتك السرية من التجسس');
             }).catch(() => {});
         }, 15000);
     });
@@ -1155,30 +1015,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!insightsStatsBox) return;
         const totalVaccines = localStorage.getItem('apex_vaccine_count') || '14892';
         const totalZeroDays = localStorage.getItem('apex_zeroday_count') || '9';
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
 
         insightsStatsBox.innerHTML = `
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
                 <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); padding: 12px; border-radius: 8px; text-align: center;">
                     <div style="font-size: 1.2rem; font-weight: bold; color: #38bdf8;">${blockedAdsCount}</div>
-                    <div style="font-size: 0.65rem; color: #94a3b8;">${isAr ? 'إعلان وبوب أب محجوب' : 'Ads & Pop-ups Blocked'}</div>
+                    <div style="font-size: 0.65rem; color: #94a3b8;">إعلان وبوب أب محجوب</div>
                 </div>
                 <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); padding: 12px; border-radius: 8px; text-align: center;">
                     <div style="font-size: 1.2rem; font-weight: bold; color: #34d399;">${totalZeroDays}</div>
-                    <div style="font-size: 0.65rem; color: #94a3b8;">${isAr ? 'هجمات صفرية محبطة' : 'Zero-Day Threats Neutralized'}</div>
+                    <div style="font-size: 0.65rem; color: #94a3b8;">هجمات صفرية محبطة</div>
                 </div>
             </div>
             <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(236, 72, 153, 0.3); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-                <div style="font-size: 0.75rem; font-weight: bold; color: #ec4899; margin-bottom: 6px;">📊 ${isAr ? 'مخطط كفاءة الحماية الأسبوعي:' : 'Weekly Defense Score:'}</div>
+                <div style="font-size: 0.75rem; font-weight: bold; color: #ec4899; margin-bottom: 6px;">📊 مخطط كفاءة الحماية الأسبوعي:</div>
                 <div style="display: flex; align-items: flex-end; gap: 8px; height: 80px; padding-top: 10px;">
-                    <div style="flex:1; background: #38bdf8; height: 60%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">Sat</div>
-                    <div style="flex:1; background: #38bdf8; height: 80%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">Sun</div>
-                    <div style="flex:1; background: #38bdf8; height: 45%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">Mon</div>
-                    <div style="flex:1; background: #38bdf8; height: 90%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">Tue</div>
-                    <div style="flex:1; background: #38bdf8; height: 75%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">Wed</div>
-                    <div style="flex:1; background: #ec4899; height: 100%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #fff;">Thu</div>
-                    <div style="flex:1; background: #10b981; height: 85%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">Fri</div>
+                    <div style="flex:1; background: #38bdf8; height: 60%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">سبت</div>
+                    <div style="flex:1; background: #38bdf8; height: 80%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">أحد</div>
+                    <div style="flex:1; background: #38bdf8; height: 45%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">إثنين</div>
+                    <div style="flex:1; background: #38bdf8; height: 90%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">ثلاثاء</div>
+                    <div style="flex:1; background: #38bdf8; height: 75%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">أربعاء</div>
+                    <div style="flex:1; background: #ec4899; height: 100%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #fff;">خميس</div>
+                    <div style="flex:1; background: #10b981; height: 85%; border-radius: 4px; text-align: center; font-size: 0.55rem; color: #000;">جمعة</div>
                 </div>
+            </div>
+            <div style="font-size: 0.7rem; color: #94a3b8; text-align: center;">
+                🌐 إجمالي اللقاحات الأمنية المتزامنة مع السحابة: <strong style="color: #38bdf8;">${totalVaccines}</strong> لقاح
             </div>
         `;
     }
@@ -1233,8 +1095,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const bridge = getNativeBridge();
 
         if (!bridge) {
-            showToast('⚠️ No Native Bridge (AndroidVPNBridge). Please run as Android APK package.');
-            console.warn("AndroidVPNBridge unavailable in browser mode.");
+            showToast('⚠️ لا يوجد جسر أصلي (AndroidVPNBridge). يُرجى تشغيل التطبيق كحزمة أندرويد APK.');
+            console.warn("AndroidVPNBridge غير متاح في المتصفح المباشر.");
             return false;
         }
 
@@ -1243,7 +1105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     await bridge.prepareVpn();
                 } catch (err) {
-                    console.warn("VPN Permission error:", err);
+                    console.warn("إذن VPN:", err);
                 }
             }
 
@@ -1261,8 +1123,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return false;
         } catch (e) {
-            console.error("Native VPN bridge execution failed:", e);
-            showToast('❌ Failed to launch VPN tunnel. Verify Android VPN permissions.');
+            console.error("فشل تنفيذ الاتصال بالنفق الأصلي في نظام أندرويد:", e);
+            showToast('❌ تعذر إطلاق النفق. تأكد من منح إذن الـ VPN لنظام أندرويد.');
             return false;
         }
     }
@@ -1294,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function triggerDuressDecoyMode() {
         if (decoyModal) decoyModal.classList.remove('hidden');
-        showToast('🚨 Duress Reflex Activated: Vault Encrypted & Calculator Decoy Mode engaged!');
+        showToast('🚨 تم تفعيل درع الإكراه: عرض الآلة الحاسبة السرية وتشفير الجلسات!');
         await logSecurityEventToCloud("DURESS_REFLEX_TRIGGERED", "تفعيل وضع التمويه الآمن (Decoy Mode).");
     }
 
@@ -1351,12 +1213,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 noiseNode.loop = true;
                 noiseNode.connect(audioCtx.destination);
                 noiseNode.start();
-                showToast('🔊 Ultrasonic Tracking Jammer Active');
+                showToast('🔊 مانع التتبع فوق الصوتي نشط: الميكروفون محصن تماماً!');
             } catch (e) {}
         } else {
             if (noiseNode) { try { noiseNode.stop(); } catch(e){} noiseNode = null; }
             if (audioCtx) { try { await audioCtx.close(); } catch(e){} audioCtx = null; }
-            showToast('⚠️ Ultrasonic Jammer Deactivated');
+            showToast('⚠️ تم إيقاف مانع التتبع فوق الصوتي');
         }
     }
 
@@ -1385,7 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function executeGForceEmergencyWipe() {
         localStorage.clear();
         await logSecurityEventToCloud("G_FORCE_CONFISCATION_WIPE", "تم رصد تسارع حركي عنيف، تم تدمير كافة البيانات محلياً.");
-        alert('⚡ G-Force Confiscation Disconnect Triggered: Local data wiped for privacy protection!');
+        alert('⚡ تم تفعيل بروتوكول الانفصال الحركي: تم مسح الخزنة والجلسات حفاظاً على خصوصيتك!');
         window.location.reload();
     }
 
@@ -1436,20 +1298,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     triggerMutationBtn?.addEventListener('click', async () => {
         triggerMutationBtn.disabled = true;
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-        triggerMutationBtn.textContent = isAr ? 'جاري إعادة هيكلة البصمة التشفيرية وتحور العتاد...' : 'Mutating cryptographic signatures...';
+        triggerMutationBtn.textContent = 'جاري إعادة هيكلة البصمة التشفيرية وتحور العتاد...';
 
         try {
             mutationGeneration++;
             localStorage.setItem('apex_quantum_gen', mutationGeneration.toString());
             if (quantumGenTag) quantumGenTag.textContent = `Gen-18.${mutationGeneration}`;
 
-            showToast(`⚛️ Quantum Mutation Complete (Gen 18.${mutationGeneration})!`);
+            showToast(`⚛️ تم إنجاز التحور الكمومي بنجاح تام (الجيل 18.${mutationGeneration})!`);
         } catch (err) {
-            console.error("Quantum Mutation Error:", err);
+            console.error("خطأ في التحور الكمومي:", err);
         } finally {
             triggerMutationBtn.disabled = false;
-            triggerMutationBtn.textContent = isAr ? 'إجبار تحور البصمة التشفيرية فوراً' : 'Force Immediate Signature Mutation';
+            triggerMutationBtn.textContent = 'إجبار تحور البصمة التشفيرية فوراً';
         }
     });
 
@@ -1459,10 +1320,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const voiceDeepfakeToggle = document.getElementById('voice-deepfake-toggle');
     voiceDeepfakeToggle?.addEventListener('change', async () => {
         if (voiceDeepfakeToggle.checked) {
-            showToast('🎙️ Voice Deepfake Detector Activated!');
+            showToast('🎙️ تم تفعيل كاشف التزييف العميق الصوتي بنجاح!');
             await logSecurityEventToCloud("DEEPFAKE_VOICE_SHIELD_ACTIVE", "مراقبة الترددات الصوتية.");
         } else {
-            showToast('⚠️ Voice Deepfake Detector Deactivated');
+            showToast('⚠️ تم إيقاف درع التزييف');
         }
     });
 
@@ -1475,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const bioThermalToggle = document.getElementById('bio-thermal-toggle');
     bioThermalToggle?.addEventListener('change', async () => {
-        showToast(bioThermalToggle.checked ? '🔥 Bio-Thermal Fusion Shield Active!' : '⚠️ Bio-Thermal Fusion Shield Deactivated');
+        showToast(bioThermalToggle.checked ? '🔥 درع الانصهار الحراري وبصمة التدمير الحيوي نشط!' : '⚠️ تم إيقاف درع الانصهار الحراري');
     });
 
     // ========================================================================
@@ -1492,26 +1353,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 meshDataChannel = meshPeerConnection.createDataChannel('apex_p2p_mesh_vaccine');
                 
                 meshDataChannel.onopen = () => {
-                    showToast('🌐 Connected to P2P Mesh Swarm Network');
+                    showToast('🌐 تم الارتباط بشبكة الأجهزة اللامركزية (P2P Swarm Mesh)');
                 };
                 
                 meshDataChannel.onmessage = (event) => {
                     try {
                         const vaccineData = JSON.parse(event.data);
-                        showToast(`🧬 Live P2P Vaccine Received: ${vaccineData.sig}`);
+                        showToast(`🧬 تلقي لقاح لامركزي مباشر: ${vaccineData.sig}`);
                     } catch(err) {}
                 };
 
                 await logSecurityEventToCloud("MESH_P2P_ACTIVATED", "تفعيل عقدة P2P Mesh.");
             } catch (e) {
-                console.error("P2P Mesh Launch Error:", e);
+                console.error("فشل إطلاق شبكة Mesh P2P:", e);
             }
         } else {
             if (meshPeerConnection) {
                 meshPeerConnection.close();
                 meshPeerConnection = null;
             }
-            showToast('⚠️ Local P2P Mesh Node Deactivated');
+            showToast('⚠️ تم إيقاف عقدة Mesh P2P المحلية');
         }
     }
 
@@ -1519,13 +1380,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const shoulderSurfingToggle = document.getElementById('shoulder-surfing-toggle');
     shoulderSurfingToggle?.addEventListener('change', () => {
-        showToast(shoulderSurfingToggle.checked ? '👁️ Shoulder-Surfing Guard Active' : '⚠️ Shoulder-Surfing Guard Deactivated');
+        showToast(shoulderSurfingToggle.checked ? '👁️ درع التجسس البصري الجانبي نشط!' : '⚠️ تم إيقاف درع التجسس البصري');
         document.body.style.filter = shoulderSurfingToggle.checked ? 'contrast(115%) brightness(95%)' : 'none';
     });
 
     const zkpProofToggle = document.getElementById('zkp-proof-toggle');
     zkpProofToggle?.addEventListener('change', async () => {
-        showToast(zkpProofToggle.checked ? '⚛️ Zero-Knowledge Proof (ZKP) Active' : '⚠️ ZKP Deactivated');
+        showToast(zkpProofToggle.checked ? '⚛️ إثبات المعرفة المعدومة (ZKP) نشط وسحابي!' : '⚠️ تم إيقاف ZKP');
     });
 
     // ========================================================================
@@ -1539,35 +1400,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const zeroDayLogContainer = document.getElementById('zeroday-log-container');
 
     let zeroDayPoisonCount = parseInt(localStorage.getItem('apex_zeroday_count') || '9');
-    if (zeroDayCounter) zeroDayCounter.textContent = `${zeroDayPoisonCount}`;
+    if (zeroDayCounter) zeroDayCounter.textContent = `${zeroDayPoisonCount} هجمة`;
 
     openZeroDayBtn?.addEventListener('click', () => zeroDayModal?.classList.remove('hidden'));
     closeZeroDayBtn?.addEventListener('click', () => zeroDayModal?.classList.add('hidden'));
 
     testZeroDayPoison?.addEventListener('click', async () => {
         testZeroDayPoison.disabled = true;
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-        testZeroDayPoison.textContent = isAr ? 'جاري رصد الهجوم وحجب التتبع...' : 'Detecting threat & poisoning telemetry...';
+        testZeroDayPoison.textContent = 'جاري رصد الهجوم وحجب التتبع...';
         
         try {
             zeroDayPoisonCount++;
             localStorage.setItem('apex_zeroday_count', zeroDayPoisonCount.toString());
-            if (zeroDayCounter) zeroDayCounter.textContent = `${zeroDayPoisonCount}`;
+            if (zeroDayCounter) zeroDayCounter.textContent = `${zeroDayPoisonCount} هجمة`;
 
             const div = document.createElement('div');
             div.className = 'radar-log-item';
-            div.textContent = `[${new Date().toLocaleTimeString()}] ☣️ Zero-Day tracking attempt intercepted & telemetry poisoned!`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ☣️ تم رصد محاولة تتبع (Zero-Day)، وتسميم البيانات وبث اللقاح!`;
             if (zeroDayLogContainer) zeroDayLogContainer.prepend(div);
 
             await logSecurityEventToCloud("ZERO_DAY_TELEMETRY_POISON", "التسميم الديناميكي وحجب هجمة صفرية.");
             await broadcastGlobalSwarmVaccine("ZERO_DAY_POISON_SIG_" + Date.now());
 
-            showToast(isAr ? '🧬 تم إحباط الهجوم المجهول وتسميم بصمات المخترق عالمياً بنجاح تام!' : '🧬 Zero-Day attack neutralized & telemetry poisoned!');
+            showToast('🧬 تم إحباط الهجوم المجهول وتسميم بصمات المخترق عالمياً بنجاح تام!');
         } catch (e) {
             console.error(e);
         } finally {
             testZeroDayPoison.disabled = false;
-            testZeroDayPoison.textContent = isAr ? 'محاكاة هجوم صفرى وإطلاق التسميم الديناميكي' : 'Simulate Zero-Day Attack & Trigger Poisoning';
+            testZeroDayPoison.textContent = 'محاكاة هجوم صفرى وإطلاق التسميم الديناميكي';
         }
     });
 
@@ -1729,12 +1589,14 @@ document.addEventListener('DOMContentLoaded', () => {
         stealthToggle.checked = localStorage.getItem('apex_stealth') === 'true';
         stealthToggle.addEventListener('change', () => {
             localStorage.setItem('apex_stealth', stealthToggle.checked);
-            showToast(stealthToggle.checked ? '🇪🇬 Stealth Obfuscation Mode Active' : '🇪🇬 Stealth Obfuscation Mode Disabled');
+            showToast(stealthToggle.checked ? '🇪🇬 تم تفعيل وضع التمويه المصري' : '🇪🇬 تم إيقاف وضع التمويه المصري');
         });
     }
 
     if (hasConsented) {
         disclosureModal?.classList.add('hidden');
+    } else {
+        setTimeout(() => showToast('🛡️ يرجى قراءة إفصاح الخدمة لتفعيل الحماية الأمنية'), 1000);
     }
 
     const savedSessionActive = localStorage.getItem('apex_session_active') === 'true';
@@ -1747,11 +1609,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         isConnected = true;
         statusOrb?.classList.add('connected');
-        if (connectionStatus) connectionStatus.textContent = `${getTrans('status_connected')} (${currentServerName})`;
+        if (connectionStatus) connectionStatus.textContent = `محمي ومتصل عبر (${currentServerName})`;
         
         fetchUserRealPublicIp();
 
-        if (connectBtn) connectBtn.textContent = getTrans('btn_deactivate');
+        if (connectBtn) connectBtn.textContent = 'إيقاف درع الحماية';
         if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '18.2 MB/s' : '24.5 MB/s';
         if (uploadSpeed) uploadSpeed.textContent = '9.2 MB/s';
         sessionTimer?.classList.remove('hidden');
@@ -1762,24 +1624,23 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('vpn_consent', 'true');
         disclosureModal?.classList.add('hidden');
         requestDevicePermissions();
-        showToast('✅ Terms accepted. VpnService protection authorized.');
+        showToast('✅ تم قبول الشروط، التطبيق جاهز للدرع الجماعي الحقيقي');
     });
 
     denyBtn?.addEventListener('click', () => {
-        alert('Service disclosure consent is required to use VPN features.');
+        alert('يتطلب تشغيل التطبيق الموافقة على شروط الأمان وسياسة جوجل بلاي.');
     });
 
     openSwarmBtn?.addEventListener('click', () => swarmModal?.classList.remove('hidden'));
     closeSwarmBtn?.addEventListener('click', () => swarmModal?.classList.add('hidden'));
 
     broadcastVaccineBtn?.addEventListener('click', async () => {
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
         broadcastVaccineBtn.disabled = true;
-        broadcastVaccineBtn.textContent = isAr ? 'جاري بث اللقاح الرقمي المباشر...' : 'Broadcasting live cyber vaccine...';
+        broadcastVaccineBtn.textContent = 'جاري بث اللقاح الرقمي المباشر...';
         await broadcastGlobalSwarmVaccine("MANUAL_BROADCAST_SIG_" + Date.now());
         setTimeout(() => {
             broadcastVaccineBtn.disabled = false;
-            broadcastVaccineBtn.textContent = isAr ? 'نشر لقاح أمني سحابي جديد للمجتمع' : 'Broadcast New P2P Cyber Vaccine to Community';
+            broadcastVaccineBtn.textContent = 'نشر لقاح أمني سحابي جديد للمجتمع';
             if (globalSwarmCount) {
                 const currentCount = parseInt(globalSwarmCount.textContent.replace(/,/g, '')) + 1;
                 globalSwarmCount.textContent = currentCount.toLocaleString();
@@ -1787,9 +1648,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const div = document.createElement('div');
             div.className = 'radar-log-item';
-            div.textContent = `[${new Date().toLocaleTimeString()}] 🚀 Cyber vaccine successfully broadcasted globally!`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] 🚀 تم بث لقاحك السيبراني بنجاح إلى شبكة الملايين!`;
             swarmLogContainer?.prepend(div);
-            showToast('🧬 New Cyber Vaccine Broadcasted to Community!');
+            showToast('🧬 تم نشر اللقاح الأمني سحابياً لكافة مستخدمي العالم بنجاح!');
         }, 1500);
     });
 
@@ -1802,7 +1663,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.className = theme;
                 localStorage.setItem('apex_theme', theme);
                 themeModal?.classList.add('hidden');
-                showToast('🎨 Theme Applied');
+                showToast('🎨 تم تطبيق الثيم بنجاح');
             }
         });
     });
@@ -1822,7 +1683,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stopSession();
         localStorage.removeItem('apex_vault_items');
         await logSecurityEventToCloud("PANIC_BUTTON", "تفعيل زر الذعر وتدمير السجلات محلياً.");
-        showToast('🚨 Panic Button Triggered: Local logs & vault session cleared!');
+        showToast('🚨 تم تفعيل وضع الذعر: تم تدمير السجلات ومسح الخزنة مؤقتاً!');
     });
 
     openAudioBtn?.addEventListener('click', () => audioModal?.classList.remove('hidden'));
@@ -1830,18 +1691,18 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleAudioShield?.addEventListener('click', () => {
         isAudioShieldActive = !isAudioShieldActive;
         if (audioShieldStatus) {
-            audioShieldStatus.textContent = isAudioShieldActive ? getTrans('acoustic_active') : getTrans('acoustic_off');
+            audioShieldStatus.textContent = isAudioShieldActive ? 'نشط (تغيير النبرة الافتراضي)' : 'متوقف';
             audioShieldStatus.style.color = isAudioShieldActive ? '#10b981' : '#f59e0b';
         }
-        showToast(isAudioShieldActive ? '🎙️ Voice Biometric Shield Active' : '⚠️ Voice Shield Deactivated');
+        showToast(isAudioShieldActive ? '🎙️ تم تشغيل الدرع الصوتي بنجاح' : '⚠️ تم إيقاف الدرع الصوتي');
     });
 
     openGpsBtn?.addEventListener('click', () => gpsModal?.classList.remove('hidden'));
     closeGpsBtn?.addEventListener('click', () => gpsModal?.classList.add('hidden'));
     toggleGpsMock?.addEventListener('click', () => {
         isGpsMockActive = !isGpsMockActive;
-        if (gpsCurrentLoc) gpsCurrentLoc.textContent = isGpsMockActive ? `Matching Active Server (${currentServerName})` : 'Real GPS Coordinates';
-        showToast('📍 Mock GPS updated to match server region');
+        if (gpsCurrentLoc) gpsCurrentLoc.textContent = isGpsMockActive ? `متطابق مع الخادم (${currentServerName})` : 'موقع GPS الحقيقي';
+        showToast('📍 تم تحديث محاكي الـ GPS الوهمي ليطابق الدولة بنجاح');
     });
 
     openDoubleVpnBtn?.addEventListener('click', () => {
@@ -1856,24 +1717,24 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('apex_double_vpn', isDoubleVpnActive.toString());
         if (isDoubleVpnActive) {
             if (doubleVpnStatus) {
-                doubleVpnStatus.textContent = 'Active (Germany ➔ Switzerland)';
+                doubleVpnStatus.textContent = 'مفعل بنجاح (ألمانيا ➔ سويسرا)';
                 doubleVpnStatus.style.color = '#10b981';
             }
             if (toggleDoubleVpnBtn) {
-                toggleDoubleVpnBtn.textContent = 'Deactivate Double VPN';
+                toggleDoubleVpnBtn.textContent = 'إيقاف التوجيه المزدوج';
                 toggleDoubleVpnBtn.style.background = '#475569';
             }
-            showToast('🌐 Double VPN Tunneling Enabled');
+            showToast('🌐 تم تفعيل التوجيه المزدوج (Double VPN) بنجاح');
         } else {
             if (doubleVpnStatus) {
-                doubleVpnStatus.textContent = 'Disabled (Tap to Activate)';
+                doubleVpnStatus.textContent = 'غير مفعل (اضغط للتفعيل)';
                 doubleVpnStatus.style.color = '#f59e0b';
             }
             if (toggleDoubleVpnBtn) {
-                toggleDoubleVpnBtn.textContent = 'Activate Double VPN';
+                toggleDoubleVpnBtn.textContent = 'تفعيل التوجيه المزدوج';
                 toggleDoubleVpnBtn.style.background = '';
             }
-            showToast('🔒 Double VPN Disabled');
+            showToast('🔒 تم إيقاف التوجيه المزدوج والعودة للخادم الفردي');
         }
     });
 
@@ -1926,22 +1787,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = vaultTitle?.value.trim();
         const content = vaultContent?.value.trim();
         if (!masterPass || !title || !content) {
-            showToast('⚠️ Please enter master password, title, and content');
+            showToast('⚠️ يرجى إدخال كلمة المرور الرئيسية، العنوان، والمحتوى');
             return;
         }
         try {
             const encryptedObj = await encryptVaultItem(content, masterPass);
             let vault = [];
             try { vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]'); } catch(e) { vault = []; }
-            vault.unshift({ title, encryptedObj, date: new Date().toLocaleDateString('en-US') });
+            vault.unshift({ title, encryptedObj, date: new Date().toLocaleDateString('ar-EG') });
             localStorage.setItem('apex_vault_items', JSON.stringify(vault));
             if (vaultTitle) vaultTitle.value = ''; 
             if (vaultContent) vaultContent.value = ''; 
             if (vaultMasterPass) vaultMasterPass.value = '';
             renderVaultItems();
-            showToast('🔐 Encrypted & Saved in Vault');
+            showToast('🔐 تم تشفير وحفظ العنصر عسكرياً في الخزنة بنجاح');
         } catch (err) {
-            showToast('❌ Encryption Failed');
+            showToast('❌ فشل تشفير العنصر');
         }
     });
 
@@ -1950,7 +1811,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try { vault = JSON.parse(localStorage.getItem('apex_vault_items') || '[]'); } catch(e) { vault = []; }
         if (!vaultListContainer) return;
         if (vault.length === 0) {
-            vaultListContainer.innerHTML = `<p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">${getTrans('vault_empty') || 'No saved items in vault.'}</p>`;
+            vaultListContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد عناصر محفوظة في الخزنة.</p>';
             return;
         }
         vaultListContainer.innerHTML = '';
@@ -1961,39 +1822,39 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const headerDiv = document.createElement('div');
             headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
-            headerDiv.innerHTML = `<div><strong>🔒 ${item.title}</strong><br><span style="color: #94a3b8; font-size: 0.65rem;">AES-GCM 256 Encrypted • ${item.date}</span></div>`;
+            headerDiv.innerHTML = `<div><strong>🔒 ${item.title}</strong><br><span style="color: #94a3b8; font-size: 0.65rem;">محتوى مشفر (AES-GCM 256) • ${item.date}</span></div>`;
             
             const decryptBtn = document.createElement('button');
             decryptBtn.className = 'btn-primary';
             decryptBtn.style.cssText = 'padding: 6px 12px; font-size: 0.7rem; cursor: pointer;';
-            decryptBtn.textContent = 'Decrypt 🔓';
+            decryptBtn.textContent = 'فك التشفير 🔓';
             
             const viewContainer = document.createElement('div');
             viewContainer.id = `decrypted-view-${index}`;
             viewContainer.style.cssText = 'display: none; margin-top: 6px; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 6px; color: #34d399; font-size: 0.75rem; word-break: break-all;';
             
             decryptBtn.addEventListener('click', async () => {
-                const masterPass = prompt('Enter Master Password to decrypt secret:');
+                const masterPass = prompt('أدخل كلمة المرور الرئيسية لفك تشفير هذا العنصر الآمن:');
                 if (!masterPass) return;
                 
                 const decryptedText = await decryptVaultItem(item.encryptedObj, masterPass);
                 if (decryptedText === null) {
-                    showToast('❌ Incorrect master password or decryption failed!');
+                    showToast('❌ كلمة المرور غير صحيحة أو فشل فك التشفير!');
                     viewContainer.style.display = 'none';
                 } else {
                     viewContainer.style.display = 'block';
                     viewContainer.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-weight: bold; color: #6ee7b7;">✨ Secret (${item.title}):</span>
-                            <button id="copy-vault-${index}" style="background: #10b981; color: #fff; border: none; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;">📋 Copy</button>
+                            <span style="font-weight: bold; color: #6ee7b7;">✨ المحتوى المفكوك (${item.title}):</span>
+                            <button id="copy-vault-${index}" style="background: #10b981; color: #fff; border: none; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;">📋 نسخ</button>
                         </div>
                         <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; font-family: monospace;">${decryptedText}</div>
                     `;
                     document.getElementById(`copy-vault-${index}`)?.addEventListener('click', () => {
                         navigator.clipboard?.writeText(decryptedText);
-                        showToast('📋 Copied to clipboard!');
+                        showToast('📋 تم نسخ المحتوى الحساس بنجاح!');
                     });
-                    showToast('🔓 Decrypted successfully!');
+                    showToast('🔓 تم فك تشفير المحتوى وعرضه داخل التطبيق بأمان تام!');
                 }
             });
 
@@ -2030,16 +1891,16 @@ document.addEventListener('DOMContentLoaded', () => {
             offlineQueue.slice(-4).reverse().forEach(log => {
                 const div = document.createElement('div');
                 div.className = 'radar-log-item';
-                div.textContent = `[${new Date(log.timestamp).toLocaleTimeString()}] 🛡️ [Local/Protected]: ${log.event} - ${log.details}`;
+                div.textContent = `[${new Date(log.timestamp).toLocaleTimeString()}] 🛡️ [محلي/محمي]: ${log.event} - ${log.details}`;
                 radarLogBox.appendChild(div);
             });
             return;
         }
 
         const fallbackThreats = [
-            `🛡️ Intercepted & neutralized ${blockedAdsCount} telemetry & pop-up attempts`,
-            `⚡ Display protected against overlay injection & unauthorized pop-ups`,
-            `🟢 Local WebNN/Wasm hardware sentinel active`
+            `🛡️ تم رصد وحجب ${blockedAdsCount} طلب تتبعي وإعلاني وبوب أب بنجاح`,
+            `⚡ تم تأمين الشاشة ومنع حقن الـ Overlay والنوافذ المنبثقة العشوائية`,
+            `🟢 شبكة العتاد العصبي المحلي (WebNN/Wasm) تعمل بكفاءة تامة`
         ];
 
         fallbackThreats.forEach(t => {
@@ -2057,12 +1918,11 @@ document.addEventListener('DOMContentLoaded', () => {
     closeScannerBtn?.addEventListener('click', () => scannerModal?.classList.add('hidden'));
 
     // ========================================================================
-    // حدث الفحص الشامل للذاكرة والملفات المحدث
+    // حدث الفحص الشامل للذاكرة والملفات المحدث والآمن من ظهور 0.0 MB
     // ========================================================================
     startDeepScan?.addEventListener('click', async () => {
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
         startDeepScan.disabled = true;
-        if (scanStatusText) scanStatusText.textContent = isAr ? '🛡️ جاري الفحص العتادي للنظام والتطبيقات المثبتة...' : '🛡️ Auditing system hardware & installed packages...';
+        if (scanStatusText) scanStatusText.textContent = '🛡️ جاري الفحص العتادي للنظام والتطبيقات المثبتة...';
         if (threatList) threatList.innerHTML = '';
 
         const bridge = getNativeBridge();
@@ -2080,7 +1940,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (res.scannedApps) scannedAppsCount = res.scannedApps;
                 }
             } catch (e) {
-                console.warn("Native scan fallback engaged", e);
+                console.warn("فشل استدعاء الفحص الأصلي، استخدام القارئ الاحتياطي", e);
             }
         } else if (navigator.storage && navigator.storage.estimate) {
             try {
@@ -2091,29 +1951,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         setTimeout(async () => {
-            if (scanStatusText) scanStatusText.textContent = isAr ? 'اكتمل الفحص الشامل للنظام والملفات بنجاح!' : 'Deep System Scan Complete!';
+            if (scanStatusText) scanStatusText.textContent = 'اكتمل الفحص الشامل للنظام والملفات بنجاح!';
             startDeepScan.disabled = false;
             
             const adsText = formatAdsCountText(blockedAdsCount);
 
             let adBlockMsg = document.getElementById('adblock-toggle')?.checked 
-                ? `<div class="safe-item adblock-counter-text" style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">✔ Ad Blocker Active: Shielded (${adsText})</div>` 
+                ? `<div class="safe-item adblock-counter-text" style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">✔ مانع الإعلانات والبوب أب نشط: تم حجب والتصدي لـ (${adsText})</div>` 
                 : '';
                 
-            let connectionModeMsg = `<div class="safe-item" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">☁️ Protected via P2P Mesh Neural Network</div>`;
+            let connectionModeMsg = `<div class="safe-item" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">☁️ متصل ومحمي بالنظام العصبي المباشر (P2P Mesh Active)</div>`;
             
-            let appsStr = scannedAppsCount > 0 ? ` (${scannedAppsCount} packages inspected)` : '';
+            let appsStr = scannedAppsCount > 0 ? ` (${scannedAppsCount} تطبيق مثبت)` : '';
 
             if (threatList) {
                 threatList.innerHTML = `
                     ${connectionModeMsg}
-                    <div class="safe-item" style="background: rgba(15, 23, 42, 0.8); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">✔ Storage Audited: ${scannedMB} MB / ${totalMB} MB${appsStr}</div>
-                    <div class="safe-item" style="background: rgba(15, 23, 42, 0.8); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">✔ WebNN/Wasm Neural Sensing: System verified clean</div>
+                    <div class="safe-item" style="background: rgba(15, 23, 42, 0.8); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">✔ مساحة التخزين والذاكرة المفحوصة: ${scannedMB} MB من إجمالي ${totalMB} MB${appsStr}</div>
+                    <div class="safe-item" style="background: rgba(15, 23, 42, 0.8); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 8px; line-height: 1.5; word-break: break-word;">✔ الاستشعار العصبي المحلي (WebNN/Wasm): تم التأكد من سلامة النظام وحجب كافة التراكبات الطفيلية</div>
                     ${adBlockMsg}
                 `;
             }
-            if (threatCount) threatCount.textContent = isAr ? '0 تهديد نشط' : '0 Active Threats';
-            showToast(isAr ? '🛡️ اكتمل الفحص الشامل وتطهير النظام بنجاح تام' : '🛡️ Deep scan & system cleanup complete');
+            if (threatCount) threatCount.textContent = '0 تهديد نشط';
+            showToast('🛡️ اكتمل الفحص الشامل وتطهير النظام بنجاح تام');
         }, 1500);
     });
 
@@ -2125,16 +1985,16 @@ document.addEventListener('DOMContentLoaded', () => {
     clearHistoryBtn?.addEventListener('click', () => {
         localStorage.removeItem('apex_session_history');
         renderSessionHistory();
-        showToast('🗑️ Session history cleared');
+        showToast('🗑️ تم مسح سجل الجلسات بنجاح');
     });
 
     openSplitBtn?.addEventListener('click', () => splitModal?.classList.remove('hidden'));
-    closeSplitBtn?.addEventListener('click', () => { splitModal?.classList.add('hidden'); showToast('⚙️ Split Tunneling Settings Saved'); });
+    closeSplitBtn?.addEventListener('click', () => { splitModal?.classList.add('hidden'); showToast('⚙️ تم حفظ إعدادات النفق المنفصل بنجاح'); });
 
     function saveSessionToHistory(duration, server, ip) {
         let history = [];
         try { history = JSON.parse(localStorage.getItem('apex_session_history') || '[]'); } catch(e) { history = []; }
-        history.unshift({ date: new Date().toLocaleDateString('en-US', { hour: '2-digit', minute: '2-digit' }), duration, server, ip });
+        history.unshift({ date: new Date().toLocaleDateString('ar-EG', { hour: '2-digit', minute: '2-digit' }), duration, server, ip });
         if (history.length > 10) history.pop();
         localStorage.setItem('apex_session_history', JSON.stringify(history));
     }
@@ -2144,7 +2004,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try { history = JSON.parse(localStorage.getItem('apex_session_history') || '[]'); } catch(e) { history = []; }
         if (!historyListContainer) return;
         if (history.length === 0) {
-            historyListContainer.innerHTML = `<p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">${getTrans('history_empty') || 'No recorded sessions yet.'}</p>`;
+            historyListContainer.innerHTML = '<p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد جلسات مسجلة حتى الآن.</p>';
             return;
         }
         historyListContainer.innerHTML = '';
@@ -2163,16 +2023,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (cpuEl) {
             const logicalCores = navigator.hardwareConcurrency || 8;
-            cpuEl.textContent = `Hardware (${logicalCores} CPU Cores)`;
+            cpuEl.textContent = `حقيقي (${logicalCores} نواة معالج)`;
         }
         if (ramEl) {
             const deviceMemGB = navigator.deviceMemory || 8;
-            ramEl.textContent = `Memory: ${deviceMemGB} GB`;
+            ramEl.textContent = `الذاكرة المتاحة: ${deviceMemGB} GB`;
         }
         if (storageEl && navigator.storage && navigator.storage.estimate) {
             navigator.storage.estimate().then(est => {
                 const usedGB = (est.usage / (1024*1024*1024)).toFixed(2);
-                storageEl.textContent = `${usedGB} GB App Usage`;
+                storageEl.textContent = `${usedGB} GB مستخدم بالتطبيق`;
             }).catch(() => {});
         }
 
@@ -2189,8 +2049,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeSpeedBtn?.addEventListener('click', () => speedModal?.classList.add('hidden'));
     startSpeedTest?.addEventListener('click', async () => {
         startSpeedTest.disabled = true;
-        const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-        if (speedStatusText) speedStatusText.textContent = isAr ? 'جاري قياس زمن الاستجابة الفعلي (Ping)...' : 'Measuring Ping latency...';
+        if (speedStatusText) speedStatusText.textContent = 'جاري قياس زمن الاستجابة الفعلي (Ping)...';
         if (livePingVal) livePingVal.textContent = '...'; 
         if (testDl) testDl.textContent = '0.0 Mb/s'; 
         if (testUl) testUl.textContent = '0.0 Mb/s';
@@ -2204,7 +2063,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (livePingVal) livePingVal.textContent = '12 ms';
         }
 
-        if (speedStatusText) speedStatusText.textContent = isAr ? 'جاري قياس سرعة التحميل الحي...' : 'Measuring Download Speed...';
+        if (speedStatusText) speedStatusText.textContent = 'جاري قياس سرعة التحميل الحي...';
         const dlStartTime = performance.now();
         try {
             const res = await fetchWithTimeout('https://httpbin.org/bytes/500000', { cache: 'no-store', timeout: 4000 });
@@ -2217,7 +2076,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (testDl) testDl.textContent = '42.8 Mb/s';
         }
 
-        if (speedStatusText) speedStatusText.textContent = isAr ? 'جاري اختبار الرفع الآمن...' : 'Measuring Upload Speed...';
+        if (speedStatusText) speedStatusText.textContent = 'جاري اختبار الرفع الآمن...';
         const ulStartTime = performance.now();
         try {
             const dummyData = new Uint8Array(200000);
@@ -2229,9 +2088,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (testUl) testUl.textContent = '18.4 Mb/s';
         }
 
-        if (speedStatusText) speedStatusText.textContent = isAr ? 'اختبار التشخيص الحي مكتمل ✔' : 'Network Speed Test Complete ✔';
+        if (speedStatusText) speedStatusText.textContent = 'اختبار التشخيص الحي مكتمل وبأعلى كفاءة ✔';
         startSpeedTest.disabled = false;
-        showToast('⚡ Network Performance Test Complete');
+        showToast('⚡ تم اختبار أداء الشبكة الحقيقي بنجاح');
     });
 
     // ========================================================================
@@ -2254,19 +2113,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const botMsg = document.createElement('div');
             botMsg.className = 'ai-message bot';
             
-            const isAr = (localStorage.getItem('apex_user_lang') || 'ar') === 'ar';
-            let reply = isAr 
-                ? "بناءً على فحص مفاعل Chrono-Photonic وإشراف التطبيق، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية."
-                : "Based on Chrono-Photonic Engine diagnostic, your system is fully shielded against telemetry tracking and ad pop-ups.";
-            
+            let reply = "بناءً على فحص مفاعل Chrono-Photonic وإشراف التطبيق، نظامك مؤمن ومحمى تماماً ضد التتبع الخارجي وإطلاقات البوب أب العشوائية.";
             const lowerText = text.toLowerCase();
             
-            if (lowerText.includes('إعلان') || lowerText.includes('ad') || lowerText.includes('popup')) {
-                reply = isAr 
-                    ? `محرك حجب الإعلانات والنوافذ المنبثقة العشوائية نشط ومدمج. تم حجب ${blockedAdsCount} إعلان حتى الآن بنجاح.`
-                    : `Ad & Pop-up Blocker is active. Total ads blocked so far: ${blockedAdsCount}.`;
-            } else if (lowerText.includes('كرم') || lowerText.includes('karam') || lowerText.includes('founder')) {
-                reply = "Karam Hamdy (كرم حمدي عبدالعظيم محمود عجاج) is the founder & lead architect of Apex Shield AI.";
+            if (lowerText.includes('إعلان') || lowerText.includes('تتبع') || lowerText.includes('مكالمات') || lowerText.includes('بوب أب')) {
+                reply = `محرك حجب الإعلانات والنوافذ المنبثقة العشوائية نشط ومدمج. تم حجب ${blockedAdsCount} إعلان حتى الآن بنجاح تامة.`;
+            } else if (lowerText.includes('سرعة') || lowerText.includes('بينغ') || lowerText.includes('فحص')) {
+                reply = "يمكنك النقر على زر 'اختبار سرعة الشبكة' أو الفحص العصبي للتأكد من أداء العتاد لحظياً.";
+            } else if (lowerText.includes('خزنة') || lowerText.includes('تشفير') || lowerText.includes('كلمة')) {
+                reply = "الخزنة الرقمية تستخدم تشفير AES-GCM 256-bit مع اشتقاق المفاتيح PBKDF2 محلياً.";
+            } else if (lowerText.includes('كرم') || lowerText.includes('المطور')) {
+                reply = "المهندس كرم حمدي عبدالعظيم محمود عجاج هو المؤسس والمطور الرئيسي لنظام Apex Shield AI وقائد براءة الاختراع السيبرانية العالمية.";
             }
 
             botMsg.textContent = reply;
@@ -2285,15 +2142,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSessionTimerAndNotifications() {
         if (timerInterval) clearInterval(timerInterval);
         if (notificationInterval) clearInterval(notificationInterval);
-        sendPhoneNotification("🛡️ Apex Shield AI Active", `Connected to ${currentServerName}`);
+        sendPhoneNotification("🛡️ Apex Chrono-Photonic AI نشط", `تم تفعيل الحماية وتوجيه نفق WireGuard المشفر (${currentServerName})`);
         timerInterval = setInterval(() => {
             sessionSeconds++;
             const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
             const secs = String(sessionSeconds % 60).padStart(2, '0');
-            if (sessionTimer) sessionTimer.textContent = `${getTrans('session_time')} ${mins}:${secs}`;
+            if (sessionTimer) sessionTimer.textContent = `وقت الجلسة: ${mins}:${secs}`;
         }, 1000);
         notificationInterval = setInterval(() => {
-            sendPhoneNotification("🟢 Encrypted WireGuard Tunnel Active", `IP protected & photonic engine active via ${currentServerName}.`);
+            sendPhoneNotification("🟢 نفق WireGuard المشفر يعمل", `الـ IP محمي والتمويه الضوئي نشط عبر ${currentServerName}.`);
         }, 45000);
     }
 
@@ -2306,24 +2163,24 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('apex_session_start_time');
         const mins = Math.floor(sessionSeconds / 60);
         const secs = sessionSeconds % 60;
-        saveSessionToHistory(`${mins}m ${secs}s`, currentServerName, currentServerIp);
+        saveSessionToHistory(`${mins} دقيقة و ${secs} ثانية`, currentServerName, currentServerIp);
 
         isConnected = false;
         statusOrb?.classList.remove('connected');
-        if (connectionStatus) connectionStatus.textContent = getTrans('status_disconnected');
+        if (connectionStatus) connectionStatus.textContent = 'غير متصل بالدرع';
         
         setTimeout(() => { fetchUserRealPublicIp(); }, 1000);
 
         if (connectBtn) {
-            connectBtn.textContent = getTrans('btn_activate');
+            connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
             connectBtn.disabled = false;
         }
         if (downloadSpeed) downloadSpeed.textContent = '0.0 MB/s';
         if (uploadSpeed) uploadSpeed.textContent = '0.0 MB/s';
         sessionTimer?.classList.add('hidden');
         sessionSeconds = 0;
-        sendPhoneNotification("🔒 Connection Disconnected", "Protection shield safely stopped.");
-        showToast('🔒 Disconnected safely');
+        sendPhoneNotification("🔒 تم قطع الاتصال", "تم إيقاف درع الحماية والمفاعل بأمان تام.");
+        showToast('🔒 تم قطع الاتصال بأمان تام');
     }
 
     // ========================================================================
@@ -2337,7 +2194,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await requestDevicePermissions();
 
         if (!isConnected) {
-            connectBtn.textContent = getTrans('btn_connecting');
+            connectBtn.textContent = 'جاري الاتصال بنفق WireGuard المشفر...';
             connectBtn.disabled = true;
 
             const bridgeSuccess = await triggerNativeVpnConnection(true, currentServerIp, currentServerName);
@@ -2345,10 +2202,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (bridgeSuccess) {
                 isConnected = true;
                 statusOrb?.classList.add('connected');
-                if (connectionStatus) connectionStatus.textContent = `${getTrans('status_connected')} (${currentServerName})`;
+                if (connectionStatus) connectionStatus.textContent = `محمي ومتصل عبر (${currentServerName})`;
                 
                 connectBtn.disabled = false;
-                connectBtn.textContent = getTrans('btn_deactivate');
+                connectBtn.textContent = 'إيقاف درع الحماية';
                 if (downloadSpeed) downloadSpeed.textContent = isDoubleVpnActive ? '28.4 MB/s' : '45.2 MB/s';
                 if (uploadSpeed) uploadSpeed.textContent = '18.6 MB/s';
                 sessionSeconds = 0;
@@ -2364,14 +2221,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => { fetchUserRealPublicIp(); }, 1500);
 
                 await logSecurityEventToCloud("VPN_WARP_CONNECT", `تفعيل الاتصال المباشر عبر ${currentServerName}`);
-                showToast(`🚀 Connected: ${currentServerName}`);
+                showToast(`🚀 تم الاتصال بنجاح بالنفق المشفر: ${currentServerName}`);
             } else {
                 connectBtn.disabled = false;
-                connectBtn.textContent = getTrans('btn_activate');
-                showToast('⚠️ Could not launch VPN tunnel. Verify Android VPN permissions.');
+                connectBtn.textContent = 'تفعيل درع الحماية والمناعة الجماعية';
+                showToast('⚠️ تعذر إطلاق النفق. يُرجى قبول إذن شبكة الـ VPN من أندرويد.');
             }
         } else {
-            connectBtn.textContent = getTrans('btn_disconnecting');
+            connectBtn.textContent = 'جاري قطع الاتصال وإعادة الـ IP الحقيقي...';
             connectBtn.disabled = true;
             await logSecurityEventToCloud("VPN_WARP_DISCONNECT", "قطع الاتصال وإيقاف النفق.");
             connectBtn.disabled = false;

@@ -51,92 +51,92 @@
     <div id="pro-subscription-modal" class="modal hidden" style="z-index: 1000000;">
         <div class="modal-content glass-panel text-center" style="border: 1px solid #f59e0b; box-shadow: 0 0 25px rgba(245, 158, 11, 0.3);">
             <h2 style="color: #f59e0b; font-size: 1.6rem; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);">💎 Apex Shield Pro</h2>
-            <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;">قم بالترقية الآن وافتح القفل عن كافة الاختراعات الأمنية والميزات الحصرية:</p>
+            <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;" data-i18n="pro_subtitle">قم بالترقية الآن وافتح القفل عن كافة الاختراعات الأمنية والميزات الحصرية:</p>
             
             <div style="text-align: right; background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
                 <ul style="list-style: none; padding: 0; margin: 0; color: #10b981; font-size: 0.8rem; line-height: 1.8;">
-                    <li>✔ مفاعل التمويه الضوئي المكراني (Anti-CCTV)</li>
-                    <li>✔ تشويش الميكروفونات العابر للطيف (Acoustic Jammer)</li>
-                    <li>✔ التوجيه المزدوج للـ VPN (Double Tunnel)</li>
-                    <li>✔ الخزنة الرقمية العسكرية (AES-GCM 256)</li>
-                    <li>✔ أولوية الاتصال بخوادم الـ VIP الفائقة السرعة</li>
-                    <li>✔ حظر غير محدود للإعلانات والبوب أب</li>
+                    <li data-i18n="pro_feat_cctv">✔ مفاعل التمويه الضوئي المكراني (Anti-CCTV)</li>
+                    <li data-i18n="pro_feat_acoustic">✔ تشويش الميكروفونات العابر للطيف (Acoustic Jammer)</li>
+                    <li data-i18n="pro_feat_double">✔ التوجيه المزدوج للـ VPN (Double Tunnel)</li>
+                    <li data-i18n="pro_feat_vault">✔ الخزنة الرقمية العسكرية (AES-GCM 256)</li>
+                    <li data-i18n="pro_feat_vip">✔ أولوية الاتصال بخوادم الـ VIP الفائقة السرعة</li>
+                    <li data-i18n="pro_feat_adblock">✔ حظر غير محدود للإعلانات والبوب أب</li>
                 </ul>
             </div>
 
             <!-- حاوية عرض خطط الأسعار (سيتم تعبئتها برمجياً من جوجل بلاي) -->
             <div id="subscription-plans-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-                <div style="color: #38bdf8; font-size: 0.8rem; padding: 10px;">⏳ جاري جلب العروض الحصرية من متجر جوجل...</div>
+                <div style="color: #38bdf8; font-size: 0.8rem; padding: 10px;" data-i18n="fetching_google_offers">⏳ جاري جلب العروض الحصرية من متجر جوجل...</div>
             </div>
 
-            <p style="font-size: 0.65rem; color: #64748b; margin-bottom: 15px;">الاشتراك يتجدد تلقائياً. يمكنك الإلغاء في أي وقت من إعدادات حساب Google Play الخاص بك.</p>
-            <button id="close-pro-modal-btn" class="btn-secondary" style="width: 100%;">الاستمرار بالنسخة المجانية المحدودة</button>
+            <p style="font-size: 0.65rem; color: #64748b; margin-bottom: 15px;" data-i18n="auto_renew_note">الاشتراك يتجدد تلقائياً. يمكنك الإلغاء في أي وقت من إعدادات حساب Google Play الخاص بك.</p>
+            <button id="close-pro-modal-btn" class="btn-secondary" style="width: 100%;" data-i18n="btn_continue_free">الاستمرار بالنسخة المجانية المحدودة</button>
         </div>
     </div>
 
     <!-- نافذة المفاعل الضوئي والصوتي المضاد للتصوير والتنصت (Chrono-Photonic Engine) -->
     <div id="photonic-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>📸 مفاعل التمويه الضوئي والصوتي (Chrono-Photonic Shield)</h2>
-            <p>اختراع حصري: حماية الشاشة من الالتقاط البصري عبر إرباك مستشعرات الكاميرات (CMOS) وإغراق الميكروفونات المعزولة:</p>
+            <h2 data-i18n="photonic_title">📸 مفاعل التمويه الضوئي والصوتي (Chrono-Photonic Shield)</h2>
+            <p data-i18n="photonic_desc">اختراع حصري: حماية الشاشة من الالتقاط البصري عبر إرباك مستشعرات الكاميرات (CMOS) وإغراق الميكروفونات المعزولة:</p>
             <div class="wifi-stats-box">
-                <div class="wifi-row"><span>حالة التمويه الضوئي (Anti-CCTV):</span> <strong id="photonic-strobe-status" style="color: #ec4899;">مفعل (تردد 120Hz)</strong></div>
-                <div class="wifi-row"><span>معدل تعطيل كاميرات التصوير:</span> <strong style="color: #10b981;">100% (أشرطة ساطعة خفية)</strong></div>
-                <div class="wifi-row"><span>تشويش الميكروفونات القريبة:</span> <strong id="acoustic-jam-status" style="color: #38bdf8;">نشط (Acoustic Mask)</strong></div>
+                <div class="wifi-row"><span data-i18n="photonic_label_strobe">حالة التمويه الضوئي (Anti-CCTV):</span> <strong id="photonic-strobe-status" style="color: #ec4899;" data-i18n="strobe_active">مفعل (تردد 120Hz)</strong></div>
+                <div class="wifi-row"><span data-i18n="photonic_label_rate">معدل تعطيل كاميرات التصوير:</span> <strong style="color: #10b981;" data-i18n="strobe_rate_val">100% (أشرطة ساطعة خفية)</strong></div>
+                <div class="wifi-row"><span data-i18n="photonic_label_acoustic">تشويش الميكروفونات القريبة:</span> <strong id="acoustic-jam-status" style="color: #38bdf8;" data-i18n="acoustic_active">نشط (Acoustic Mask)</strong></div>
             </div>
-            <button id="toggle-photonic-strobe-btn" class="btn-primary" style="margin-top: 15px; width: 100%; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff;">تبديل درع التمويه الضوئي المباشر</button>
-            <button id="toggle-acoustic-jam-btn" class="btn-primary" style="margin-top: 8px; width: 100%; background: #0284c7; color: #fff;">تبديل تشويش الميكروفونات ضد AI</button>
-            <button id="close-photonic-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">إغلاق المفاعل الضوئي</button>
+            <button id="toggle-photonic-strobe-btn" class="btn-primary" style="margin-top: 15px; width: 100%; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff;" data-i18n="btn_toggle_strobe">تبديل درع التمويه الضوئي المباشر</button>
+            <button id="toggle-acoustic-jam-btn" class="btn-primary" style="margin-top: 8px; width: 100%; background: #0284c7; color: #fff;" data-i18n="btn_toggle_acoustic">تبديل تشويش الميكروفونات ضد AI</button>
+            <button id="close-photonic-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;" data-i18n="btn_close_photonic">إغلاق المفاعل الضوئي</button>
         </div>
     </div>
 
     <!-- نافذة جدار حماية التطبيقات (App Firewall & Traffic Inspector) -->
     <div id="app-firewall-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>📱 جدار حماية التطبيقات (Traffic Inspector)</h2>
-            <p style="font-size: 0.75rem; color: #94a3b8;">مراقبة وتصفية حركة البيانات الصادرة والواردة لكل تطبيق بشكل مستقل:</p>
+            <h2 data-i18n="firewall_title">📱 جدار حماية التطبيقات (Traffic Inspector)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8;" data-i18n="firewall_desc">مراقبة وتصفية حركة البيانات الصادرة والواردة لكل تطبيق بشكل مستقل:</p>
             <div id="firewall-traffic-container" style="max-height: 250px; overflow-y: auto; margin: 12px 0;"></div>
-            <button id="close-app-firewall-btn" class="btn-secondary" style="width: 100%;">إغلاق جدار الحماية</button>
+            <button id="close-app-firewall-btn" class="btn-secondary" style="width: 100%;" data-i18n="btn_close">إغلاق جدار الحماية</button>
         </div>
     </div>
 
     <!-- نافذة كاشف برمجيات التجسس (Stalkerware & Spyware Detector) -->
     <div id="stalkerware-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🕵️ كاشف برمجيات التجسس (Stalkerware Detector)</h2>
-            <p style="font-size: 0.75rem; color: #94a3b8;">فحص صلاحيات الكاميرا والميكروفون وقراءة الشاشة وخدمات الوصول الخفية:</p>
+            <h2 data-i18n="stalkerware_title">🕵️ كاشف برمجيات التجسس (Stalkerware Detector)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8;" data-i18n="stalkerware_desc">فحص صلاحيات الكاميرا والميكروفون وقراءة الشاشة وخدمات الوصول الخفية:</p>
             <div id="stalkerware-results-container" style="margin: 12px 0;"></div>
-            <button id="start-stalkerware-scan" class="btn-primary" style="margin-bottom: 8px; width: 100%;">بدء الفحص العميق للتجسس</button>
-            <button id="close-stalkerware-btn" class="btn-secondary" style="width: 100%;">إغلاق الكاشف</button>
+            <button id="start-stalkerware-scan" class="btn-primary" style="margin-bottom: 8px; width: 100%;" data-i18n="btn_start_stalkerware_scan">بدء الفحص العميق للتجسس</button>
+            <button id="close-stalkerware-btn" class="btn-secondary" style="width: 100%;" data-i18n="btn_close">إغلاق الكاشف</button>
         </div>
     </div>
 
     <!-- نافذة تقييم أمان الواي فاي (Wi-Fi Security Auditor) -->
     <div id="wifi-auditor-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>📶 تقييم أمان شبكات الواي فاي (Wi-Fi Auditor)</h2>
-            <p style="font-size: 0.75rem; color: #94a3b8;">كشف هجمات رجل في المنتصف (MITM) والشبكات الوهمية (Evil Twin):</p>
+            <h2 data-i18n="wifiaudit_title">📶 تقييم أمان شبكات الواي فاي (Wi-Fi Auditor)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8;" data-i18n="wifiaudit_desc">كشف هجمات رجل في المنتصف (MITM) والشبكات الوهمية (Evil Twin):</p>
             <div id="wifi-audit-results" style="margin: 12px 0;"></div>
-            <button id="run-wifi-audit-btn" class="btn-primary" style="margin-bottom: 8px; width: 100%;">فحص شبكة الواي فاي الحالية</button>
-            <button id="close-wifi-auditor-btn" class="btn-secondary" style="width: 100%;">إغلاق</button>
+            <button id="run-wifi-audit-btn" class="btn-primary" style="margin-bottom: 8px; width: 100%;" data-i18n="btn_run_wifi_audit">فحص شبكة الواي فاي الحالية</button>
+            <button id="close-wifi-auditor-btn" class="btn-secondary" style="width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة تقرير الأمان اليومي التفاعلي (Security Insights & Dashboard) -->
     <div id="insights-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>📊 تقرير الأمان اليومي (Security Insights)</h2>
-            <p style="font-size: 0.75rem; color: #94a3b8;">لوحة بيانات مرئية توضح الإحصائيات الأسبوعية للهجمات والإعلانات المحجوبة:</p>
+            <h2 data-i18n="insights_title">📊 تقرير الأمان اليومي (Security Insights)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8;" data-i18n="insights_desc">لوحة بيانات مرئية توضح الإحصائيات الأسبوعية للهجمات والإعلانات المحجوبة:</p>
             <div id="insights-stats-box" style="margin: 12px 0;"></div>
-            <button id="close-insights-btn" class="btn-secondary" style="width: 100%;">إغلاق التقرير</button>
+            <button id="close-insights-btn" class="btn-secondary" style="width: 100%;" data-i18n="btn_close_report">إغلاق التقرير</button>
         </div>
     </div>
 
     <!-- نافذة التمويه الوهمي تحت الإكراه (Decoy Calculator Mode) -->
     <div id="decoy-modal" class="modal hidden" style="background: #0f172a; z-index: 99999;">
         <div class="modal-content glass-panel text-center">
-            <h2>🧮 الآلة الحاسبة الذكية (النظام الآمن)</h2>
-            <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 15px;">أدخل الأرقام لإجراء العمليات الحسابية القياسية:</p>
+            <h2 data-i18n="decoy_title">🧮 الآلة الحاسبة الذكية (النظام الآمن)</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 15px;" data-i18n="decoy_desc">أدخل الأرقام لإجراء العمليات الحسابية القياسية:</p>
             <div style="background: #1e293b; padding: 15px; border-radius: 12px; font-size: 1.5rem; margin-bottom: 15px; color: #38bdf8;" id="decoy-screen">0</div>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
                 <button class="btn-secondary decoy-key" data-val="7">7</button>
@@ -156,40 +156,40 @@
                 <button class="btn-secondary decoy-key" data-val="=">=</button>
                 <button class="btn-primary decoy-key" data-val="/">÷</button>
             </div>
-            <button id="exit-decoy-btn" class="btn-secondary" style="margin-top: 15px; width: 100%; font-size: 0.7rem;">إغلاق الآلة الحاسبة</button>
+            <button id="exit-decoy-btn" class="btn-secondary" style="margin-top: 15px; width: 100%; font-size: 0.7rem;" data-i18n="btn_exit_decoy">إغلاق الآلة الحاسبة</button>
         </div>
     </div>
 
     <!-- نافذة مصفوفة الحماية الذاتية للثغرات المجهولة (Zero-Day Neural Immune Shield) -->
     <div id="zeroday-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🧬 مصفوفة الحماية الذاتية (Zero-Day Shield)</h2>
-            <p>درع استباقي يحلل الإنتروبيا المحلية ويسمم بيانات التتبع لمحاولات الاختراق المجهولة (Zero-Day) فوراً:</p>
+            <h2 data-i18n="zeroday_title">🧬 مصفوفة الحماية الذاتية (Zero-Day Shield)</h2>
+            <p data-i18n="zeroday_desc">درع استباقي يحلل الإنتروبيا المحلية ويسمم بيانات التتبع لمحاولات الاختراق المجهولة (Zero-Day) فوراً:</p>
             <div class="wifi-stats-box">
-                <div class="wifi-row"><span>حالة الاستشعار الجيني:</span> <strong style="color: #10b981;">نشط ومحصن ضد الهجمات الصفرية</strong></div>
-                <div class="wifi-row"><span>عدد التهديدات المُسممة والمضللة:</span> <strong id="zeroday-counter" style="color: #38bdf8;">3 هجمة</strong></div>
-                <div class="wifi-row"><span>معدل الإنتروبيا العشوائية:</span> <strong style="color: #10b981;">متزن (99.8%)</strong></div>
+                <div class="wifi-row"><span data-i18n="zeroday_status_label">حالة الاستشعار الجيني:</span> <strong style="color: #10b981;" data-i18n="zeroday_status_val">نشط ومحصن ضد الهجمات الصفرية</strong></div>
+                <div class="wifi-row"><span data-i18n="zeroday_count_label">عدد التهديدات المُسممة والمضللة:</span> <strong id="zeroday-counter" style="color: #38bdf8;">3 هجمة</strong></div>
+                <div class="wifi-row"><span data-i18n="zeroday_entropy_label">معدل الإنتروبيا العشوائية:</span> <strong style="color: #10b981;">متزن (99.8%)</strong></div>
             </div>
             <div id="zeroday-log-container" class="history-list-container" style="max-height: 120px; margin-top: 10px;">
-                <div class="radar-log-item">🧬 جاري مراقبة تدفق الحزم الحي وتسميم أي تتبع مجهول...</div>
+                <div class="radar-log-item" data-i18n="zeroday_log_item">🧬 جاري مراقبة تدفق الحزم الحي وتسميم أي تتبع مجهول...</div>
             </div>
-            <button id="test-zeroday-poison" class="btn-primary" style="margin-top: 15px; width: 100%;">محاكاة هجوم صفرى وإطلاق التسميم الديناميكي</button>
-            <button id="close-zeroday-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق المظلة</button>
+            <button id="test-zeroday-poison" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_test_zeroday">محاكاة هجوم صفرى وإطلاق التسميم الديناميكي</button>
+            <button id="close-zeroday-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;" data-i18n="btn_close">إغلاق المظلة</button>
         </div>
     </div>
 
     <!-- نافذة مففاعل التطور العصبي الكمومي الخارق (Quantum Swarm v18) -->
     <div id="quantum-evolution-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>⚛️ مففاعل التطور العصبي الذاتي (Quantum Evolution v18)</h2>
-            <p>نظام دفاعي حي يتغير بنيوياً وتشفيرياً كل 60 ثانية لإرباك أي محاولة تتبع استخباراتي:</p>
+            <h2 data-i18n="quantum_title">⚛️ مففاعل التطور العصبي الذاتي (Quantum Evolution v18)</h2>
+            <p data-i18n="quantum_desc">نظام دفاعي حي يتغير بنيوياً وتشفيرياً كل 60 ثانية لإرباك أي محاولة تتبع استخباراتي:</p>
             <div class="wifi-stats-box">
-                <div class="wifi-row"><span>حالة التطور الحي:</span> <strong style="color: #10b981;">نشط ويتحور برمجياً</strong></div>
-                <div class="wifi-row"><span>جيل البصمة الرقمية الحالي:</span> <strong id="quantum-gen-tag" style="color: #38bdf8;">Gen-18.0.1</strong></div>
-                <div class="wifi-row"><span>معدل التشابك الكمومي:</span> <strong style="color: #10b981;">100% (آمن تماماً)</strong></div>
+                <div class="wifi-row"><span data-i18n="quantum_status_label">حالة التطور الحي:</span> <strong style="color: #10b981;" data-i18n="quantum_status_val">نشط ويتحور برمجياً</strong></div>
+                <div class="wifi-row"><span data-i18n="quantum_gen_label">جيل البصمة الرقمية الحالي:</span> <strong id="quantum-gen-tag" style="color: #38bdf8;">Gen-18.0.1</strong></div>
+                <div class="wifi-row"><span data-i18n="quantum_entangle_label">معدل التشابك الكمومي:</span> <strong style="color: #10b981;">100% (آمن تماماً)</strong></div>
             </div>
-            <button id="trigger-quantum-mutation" class="btn-primary" style="margin-top: 15px; width: 100%;">إجبار تحور البصمة التشفيرية فوراً</button>
-            <button id="close-quantum-modal" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق المفاعل</button>
+            <button id="trigger-quantum-mutation" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_trigger_mutation">إجبار تحور البصمة التشفيرية فوراً</button>
+            <button id="close-quantum-modal" class="btn-secondary" style="margin-top: 5px; width: 100%;" data-i18n="btn_close">إغلاق المفاعل</button>
         </div>
     </div>
 
@@ -197,12 +197,12 @@
     <div id="disclosure-modal" class="modal">
         <div class="modal-content glass-panel">
             <div class="modal-icon">🛡️</div>
-            <h2>إفصاح الخدمة وصلاحية الـ VPN والمناعة الجماعية</h2>
-            <p>يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> ومفاعل <strong>Chrono-Photonic Neural Defense</strong> لإنشاء نفق مشفّر ومشاركة بصمات التهديدات أماناً عبر السحابة لحماية شبكتك العالمية.</p>
-            <p>نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل الاتصال الآمن والمناعة السيبرانية المشتركة.</p>
+            <h2 data-i18n="disclosure_title">إفصاح الخدمة وصلاحية الـ VPN والمناعة الجماعية</h2>
+            <p data-i18n="disclosure_text_1">يستخدم تطبيق <strong>Apex Shield AI</strong> واجهة <strong>VpnService</strong> ومفاعل <strong>Chrono-Photonic Neural Defense</strong> لإنشاء نفق مشفّر ومشاركة بصمات التهديدات أماناً عبر السحابة لحماية شبكتك العالمية.</p>
+            <p data-i18n="disclosure_text_2">نحن نلتزم بسياسة عدم الاحتفاظ بالسجلات (No-Logs). بالموافقة، أنت تمنح الإذن بتفعيل الاتصال الآمن والمناعة السيبرانية المشتركة.</p>
             <div class="modal-buttons">
-                <button id="accept-btn" class="btn-primary">موافقة وتفعيل الحماية</button>
-                <button id="deny-btn" class="btn-secondary">رفض وخروج</button>
+                <button id="accept-btn" class="btn-primary" data-i18n="btn_accept_disclosure">موافقة وتفعيل الحماية</button>
+                <button id="deny-btn" class="btn-secondary" data-i18n="btn_deny_disclosure">رفض وخروج</button>
             </div>
         </div>
     </div>
@@ -211,15 +211,15 @@
     <div id="ai-modal" class="modal hidden">
         <div class="modal-content glass-panel ai-panel">
             <div class="ai-header">
-                <span>🤖 مساعد الذكاء الاصطناعي السحابي والمحلي</span>
+                <span data-i18n="ai_header_title">🤖 مساعد الذكاء الاصطناعي السحابي والمحلي</span>
                 <button id="close-ai-btn" class="close-icon">&times;</button>
             </div>
             <div class="ai-chat-box" id="ai-chat-box">
-                <div class="ai-message bot">مرحباً بك ! أنا مساعد مفاعل Chrono-Photonic الأمني. كيف أساعدك اليوم؟</div>
+                <div class="ai-message bot" data-i18n="ai_welcome_msg">مرحباً بك ! أنا مساعد مفاعل Chrono-Photonic الأمني. كيف أساعدك اليوم؟</div>
             </div>
             <div class="ai-input-area">
-                <input type="text" id="ai-input" placeholder="اسأل المساعد عن حالة المفاعل أو أمان الشبكة...">
-                <button id="ai-send-btn" class="btn-primary">إرسال</button>
+                <input type="text" id="ai-input" placeholder="اسأل المساعد عن حالة المفاعل أو أمان الشبكة..." data-i18n-ph="ai_input_ph">
+                <button id="ai-send-btn" class="btn-primary" data-i18n="btn_send">إرسال</button>
             </div>
         </div>
     </div>
@@ -227,85 +227,85 @@
     <!-- نافذة مفاعل الدفاع العصبي الجماعي واللقاحات الحية (Swarm AI) -->
     <div id="swarm-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🌐 مفاعل المناعة السيبرانية الجماعية واللقاحات الحية (Swarm AI)</h2>
-            <p>شبكة عصبية عالمية مترابطة عبر سحابة Firebase (vpn1-c7cbd) وشبكة P2P Mesh لمشاركة اللقاحات الحية لحماية جميع الأجهزة:</p>
+            <h2 data-i18n="swarm_title">🌐 مفاعل المناعة السيبرانية الجماعية واللقاحات الحية (Swarm AI)</h2>
+            <p data-i18n="swarm_desc">شبكة عصبية عالمية مترابطة عبر سحابة Firebase (vpn1-c7cbd) وشبكة P2P Mesh لمشاركة اللقاحات الحية لحماية جميع الأجهزة:</p>
             <div class="wifi-stats-box">
-                <div class="wifi-row"><span>حالة العقدة السحابية:</span> <strong style="color: #10b981;">متصل ومحمّل باللقاحات النشطة</strong></div>
-                <div class="wifi-row"><span>حالة اللقاح السحابي الحي:</span> <strong id="live-vaccine-status" style="color: #38bdf8;">متزامن مع Firebase بنجاح</strong></div>
-                <div class="wifi-row"><span>عدد التهديدات المُحبطة عالمياً:</span> <strong id="global-swarm-count" style="color: #38bdf8;">14,892 هجمة</strong></div>
-                <div class="wifi-row"><span>مزامنة البصمات مع السحابة:</span> <strong style="color: #10b981;">فورية (Real-Time Sync)</strong></div>
+                <div class="wifi-row"><span data-i18n="swarm_node_label">حالة العقدة السحابية:</span> <strong style="color: #10b981;" data-i18n="swarm_node_val">متصل ومحمّل باللقاحات النشطة</strong></div>
+                <div class="wifi-row"><span data-i18n="swarm_vaccine_label">حالة اللقاح السحابي الحي:</span> <strong id="live-vaccine-status" style="color: #38bdf8;" data-i18n="swarm_vaccine_val">متزامن مع Firebase بنجاح</strong></div>
+                <div class="wifi-row"><span data-i18n="swarm_blocked_label">عدد التهديدات المُحبطة عالمياً:</span> <strong id="global-swarm-count" style="color: #38bdf8;">14,892 هجمة</strong></div>
+                <div class="wifi-row"><span data-i18n="swarm_sync_label">مزامنة البصمات مع السحابة:</span> <strong style="color: #10b981;" data-i18n="swarm_sync_val">فورية (Real-Time Sync)</strong></div>
             </div>
             <div id="swarm-log-container" class="history-list-container" style="max-height: 120px; margin-top: 10px;">
-                <div class="radar-log-item">🧬 تم تحديث بصمة التمويه العصبية وبث اللقاح الحي بنجاح.</div>
+                <div class="radar-log-item" data-i18n="swarm_log_item">🧬 تم تحديث بصمة التمويه العصبية وبث اللقاح الحي بنجاح.</div>
             </div>
-            <button id="broadcast-vaccine-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">نشر لقاح أمني سحابي و P2P جديد للمجتمع</button>
-            <button id="close-swarm-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق المفاعل</button>
+            <button id="broadcast-vaccine-btn" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_broadcast_vaccine">نشر لقاح أمني سحابي و P2P جديد للمجتمع</button>
+            <button id="close-swarm-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;" data-i18n="btn_close">إغلاق المفاعل</button>
         </div>
     </div>
 
     <!-- نافذة اختيار جميع دول العالم وتغيير الـ IP -->
     <div id="servers-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🌍 شبكة الخوادم العالمية (تغيير حقيقي للـ IP)</h2>
-            <input type="text" id="country-search" placeholder="ابحث عن دولة أو سيرفر..." class="search-input">
+            <h2 data-i18n="servers_title">🌍 شبكة الخوادم العالمية (تغيير حقيقي للـ IP)</h2>
+            <input type="text" id="country-search" placeholder="ابحث عن دولة أو سيرفر..." class="search-input" data-i18n-ph="servers_search_ph">
             
             <!-- الحاوية الديناميكية لعرض الخوادم والعناوين العالمية -->
             <div class="server-list" id="servers-list-container">
-                <div style="color: #38bdf8; font-size: 0.8rem; text-align: center; padding: 15px;">⏳ جاري إعداد وتجهيز شبكة الخوادم العالمية النشطة...</div>
+                <div style="color: #38bdf8; font-size: 0.8rem; text-align: center; padding: 15px;" data-i18n="loading_servers">⏳ جاري إعداد وتجهيز شبكة الخوادم العالمية النشطة...</div>
             </div>
             
-            <button id="close-servers-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق القائمة</button>
+            <button id="close-servers-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;" data-i18n="btn_close_list">إغلاق القائمة</button>
         </div>
     </div>
 
     <!-- نافذة التوجيه المزدوج Double VPN -->
     <div id="doublevpn-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🌐 التوجيه المزدوج (Double VPN)</h2>
-            <p>مرر بياناتك عبر خادمين متتاليين للحصول على تشفير مضاعف بنسبة 200%:</p>
+            <h2 data-i18n="doublevpn_title">🌐 التوجيه المزدوج (Double VPN)</h2>
+            <p data-i18n="doublevpn_desc">مرر بياناتك عبر خادمين متتاليين للحصول على تشفير مضاعف بنسبة 200%:</p>
             <div class="split-apps-list">
-                <label class="split-item"><span>الخادم الأول (بوابة الدخول):</span> <strong style="color: #38bdf8;">ألمانيا (Frankfurt)</strong></label>
-                <label class="split-item"><span>الخادم الثاني (بوابة الخروج):</span> <strong style="color: #10b981;">سويسرا (Zurich Secure)</strong></label>
+                <label class="split-item"><span data-i18n="double_server_1">الخادم الأول (بوابة الدخول):</span> <strong style="color: #38bdf8;">ألمانيا (Frankfurt)</strong></label>
+                <label class="split-item"><span data-i18n="double_server_2">الخادم الثاني (بوابة الخروج):</span> <strong style="color: #10b981;">سويسرا (Zurich Secure)</strong></label>
             </div>
-            <div style="margin-top: 10px; font-size: 0.7rem; color: #94a3b8;">الحالة: <span id="double-vpn-status" style="color: #f59e0b; font-weight: bold;">غير مفعل (اضغط للتفعيل)</span></div>
-            <button id="toggle-double-vpn-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">تفعيل التوجيه المزدوج</button>
-            <button id="close-doublevpn-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
+            <div style="margin-top: 10px; font-size: 0.7rem; color: #94a3b8;"><span data-i18n="double_status_label">الحالة:</span> <span id="double-vpn-status" style="color: #f59e0b; font-weight: bold;" data-i18n="double_disabled">غير مفعل (اضغط للتفعيل)</span></div>
+            <button id="toggle-double-vpn-btn" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_toggle_double">تفعيل التوجيه المزدوج</button>
+            <button id="close-doublevpn-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة الدرع الصوتي البيومتري (Apex Audio Shield) -->
     <div id="audio-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🎙️ الدرع الصوتي البيومتري (Voice Shield)</h2>
-            <p>منع برامج التجسس من تحليل نبرة صوتك أو تسجيل المكالمات عبر تشويش ذكي:</p>
+            <h2 data-i18n="audio_title">🎙️ الدرع الصوتي البيومتري (Voice Shield)</h2>
+            <p data-i18n="audio_desc">منع برامج التجسس من تحليل نبرة صوتك أو تسجيل المكالمات عبر تشويش ذكي:</p>
             <div class="wifi-stats-box">
-                <div class="wifi-row"><span>حالة تشفير الصوت:</span> <strong id="audio-shield-status" style="color: #10b981;">نشط (تغيير النبرة الافتراضي)</strong></div>
-                <div class="wifi-row"><span>منع البصمة الصوتية:</span> <strong style="color: #38bdf8;">مفعل بنسبة 100%</strong></div>
+                <div class="wifi-row"><span data-i18n="audio_status_label">حالة تشفير الصوت:</span> <strong id="audio-shield-status" style="color: #10b981;" data-i18n="audio_status_val">نشط (تغيير النبرة الافتراضي)</strong></div>
+                <div class="wifi-row"><span data-i18n="audio_prevent_label">منع البصمة الصوتية:</span> <strong style="color: #38bdf8;">مفعل بنسبة 100%</strong></div>
             </div>
-            <button id="toggle-audio-shield" class="btn-primary" style="margin-top: 15px; width: 100%;">تبديل وضع تشويش الصوت</button>
-            <button id="close-audio-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
+            <button id="toggle-audio-shield" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_toggle_audio">تبديل وضع تشويش الصوت</button>
+            <button id="close-audio-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة محاكي الموقع الجغرافي الوهمي المصري (GPS Teleport) -->
     <div id="gps-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>📍 محاكي الموقع الجغرافي (GPS Teleport)</h2>
-            <p>إجبار نظام هاتفك وتطبيقات الخرائط على قراءة إحداثيات متوافقة مع دولة خادم الـ VPN:</p>
+            <h2 data-i18n="gps_title">📍 محاكي الموقع الجغرافي (GPS Teleport)</h2>
+            <p data-i18n="gps_desc">إجبار نظام هاتفك وتطبيقات الخرائط على قراءة إحداثيات متوافقة مع دولة خادم الـ VPN:</p>
             <div class="wifi-stats-box">
-                <div class="wifi-row"><span>موقع الـ GPS الحالي:</span> <strong id="gps-current-loc" style="color: #38bdf8;">متطابق مع الخادم (فرنكفورت، ألمانيا)</strong></div>
-                <div class="wifi-row"><span>حالة التمويه المكانى:</span> <strong style="color: #10b981;">محصن تماماً ضد التتبع بالأقمار</strong></div>
+                <div class="wifi-row"><span data-i18n="gps_loc_label">موقع الـ GPS الحالي:</span> <strong id="gps-current-loc" style="color: #38bdf8;" data-i18n="gps_loc_val">متطابق مع الخادم (فرنكفورت، ألمانيا)</strong></div>
+                <div class="wifi-row"><span data-i18n="gps_stealth_label">حالة التمويه المكانى:</span> <strong style="color: #10b981;" data-i18n="gps_stealth_val">محصن تماماً ضد التتبع بالأقمار</strong></div>
             </div>
-            <button id="toggle-gps-mock" class="btn-primary" style="margin-top: 15px; width: 100%;">تحديث الإحداثيات الوهمية</button>
-            <button id="close-gps-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
+            <button id="toggle-gps-mock" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_toggle_gps">تحديث الإحداثيات الوهمية</button>
+            <button id="close-gps-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة رادار التهديدات السيبرانية الحي -->
     <div id="radar-modal" class="modal hidden">
         <div class="modal-content glass-panel text-center">
-            <h2>📡 رادار التهديدات السيبرانية والشبكة اللامركزية الحي</h2>
-            <p style="font-size: 0.7rem; color: #94a3b8;">رصد فوري لمحاولات التتبع والهجمات السيبرانية وعقد P2P:</p>
+            <h2 data-i18n="radar_title">📡 رادار التهديدات السيبرانية والشبكة اللامركزية الحي</h2>
+            <p style="font-size: 0.7rem; color: #94a3b8;" data-i18n="radar_desc">رصد فوري لمحاولات التتبع والهجمات السيبرانية وعقد P2P:</p>
             <div class="radar-screen">
                 <div class="radar-sweep"></div>
                 <div class="radar-center-dot"></div>
@@ -313,181 +313,181 @@
                 <div class="radar-blip blip-2"></div>
             </div>
             <div class="radar-log-box" id="radar-log-box">
-                <div class="radar-log-item">🟢 جاري مسح محيط الشبكة والسحابة والمفاعل... النظام آمن</div>
-                <div class="radar-log-item">🛡️ تم رصد وحجب محاولة تتبع قادمة من IP خارجي مشبوه</div>
+                <div class="radar-log-item" data-i18n="radar_log_1">🟢 جاري مسح محيط الشبكة والسحابة والمفاعل... النظام آمن</div>
+                <div class="radar-log-item" data-i18n="radar_log_2">🛡️ تم رصد وحجب محاولة تتبع قادمة من IP خارجي مشبوه</div>
             </div>
-            <button id="close-radar-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق الرادار</button>
+            <button id="close-radar-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;" data-i18n="btn_close_radar">إغلاق الرادار</button>
         </div>
     </div>
 
     <!-- نافذة الخزنة الرقمية المشفرة (Apex Secure Vault - AES-GCM) -->
     <div id="vault-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🔐 الخزنة الرقمية المشفرة (Apex Vault)</h2>
-            <p>احفظ كلمات المرور والملاحظات السرية بتشفير عسكري محلي (AES-GCM):</p>
+            <h2 data-i18n="vault_title">🔐 الخزنة الرقمية المشفرة (Apex Vault)</h2>
+            <p data-i18n="vault_desc">احفظ كلمات المرور والملاحظات السرية بتشفير عسكري محلي (AES-GCM):</p>
             <div class="vault-input-group">
-                <input type="password" id="vault-master-pass" placeholder="كلمة المرور الرئيسية (للتشفير وفك التشفير)" class="search-input">
-                <input type="text" id="vault-title" placeholder="عنوان السر (مثال: كلمة مرور البنك)" class="search-input">
-                <textarea id="vault-content" placeholder="اكتب التفاصيل السرية هنا..." class="search-input" style="height: 60px; resize: none;"></textarea>
-                <button id="save-vault-item" class="btn-primary" style="width: 100%; margin-bottom: 10px;">تشفير وحفظ في الخزنة</button>
+                <input type="password" id="vault-master-pass" placeholder="كلمة المرور الرئيسية (للتشفير وفك التشفير)" class="search-input" data-i18n-ph="vault_pass_ph">
+                <input type="text" id="vault-title" placeholder="عنوان السر (مثال: كلمة مرور البنك)" class="search-input" data-i18n-ph="vault_title_ph">
+                <textarea id="vault-content" placeholder="اكتب التفاصيل السرية هنا..." class="search-input" style="height: 60px; resize: none;" data-i18n-ph="vault_content_ph"></textarea>
+                <button id="save-vault-item" class="btn-primary" style="width: 100%; margin-bottom: 10px;" data-i18n="btn_save_vault">تشفير وحفظ في الخزنة</button>
             </div>
             <div class="history-list-container" id="vault-list-container">
-                <p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد عناصر محفوظة في الخزنة.</p>
+                <p style="color: #94a3b8; font-size: 0.75rem; text-align: center;" data-i18n="vault_empty">لا توجد عناصر محفوظة في الخزنة.</p>
             </div>
-            <button id="close-vault-btn" class="btn-secondary" style="margin-top: 10px; width: 100%;">إغلاق الخزنة</button>
+            <button id="close-vault-btn" class="btn-secondary" style="margin-top: 10px; width: 100%;" data-i18n="btn_close_vault">إغلاق الخزنة</button>
         </div>
     </div>
 
     <!-- نافذة التنبؤ بالتهديدات الجديدة بالذكاء الاصطناعي (AI Threat Predictor) -->
     <div id="pred-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🔮 محلل التهديدات الاستباقي (AI Predictor)</h2>
-            <p>يقوم نموذج الذكاء الاصطناعي بتحليل الأنماط الخفية لتوقع وحجب الهجمات المستقبلية:</p>
+            <h2 data-i18n="pred_title">🔮 محلل التهديدات الاستباقي (AI Predictor)</h2>
+            <p data-i18n="pred_desc">يقوم نموذج الذكاء الاصطناعي بتحليل الأنماط الخفية لتوقع وحجب الهجمات المستقبلية:</p>
             <div class="wifi-stats-box">
-                <div class="wifi-row"><span>حالة الاستشعار الذكي:</span> <strong style="color: #10b981;">نشط ويعمل بكفاءة عالية</strong></div>
-                <div class="wifi-row"><span>الثغرات المتوقعة والمغلقة:</span> <strong style="color: #38bdf8;">0 ثغرات مستهدفة</strong></div>
-                <div class="wifi-row"><span>مؤشر الأمان الشامل:</span> <strong style="color: #10b981;">99.9% (محصن تماماً)</strong></div>
+                <div class="wifi-row"><span data-i18n="pred_status_label">حالة الاستشعار الذكي:</span> <strong style="color: #10b981;" data-i18n="pred_status_val">نشط ويعمل بكفاءة عالية</strong></div>
+                <div class="wifi-row"><span data-i18n="pred_vuln_label">الثغرات المتوقعة والمغلقة:</span> <strong style="color: #38bdf8;" data-i18n="pred_vuln_val">0 ثغرات مستهدفة</strong></div>
+                <div class="wifi-row"><span data-i18n="pred_score_label">مؤشر الأمان الشامل:</span> <strong style="color: #10b981;">99.9% (محصن تماماً)</strong></div>
             </div>
-            <button id="close-pred-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+            <button id="close-pred-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة فحص التطبيقات وملفات الهاتف الشامل الحقيقي والسحابي -->
     <div id="scanner-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🔍 فحص ملفات الهاتف والتطبيقات الضارة (سحابي وعصبي)</h2>
-            <p>يقوم نظام AI بفحص الذاكرة والتطبيقات المثبتة محلياً وعبر سحابة Firebase.</p>
+            <h2 data-i18n="scanner_title">🔍 فحص ملفات الهاتف والتطبيقات الضارة (سحابي وعصبي)</h2>
+            <p data-i18n="scanner_desc">يقوم نظام AI بفحص الذاكرة والتطبيقات المثبتة محلياً وعبر سحابة Firebase.</p>
             <div id="scanner-results" class="scanner-box">
-                <span id="scan-status-text">جاهز لبدء الفحص العميق المتصل بالسحابة...</span>
+                <span id="scan-status-text" data-i18n="scan_ready">جاهز لبدء الفحص العميق المتصل بالسحابة...</span>
                 <div id="threat-list" class="threat-list-container"></div>
             </div>
-            <button id="start-deep-scan" class="btn-primary" style="margin-top: 15px; width: 100%;">بدء الفحص الشامل الآن</button>
-            <button id="close-scanner-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">إغلاق</button>
+            <button id="start-deep-scan" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_start_scan">بدء الفحص الشامل الآن</button>
+            <button id="close-scanner-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة تحليل استهلاك الجهاز والتطبيقات -->
     <div id="analytics-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>📊 تحليل استهلاك الجهاز والتطبيقات</h2>
+            <h2 data-i18n="analytics_title">📊 تحليل استهلاك الجهاز والتطبيقات</h2>
             <div class="analytics-container">
                 <div class="metric-card">
-                    <span>استهلاك المعالج (CPU)</span>
+                    <span data-i18n="metric_cpu">استهلاك المعالج (CPU)</span>
                     <strong id="cpu-usage">14%</strong>
                 </div>
                 <div class="metric-card">
-                    <span>الذاكرة العشوائية (RAM)</span>
+                    <span data-i18n="metric_ram">الذاكرة العشوائية (RAM)</span>
                     <strong id="ram-usage">3.2 GB / 8 GB</strong>
                 </div>
                 <div class="metric-card">
-                    <span>استهلاك التخزين والتطبيقات</span>
+                    <span data-i18n="metric_storage">استهلاك التخزين والتطبيقات</span>
                     <strong id="storage-usage">64.5 GB مستخدم</strong>
                 </div>
             </div>
             <div class="app-usage-list">
-                <h4>أكثر التطبيقات استهلاكاً للبيانات:</h4>
-                <div class="app-usage-item"><span>متصفح الإنترنت</span> <strong>42%</strong></div>
-                <div class="app-usage-item"><span>منصات التواصل</span> <strong>31%</strong></div>
-                <div class="app-usage-item"><span>خدمات النظام والخلفية</span> <strong>27%</strong></div>
+                <h4 data-i18n="top_apps_title">أكثر التطبيقات استهلاكاً للبيانات:</h4>
+                <div class="app-usage-item"><span data-i18n="app_browser">متصفح الإنترنت</span> <strong>42%</strong></div>
+                <div class="app-usage-item"><span data-i18n="app_social">منصات التواصل</span> <strong>31%</strong></div>
+                <div class="app-usage-item"><span data-i18n="app_system">خدمات النظام والخلفية</span> <strong>27%</strong></div>
             </div>
-            <button id="close-analytics-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+            <button id="close-analytics-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة تحليل الواي فاي والاتصال -->
     <div id="wifi-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>📶 تحليل الواي فاي والاتصال والسرعة</h2>
+            <h2 data-i18n="wifi_title">📶 تحليل الواي فاي والاتصال والسرعة</h2>
             <div class="wifi-stats-box">
-                <div class="wifi-row"><span>قوة الإشارة (RSSI):</span> <strong id="wifi-rssi">-45 dBm (ممتازة)</strong></div>
-                <div class="wifi-row"><span>نوع التشفير:</span> <strong id="wifi-security">WPA3 - آمن جداً</strong></div>
-                <div class="wifi-row"><span>سرعة الرابط المحلي:</span> <strong id="wifi-link-speed">433 Mbps</strong></div>
-                <div class="wifi-row"><span>حالة الأمان بالذكاء الاصطناعي:</span> <strong style="color: #10b981;">محمي تماماً من الهجمات</strong></div>
+                <div class="wifi-row"><span data-i18n="wifi_rssi_label">قوة الإشارة (RSSI):</span> <strong id="wifi-rssi" data-i18n="wifi_rssi_val">-45 dBm (ممتازة)</strong></div>
+                <div class="wifi-row"><span data-i18n="wifi_sec_label">نوع التشفير:</span> <strong id="wifi-security" data-i18n="wifi_sec_val">WPA3 - آمن جداً</strong></div>
+                <div class="wifi-row"><span data-i18n="wifi_speed_label">سرعة الرابط المحلي:</span> <strong id="wifi-link-speed">433 Mbps</strong></div>
+                <div class="wifi-row"><span data-i18n="wifi_ai_label">حالة الأمان بالذكاء الاصطناعي:</span> <strong style="color: #10b981;" data-i18n="wifi_ai_val">محمي تماماً من الهجمات</strong></div>
             </div>
-            <button id="close-wifi-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+            <button id="close-wifi-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة فحص تسريب الـ DNS -->
     <div id="dns-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🛡️ فحص تسريب خوادم الـ DNS</h2>
-            <p>التحقق من خوادم أسماء النطاقات لمنع أي كشف لمزود الخدمة الأصلي:</p>
+            <h2 data-i18n="dns_title">🛡️ فحص تسريب خوادم الـ DNS</h2>
+            <p data-i18n="dns_desc">التحقق من خوادم أسماء النطاقات لمنع أي كشف لمزود الخدمة الأصلي:</p>
             <div class="dns-result-box" id="dns-result-content">
-                <div class="wifi-row"><span>خادم الـ DNS الحالي:</span> <strong style="color: #38bdf8;">Cloudflare & Apex Secure DNS</strong></div>
-                <div class="wifi-row"><span>حالة التسريب:</span> <strong style="color: #10b981;">لا يوجد أي تسريب (0% Leak)</strong></div>
-                <div class="wifi-row"><span>التشفير الفعّال:</span> <strong>DNS over HTTPS (DoH)</strong></div>
+                <div class="wifi-row"><span data-i18n="dns_server_label">خادم الـ DNS الحالي:</span> <strong style="color: #38bdf8;">Cloudflare & Apex Secure DNS</strong></div>
+                <div class="wifi-row"><span data-i18n="dns_leak_label">حالة التسريب:</span> <strong style="color: #10b981;" data-i18n="dns_no_leak">لا يوجد أي تسريب (0% Leak)</strong></div>
+                <div class="wifi-row"><span data-i18n="dns_encryption_label">التشفير الفعّال:</span> <strong>DNS over HTTPS (DoH)</strong></div>
             </div>
-            <button id="close-dns-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+            <button id="close-dns-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة سجل جلسات الأمان السابقة -->
     <div id="history-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>📜 سجل جلسات الاتصال والأمان السابقة</h2>
+            <h2 data-i18n="history_title">📜 سجل جلسات الاتصال والأمان السابقة</h2>
             <div class="history-list-container" id="history-list-container">
-                <p style="color: #94a3b8; font-size: 0.75rem; text-align: center;">لا توجد جلسات مسجلة حتى الآن.</p>
+                <p style="color: #94a3b8; font-size: 0.75rem; text-align: center;" data-i18n="history_empty">لا توجد جلسات مسجلة حتى الآن.</p>
             </div>
-            <button id="clear-history-btn" class="btn-secondary" style="margin-top: 10px; width: 100%; background: rgba(239, 68, 68, 0.2); color: #fca5a5;">مسح السجل</button>
-            <button id="close-history-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">إغلاق</button>
+            <button id="clear-history-btn" class="btn-secondary" style="margin-top: 10px; width: 100%; background: rgba(239, 68, 68, 0.2); color: #fca5a5;" data-i18n="btn_clear_history">مسح السجل</button>
+            <button id="close-history-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة إعدادات النفق المنفصل (Split Tunneling) -->
     <div id="split-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>⚙️ إدارة النفق المنفصل (Split Tunneling)</h2>
-            <p>اختر التطبيقات المستثناة لتتصل بالإنترنت المباشر دون مرور عبر الـ VPN:</p>
+            <h2 data-i18n="split_title">⚙️ إدارة النفق المنفصل (Split Tunneling)</h2>
+            <p data-i18n="split_desc">اختر التطبيقات المستثناة لتتصل بالإنترنت المباشر دون مرور عبر الـ VPN:</p>
             <div class="split-apps-list">
-                <label class="split-item"><span>التطبيقات البنكية والمصرفية</span> <input type="checkbox" checked class="split-toggle"></label>
-                <label class="split-item"><span>تطبيقات الألعاب الحساسة للبينغ</span> <input type="checkbox" checked class="split-toggle"></label>
-                <label class="split-item"><span>تطبيقات التوصيل والخرائط</span> <input type="checkbox" class="split-toggle"></label>
+                <label class="split-item"><span data-i18n="split_item_banking">التطبيقات البنكية والمصرفية</span> <input type="checkbox" checked class="split-toggle"></label>
+                <label class="split-item"><span data-i18n="split_item_games">تطبيقات الألعاب الحساسة للبينغ</span> <input type="checkbox" checked class="split-toggle"></label>
+                <label class="split-item"><span data-i18n="split_item_maps">تطبيقات التوصيل والخرائط</span> <input type="checkbox" class="split-toggle"></label>
             </div>
-            <button id="close-split-btn" class="btn-primary" style="margin-top: 15px; width: 100%;">حفظ الإعدادات</button>
+            <button id="close-split-btn" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_save_settings">حفظ الإعدادات</button>
         </div>
     </div>
 
     <!-- نافذة تخصيص الثيم والاختبارات -->
     <div id="theme-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>🎨 تخصيص الإضاءة وثيم التطبيق</h2>
+            <h2 data-i18n="theme_title">🎨 تخصيص الإضاءة وثيم التطبيق</h2>
             <div class="theme-options">
-                <button class="theme-btn cyan" data-theme="theme-cyan">سيبراني أزرق</button>
-                <button class="theme-btn emerald" data-theme="theme-emerald">زمردي أخضر</button>
-                <button class="theme-btn purple" data-theme="theme-purple">بنفسجي ملكي</button>
-                <button class="theme-btn gold" data-theme="theme-gold">ذهبي VIP</button>
+                <button class="theme-btn cyan" data-theme="theme-cyan" data-i18n="theme_cyan">سيبراني أزرق</button>
+                <button class="theme-btn emerald" data-theme="theme-emerald" data-i18n="theme_emerald">زمردي أخضر</button>
+                <button class="theme-btn purple" data-theme="theme-purple" data-i18n="theme_purple">بنفسجي ملكي</button>
+                <button class="theme-btn gold" data-theme="theme-gold" data-i18n="theme_gold">ذهبي VIP</button>
             </div>
-            <button id="close-theme-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;">إغلاق</button>
+            <button id="close-theme-btn" class="btn-secondary" style="margin-top: 15px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة اختبار السرعة -->
     <div id="speed-modal" class="modal hidden">
         <div class="modal-content glass-panel text-center">
-            <h2>⚡ اختبار أداء الشبكة السريع</h2>
+            <h2 data-i18n="speed_title">⚡ اختبار أداء الشبكة السريع</h2>
             <div class="speed-test-display">
                 <div class="speed-gauge">
-                    <span id="speed-status-text">اضغط للبدء</span>
+                    <span id="speed-status-text" data-i18n="speed_start_text">اضغط للبدء</span>
                     <strong id="live-ping-val">-- ms</strong>
                 </div>
                 <div class="speed-results-grid">
-                    <div><span>التحميل:</span> <strong id="test-dl">0.0 Mb/s</strong></div>
-                    <div><span>الرفع:</span> <strong id="test-ul">0.0 Mb/s</strong></div>
+                    <div><span data-i18n="label_download">التحميل:</span> <strong id="test-dl">0.0 Mb/s</strong></div>
+                    <div><span data-i18n="label_upload">الرفع:</span> <strong id="test-ul">0.0 Mb/s</strong></div>
                 </div>
             </div>
-            <button id="start-speed-test" class="btn-primary" style="margin-top: 15px; width: 100%;">بدء التشخيص الآن</button>
-            <button id="close-speed-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">إغلاق</button>
+            <button id="start-speed-test" class="btn-primary" style="margin-top: 15px; width: 100%;" data-i18n="btn_start_speed_test">بدء التشخيص الآن</button>
+            <button id="close-speed-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;" data-i18n="btn_close">إغلاق</button>
         </div>
     </div>
 
     <!-- نافذة سياسة الخصوصية -->
     <div id="policy-modal" class="modal hidden">
         <div class="modal-content glass-panel">
-            <h2>سياسة الخصوصية والشفافية</h2>
-            <p>نحن نؤمن بأن الخصوصية حق أساسي. لا نقوم بجمع أو بيع بيانات التصفح، ويتم تشفير كافة البيانات عبر بروتوكولات متقدمة.</p>
-            <a href="privacy-policy.html" target="_blank" class="btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 15px; width: 100%;">عرض سياسة الخصوصية الكاملة 📄</a>
-            <button id="close-policy-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">فهمت وإغلاق</button>
+            <h2 data-i18n="policy_title">سياسة الخصوصية والشفافية</h2>
+            <p data-i18n="policy_desc">نحن نؤمن بأن الخصوصية حق أساسي. لا نقوم بجمع أو بيع بيانات التصفح، ويتم تشفير كافة البيانات عبر بروتوكولات متقدمة.</p>
+            <a href="privacy-policy.html" target="_blank" class="btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 15px; width: 100%;" data-i18n="btn_full_policy">عرض سياسة الخصوصية الكاملة 📄</a>
+            <button id="close-policy-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;" data-i18n="btn_understand_close">فهمت وإغلاق</button>
         </div>
     </div>
 
@@ -503,11 +503,12 @@
                     <span class="ai-badge">AI</span>
                 </div>
                 <div class="header-actions">
+                    <button id="lang-toggle-btn" class="icon-btn" title="تغيير اللغة / Change Language">🌐</button>
                     <button id="panic-btn" class="icon-btn panic-icon" title="زر الذعر الفوري (تدمير مؤقت)">🚨</button>
                     <button id="theme-customizer-btn" class="icon-btn" title="تخصيص الثيم">🎨</button>
                     <button id="ai-copilot-btn" class="icon-btn" title="مساعد الذكاء الاصطناعي">🤖</button>
                     <button id="server-select-btn" class="badge-btn">
-                        <span id="server-location" class="badge">🌐 اختيار الخادم</span>
+                        <span id="server-location" class="badge" data-i18n="btn_select_server">🌐 اختيار الخادم</span>
                     </button>
                 </div>
             </header>
@@ -520,11 +521,11 @@
                         <div class="orb-core">🛡️</div>
                     </div>
                 </div>
-                <h2 id="connection-status">غير متصل بالدرع السحابي</h2>
-                <p id="ip-display">IP الحقيقي: جاري الفحص...</p>
-                <p id="session-timer" class="session-timer hidden">وقت الجلسة: 00:00</p>
+                <h2 id="connection-status" data-i18n="status_disconnected">غير متصل بالدرع السحابي</h2>
+                <p id="ip-display" data-i18n="ip_checking">IP الحقيقي: جاري الفحص...</p>
+                <p id="session-timer" class="session-timer hidden"><span data-i18n="session_time">وقت الجلسة:</span> 00:00</p>
                 
-                <button id="connect-btn" class="connect-btn">تفعيل درع الحماية والمناعة الجماعية</button>
+                <button id="connect-btn" class="connect-btn" data-i18n="btn_activate">تفعيل درع الحماية والمناعة الجماعية</button>
             </div>
         </div>
 
@@ -533,8 +534,8 @@
             <!-- عداد حماية التهديدات -->
             <div class="threat-widget glass-card" id="open-scanner-btn" style="cursor: pointer;">
                 <div class="threat-info">
-                    <span class="threat-label">الفحص السحابي الشامل والمناعة (اضغط للفحص)</span>
-                    <strong id="threat-count">0 تهديد نشط</strong>
+                    <span class="threat-label" data-i18n="threat_widget_label">الفحص السحابي الشامل والمناعة (اضغط للفحص)</span>
+                    <strong id="threat-count" data-i18n="threat_count_zero">0 تهديد نشط</strong>
                 </div>
                 <div class="shield-status-indicator"></div>
             </div>
@@ -544,192 +545,192 @@
 
                 <!-- زر الترقية لنسخة Pro -->
                 <div class="setting-row clickable-row" id="open-pro-subscription-btn" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%); border: 1px solid rgba(245, 158, 11, 0.3);">
-                    <span style="color: #f59e0b; font-weight: bold;">💎 الترقية إلى Apex Shield Pro</span>
-                    <span class="accent-link" style="color: #fcd34d; font-weight: bold;">ترقية الآن</span>
+                    <span style="color: #f59e0b; font-weight: bold;" data-i18n="row_upgrade_pro">💎 الترقية إلى Apex Shield Pro</span>
+                    <span class="accent-link" style="color: #fcd34d; font-weight: bold;" data-i18n="link_upgrade_now">ترقية الآن</span>
                 </div>
 
                 <!-- الاختراع الفريد الجديد v18.0 -->
                 <div class="setting-row clickable-row" id="open-photonic-btn">
-                    <span>📸 المفاعل الضوئي المكراني ضد كاميرات التصوير (Anti-CCTV Engine)</span>
-                    <span class="accent-link" style="color: #ec4899; font-weight: bold;">اختراع حصري 📸</span>
+                    <span data-i18n="row_photonic_engine">📸 المفاعل الضوئي المكراني ضد كاميرات التصوير (Anti-CCTV Engine)</span>
+                    <span class="accent-link" style="color: #ec4899; font-weight: bold;" data-i18n="link_exclusive_pat">اختراع حصري 📸</span>
                 </div>
 
                 <!-- الإضافات المتقدمة الجديدة -->
                 <div class="setting-row clickable-row" id="open-app-firewall-btn">
-                    <span>📱 جدار حماية التطبيقات (App Traffic Inspector)</span>
-                    <span class="accent-link" style="color: #38bdf8; font-weight: bold;">مراقب 🔒</span>
+                    <span data-i18n="row_app_firewall_inspector">📱 جدار حماية التطبيقات (App Traffic Inspector)</span>
+                    <span class="accent-link" style="color: #38bdf8; font-weight: bold;" data-i18n="link_inspector">مراقب 🔒</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-stalkerware-btn">
-                    <span>🕵️ كاشف برمجيات التجسس (Stalkerware Detector)</span>
-                    <span class="accent-link" style="color: #ef4444; font-weight: bold;">فحص 🛡️</span>
+                    <span data-i18n="row_stalkerware_detector">🕵️ كاشف برمجيات التجسس (Stalkerware Detector)</span>
+                    <span class="accent-link" style="color: #ef4444; font-weight: bold;" data-i18n="link_scan">فحص 🛡️</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-wifi-auditor-btn">
-                    <span>📶 تقييم أمان الواي فاي (Wi-Fi Auditor & Anti-MITM)</span>
-                    <span class="accent-link" style="color: #10b981; font-weight: bold;">تحليل 🌐</span>
+                    <span data-i18n="row_wifi_auditor_mitm">📶 تقييم أمان الواي فاي (Wi-Fi Auditor & Anti-MITM)</span>
+                    <span class="accent-link" style="color: #10b981; font-weight: bold;" data-i18n="link_analyze">تحليل 🌐</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-insights-btn">
-                    <span>📊 تقرير الأمان اليومي (Security Insights & Dashboard)</span>
-                    <span class="accent-link" style="color: #f59e0b; font-weight: bold;">تقرير 📈</span>
+                    <span data-i18n="row_security_insights">📊 تقرير الأمان اليومي (Security Insights & Dashboard)</span>
+                    <span class="accent-link" style="color: #f59e0b; font-weight: bold;" data-i18n="link_report">تقرير 📈</span>
                 </div>
 
                 <!-- مفاتيح التفعيل المباشرة الجديدة (Toggles) -->
                 <div class="setting-row">
-                    <span>🧱 جدار حماية ترافيك التطبيقات (App Firewall)</span>
+                    <span data-i18n="toggle_app_firewall">🧱 جدار حماية ترافيك التطبيقات (App Firewall)</span>
                     <label class="switch"><input type="checkbox" id="app-firewall-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>🕵️ حماية خدمات الوصول وحجب التجسس (Anti-Stalkerware)</span>
+                    <span data-i18n="toggle_anti_stalkerware">🕵️ حماية خدمات الوصول وحجب التجسس (Anti-Stalkerware)</span>
                     <label class="switch"><input type="checkbox" id="stalkerware-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>📡 مراقبة شبكات الواي فاي ومنع MITM</span>
+                    <span data-i18n="toggle_wifi_auditor">📡 مراقبة شبكات الواي فاي ومنع MITM</span>
                     <label class="switch"><input type="checkbox" id="wifi-auditor-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>📋 درع الحافظة المتقدم والتشفير تلقائي (Clipboard Shield)</span>
+                    <span data-i18n="toggle_clipboard_shield">📋 درع الحافظة المتقدم والتشفير تلقائي (Clipboard Shield)</span>
                     <label class="switch"><input type="checkbox" id="advanced-clipboard-toggle" checked><span class="slider"></span></label>
                 </div>
 
                 <!-- الإضافات الكمومية والعصبية -->
                 <div class="setting-row clickable-row" id="open-quantum-evolution-btn">
-                    <span>⚛️ مففاعل التطور العصبي والتحور الحي (Quantum v18)</span>
-                    <span class="accent-link" style="color: #f59e0b; font-weight: bold;">اختراع عالمي 🚀</span>
+                    <span data-i18n="row_quantum_v18">⚛️ مففاعل التطور العصبي والتحور الحي (Quantum v18)</span>
+                    <span class="accent-link" style="color: #f59e0b; font-weight: bold;" data-i18n="link_global_pat">اختراع عالمي 🚀</span>
                 </div>
                 <div class="setting-row">
-                    <span>🧠 الاستشعار العصبي المحلي (Local Neural AI)</span>
+                    <span data-i18n="toggle_local_nn">🧠 الاستشعار العصبي المحلي (Local Neural AI)</span>
                     <label class="switch"><input type="checkbox" id="local-nn-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>🌐 المزامنة اللامركزية المباشرة (P2P Mesh Sync)</span>
+                    <span data-i18n="toggle_p2p_sync">🌐 المزامنة اللامركزية المباشرة (P2P Mesh Sync)</span>
                     <label class="switch"><input type="checkbox" id="p2p-mesh-sync-toggle" checked><span class="slider"></span></label>
                 </div>
 
                 <!-- الاختراعات السابقة والأساسية -->
                 <div class="setting-row">
-                    <span>🔥 درع الانصهار الحراري والتدمير الحيوي (Bio-Thermal)</span>
+                    <span data-i18n="toggle_bio_thermal">🔥 درع الانصهار الحراري والتدمير الحيوي (Bio-Thermal)</span>
                     <label class="switch"><input type="checkbox" id="bio-thermal-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>🌐 شبكة التخفي اللامركزية بلا إنترنت (Mesh P2P)</span>
+                    <span data-i18n="toggle_mesh_p2p">🌐 شبكة التخفي اللامركزية بلا إنترنت (Mesh P2P)</span>
                     <label class="switch"><input type="checkbox" id="mesh-beacon-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>👁️ درع التجسس البصري الجانبي (Shoulder-Surfing)</span>
+                    <span data-i18n="toggle_shoulder_surfing">👁️ درع التجسس البصري الجانبي (Shoulder-Surfing)</span>
                     <label class="switch"><input type="checkbox" id="shoulder-surfing-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>⚛️ إثبات المعرفة المعدومة للعتاد والسحابة (ZKP)</span>
+                    <span data-i18n="toggle_zkp">⚛️ إثبات المعرفة المعدومة للعتاد والسحابة (ZKP)</span>
                     <label class="switch"><input type="checkbox" id="zkp-proof-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>👻 درع الإنتروبيا الكمومية (Quantum Ghost)</span>
+                    <span data-i18n="toggle_quantum_ghost">👻 درع الإنتروبيا الكمومية (Quantum Ghost)</span>
                     <label class="switch"><input type="checkbox" id="quantum-ghost-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>🎙️ كاشف التزييف العميق الصوتي (Voice Deepfake)</span>
+                    <span data-i18n="toggle_voice_deepfake">🎙️ كاشف التزييف العميق الصوتي (Voice Deepfake)</span>
                     <label class="switch"><input type="checkbox" id="voice-deepfake-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>🧬 مبخر الذاكرة العصبية للحافظة (Clipboard Vaporizer)</span>
+                    <span data-i18n="toggle_clipboard_vaporizer">🧬 مبخر الذاكرة العصبية للحافظة (Clipboard Vaporizer)</span>
                     <label class="switch"><input type="checkbox" id="clipboard-vaporizer-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row clickable-row" id="open-zeroday-btn">
-                    <span>🧬 مصفوفة الحماية الذاتية (Zero-Day Shield)</span>
-                    <span class="accent-link" style="color: #10b981; font-weight: bold;">اختراع عالمي 🛡️</span>
+                    <span data-i18n="row_zeroday_shield">🧬 مصفوفة الحماية الذاتية (Zero-Day Shield)</span>
+                    <span class="accent-link" style="color: #10b981; font-weight: bold;" data-i18n="link_global_pat_shield">اختراع عالمي 🛡️</span>
                 </div>
                 <div class="setting-row">
-                    <span>🛡️ درع التوتر تحت الإكراه (Duress Reflex)</span>
+                    <span data-i18n="toggle_duress">🛡️ درع التوتر تحت الإكراه (Duress Reflex)</span>
                     <label class="switch"><input type="checkbox" id="duress-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>🔊 مانع التتبع فوق الصوتي (Ultrasonic Jammer)</span>
+                    <span data-i18n="toggle_ultrasonic">🔊 مانع التتبع فوق الصوتي (Ultrasonic Jammer)</span>
                     <label class="switch"><input type="checkbox" id="ultrasonic-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>⚡ بروتوكول الانفصال الحركي للمصادرة (G-Force)</span>
+                    <span data-i18n="toggle_gforce">⚡ بروتوكول الانفصال الحركي للمصادرة (G-Force)</span>
                     <label class="switch"><input type="checkbox" id="gforce-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row clickable-row" id="open-swarm-btn">
-                    <span>🌐 مفاعل المناعة الجماعية واللقاحات الحية (Swarm AI)</span>
-                    <span class="accent-link" style="color: #38bdf8; font-weight: bold;">ابتكار 🧬</span>
+                    <span data-i18n="row_swarm_ai">🌐 مفاعل المناعة الجماعية واللقاحات الحية (Swarm AI)</span>
+                    <span class="accent-link" style="color: #38bdf8; font-weight: bold;" data-i18n="link_innovation">ابتكار 🧬</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-audio-btn">
-                    <span>🎙️ الدرع الصوتي البيومتري (Voice Shield)</span>
-                    <span class="accent-link">حماية 🔊</span>
+                    <span data-i18n="row_voice_shield">🎙️ الدرع الصوتي البيومتري (Voice Shield)</span>
+                    <span class="accent-link" data-i18n="link_protection">حماية 🔊</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-gps-btn">
-                    <span>📍 محاكي الموقع الجغرافي (GPS Teleport)</span>
-                    <span class="accent-link">تخفي 🌍</span>
+                    <span data-i18n="row_gps_teleport">📍 محاكي الموقع الجغرافي (GPS Teleport)</span>
+                    <span class="accent-link" data-i18n="link_stealth">تخفي 🌍</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-vault-btn">
-                    <span>🔐 الخزنة الرقمية المشفرة (Vault)</span>
-                    <span class="accent-link">فتح 🔑</span>
+                    <span data-i18n="row_vault">🔐 الخزنة الرقمية المشفرة (Vault)</span>
+                    <span class="accent-link" data-i18n="link_open">فتح 🔑</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-pred-btn">
-                    <span>🔮 محلل التهديدات الاستباقي (AI Predictor)</span>
-                    <span class="accent-link">فحص 🧠</span>
+                    <span data-i18n="row_ai_predictor">🔮 محلل التهديدات الاستباقي (AI Predictor)</span>
+                    <span class="accent-link" data-i18n="link_scan">فحص 🧠</span>
                 </div>
                 <div class="setting-row">
-                    <span>🧬 مصفوفة الشبح العصبي للبصمة (Neural Phantom)</span>
+                    <span data-i18n="toggle_neural_phantom">🧬 مصفوفة الشبح العصبي للبصمة (Neural Phantom)</span>
                     <label class="switch"><input type="checkbox" id="phantom-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>🇪🇬 وضع التمويه المصري (Stealth Mode)</span>
+                    <span data-i18n="toggle_stealth_mode">🇪🇬 وضع التمويه المصري (Stealth Mode)</span>
                     <label class="switch"><input type="checkbox" id="stealth-toggle"><span class="slider"></span></label>
                 </div>
                 <div class="setting-row clickable-row" id="open-radar-btn">
-                    <span>📡 رادار التهديدات السيبرانية الحي</span>
-                    <span class="accent-link">رصد 🔴</span>
+                    <span data-i18n="row_radar">📡 رادار التهديدات السيبرانية الحي</span>
+                    <span class="accent-link" data-i18n="link_monitor">رصد 🔴</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-double-vpn-btn">
-                    <span>🌐 التوجيه المزدوج (Double VPN)</span>
-                    <span class="accent-link">إعداد 🔗</span>
+                    <span data-i18n="row_double_vpn">🌐 التوجيه المزدوج (Double VPN)</span>
+                    <span class="accent-link" data-i18n="link_config">إعداد 🔗</span>
                 </div>
                 <div class="setting-row">
-                    <span>⚡ مفتاح الإيقاف الطارئ (Kill Switch)</span>
+                    <span data-i18n="toggle_killswitch">⚡ مفتاح الإيقاف الطارئ (Kill Switch)</span>
                     <label class="switch"><input type="checkbox" id="killswitch-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row">
-                    <span>🛑 مانع الإعلانات والتتبع (AdBlock)</span>
+                    <span data-i18n="toggle_adblock">🛑 مانع الإعلانات والتتبع (AdBlock)</span>
                     <label class="switch"><input type="checkbox" id="adblock-toggle" checked><span class="slider"></span></label>
                 </div>
                 <div class="setting-row clickable-row" id="open-analytics-btn">
-                    <span>تحليل استهلاك الجهاز والتطبيقات</span>
-                    <span class="accent-link">عرض 📊</span>
+                    <span data-i18n="row_analytics">تحليل استهلاك الجهاز والتطبيقات</span>
+                    <span class="accent-link" data-i18n="link_view">عرض 📊</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-wifi-btn">
-                    <span>تحليل شبكة الواي فاي والاتصال</span>
-                    <span class="accent-link">فحص 📶</span>
+                    <span data-i18n="row_wifi_analysis">تحليل شبكة الواي فاي والاتصال</span>
+                    <span class="accent-link" data-i18n="link_scan">فحص 📶</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-dns-test-btn">
-                    <span>فحص تسريب خوادم الـ DNS</span>
-                    <span class="accent-link">فحص 🛡️</span>
+                    <span data-i18n="row_dns_test">فحص تسريب خوادم الـ DNS</span>
+                    <span class="accent-link" data-i18n="link_scan">فحص 🛡️</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-history-btn">
-                    <span>سجل جلسات الأمان السابقة</span>
-                    <span class="accent-link">السجل 📜</span>
+                    <span data-i18n="row_history">سجل جلسات الأمان السابقة</span>
+                    <span class="accent-link" data-i18n="link_history">السجل 📜</span>
                 </div>
                 <div class="setting-row clickable-row" id="open-split-btn">
-                    <span>إعدادات النفق المنفصل (Split)</span>
-                    <span class="accent-link">تخصيص ⚙️</span>
+                    <span data-i18n="row_split_tunneling">إعدادات النفق المنفصل (Split)</span>
+                    <span class="accent-link" data-i18n="link_customize">تخصيص ⚙️</span>
                 </div>
             </div>
 
             <div class="stats-grid">
                 <div class="stat-box glass-card">
-                    <span>التحميل المشفر</span>
+                    <span data-i18n="stat_encrypted_dl">التحميل المشفر</span>
                     <strong id="download-speed">0.0 MB/s</strong>
                 </div>
                 <div class="stat-box glass-card">
-                    <span>الرفع الآمن</span>
+                    <span data-i18n="stat_secure_ul">الرفع الآمن</span>
                     <strong id="upload-speed">0.0 MB/s</strong>
                 </div>
             </div>
         </main>
 
         <footer class="app-footer">
-            <a href="privacy-policy.html" target="_blank" id="open-policy-link">الخصوصية</a> • 
-            <a href="#" id="reopen-disclosure-link">إفصاح الخدمة</a> • 
+            <a href="privacy-policy.html" target="_blank" id="open-policy-link" data-i18n="footer_privacy">الخصوصية</a> • 
+            <a href="#" id="reopen-disclosure-link" data-i18n="footer_disclosure">إفصاح الخدمة</a> • 
             <span class="version-tag">v18.0 Chrono-Photonic Sovereign Edition</span>
         </footer>
     </div>
@@ -738,4 +739,4 @@
     <script src="capacitor.js"></script>
     <script src="app.js"></script>
 </body>
-                        </html>
+</html>

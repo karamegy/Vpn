@@ -503,6 +503,8 @@
                     <span class="ai-badge">AI</span>
                 </div>
                 <div class="header-actions">
+                    <!-- عنصر محرك ترجمة جوجل المباشر -->
+                    <div id="google_translate_element"></div>
                     <button id="panic-btn" class="icon-btn panic-icon" title="زر الذعر الفوري (تدمير مؤقت)">🚨</button>
                     <button id="theme-customizer-btn" class="icon-btn" title="تخصيص الثيم">🎨</button>
                     <button id="ai-copilot-btn" class="icon-btn" title="مساعد الذكاء الاصطناعي">🤖</button>
@@ -737,5 +739,17 @@
     <!-- ربط جسر كاباسيتور الأندرويد الأصلي لضمان الاتصال الحقيقي وتفعيل النفق -->
     <script src="capacitor.js"></script>
     <script src="app.js"></script>
+
+    <!-- Google Translate Core Script Integration -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'ar',
+                includedLanguages: 'ar,en,fr,de,es,ru,zh-CN,tr,fa,ur',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
-    </html>
+</html>

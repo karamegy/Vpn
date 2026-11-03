@@ -115,7 +115,6 @@ body::after {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     animation: fadeInOut 3.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     pointer-events: auto;
-    text-align: right;
 }
 
 @keyframes fadeInOut {
@@ -194,7 +193,7 @@ input:checked + .slider:before { transform: translateX(18px); }
     100% { transform: scale(0.8); opacity: 0.4; }
 }
 .radar-log-box {
-    background: rgba(2, 6, 23, 0.9); padding: 10px; border-radius: 10px; max-height: 100px; overflow-y: auto; text-align: right; font-size: 0.7rem; border: 1px solid var(--panel-border);
+    background: rgba(2, 6, 23, 0.9); padding: 10px; border-radius: 10px; max-height: 100px; overflow-y: auto; font-size: 0.7rem; border: 1px solid var(--panel-border);
 }
 .radar-log-item { margin-bottom: 5px; color: #cbd5e1; font-family: monospace; }
 
@@ -435,7 +434,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 }
 .setting-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #cbd5e1; font-weight: 500; padding: 2px 0; }
 .clickable-row { cursor: pointer; padding: 4px 2px; border-radius: 6px; transition: color 0.2s; }
-.clickable-row:hover { color: var(--accent-color); background: rgba(255, 255, 255, 0.03); padding-right: 6px; }
+.clickable-row:hover { color: var(--accent-color); background: rgba(255, 255, 255, 0.03); }
 .accent-link { color: var(--accent-color); font-weight: 800; font-size: 0.7rem; }
 
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -455,7 +454,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 .modal-content {
     background: #0f172a;
     border-radius: 24px; padding: 22px; max-width: 390px; width: 100%;
-    text-align: right; border: 1px solid var(--panel-border);
+    border: 1px solid var(--panel-border);
     max-height: 85vh; overflow-y: auto;
     box-shadow: 0 20px 50px rgba(0,0,0,0.8);
 }
@@ -578,4 +577,46 @@ input:checked + .slider:before { transform: translateX(18px); }
 
 #photonic-canvas-overlay {
     transition: opacity 0.3s ease;
+}
+
+/* ============================================================================
+   ضبط الاتجاهات والتوطين التلقائي (RTL vs LTR Internationalization Rules)
+   ============================================================================ */
+
+/* الاتجاه الافتراضي العربي (RTL) */
+html[dir="rtl"] .toast-message,
+html[dir="rtl"] .modal-content,
+html[dir="rtl"] .radar-log-box {
+    text-align: right;
+}
+
+html[dir="rtl"] .clickable-row:hover {
+    padding-right: 6px;
+}
+
+/* اتجاه اللغات اللاتينية والإنجليزية (LTR) */
+html[dir="ltr"] .toast-message,
+html[dir="ltr"] .modal-content,
+html[dir="ltr"] .radar-log-box,
+html[dir="ltr"] .modal-content div[style*="text-align: right"] {
+    text-align: left !important;
+}
+
+html[dir="ltr"] .setting-row {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+html[dir="ltr"] .clickable-row:hover {
+    padding-left: 6px;
+    padding-right: 2px;
+}
+
+html[dir="ltr"] .badge-btn span {
+    margin-right: 0;
+    margin-left: 5px;
+}
+
+html[dir="ltr"] .modal-buttons {
+    justify-content: flex-start;
 }

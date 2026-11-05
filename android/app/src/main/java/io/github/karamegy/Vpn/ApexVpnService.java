@@ -80,8 +80,7 @@ public class ApexVpnService extends VpnService {
                        .addAddress("10.0.0.2", 32)
                        .addDnsServer(ADGUARD_DNS)
                        .addDnsServer(SECONDARY_DNS)
-                       .addRoute(ADGUARD_DNS, 32)
-                       .addRoute(SECONDARY_DNS, 32)
+                       .addRoute("0.0.0.0", 0) // ✅ توجيه كافة البيانات عبر النفق الحقيقي
                        .setMtu(1500);
 
                 try {
@@ -94,7 +93,7 @@ public class ApexVpnService extends VpnService {
                     return;
                 }
 
-                Log.i(TAG, "✅ تم تشغيل النفق المحسن بنجاح عبر: " + serverName);
+                Log.i(TAG, "✅ تم تشغيل النفق الحقيقي بنجاح عبر: " + serverName);
                 runPacketLoop();
 
             } catch (Exception ex) {
@@ -117,16 +116,15 @@ public class ApexVpnService extends VpnService {
                 int length = in.read(packetBuffer);
                 if (length > 28) {
                     int ipVersion = (packetBuffer[0] >> 4) & 0x0F;
-                    if (ipVersion != 4) continue; // فحص IPv4
+                    if (ipVersion != 4) continue;
 
                     int ipHeaderLen = (packetBuffer[0] & 0x0F) * 4;
                     int protocol = packetBuffer[9] & 0xFF;
 
-                    // معالجة حزم UDP (البروتوكول 17)
+                    // معالجة وحجب حزم UDP الخاصة بـ DNS (Port 53)
                     if (protocol == 17 && length >= ipHeaderLen + 8) {
                         int dstPort = ((packetBuffer[ipHeaderLen + 2] & 0xFF) << 8) | (packetBuffer[ipHeaderLen + 3] & 0xFF);
                         
-                        // التحقق من أن منفذ الوجهة هو DNS (Port 53)
                         if (dstPort == 53) {
                             int dnsPayloadOffset = ipHeaderLen + 8;
                             int dnsPayloadLen = length - dnsPayloadOffset;
@@ -137,7 +135,7 @@ public class ApexVpnService extends VpnService {
 
                                 dnsThreadPool.execute(() -> {
                                     try (DatagramSocket taskSocket = new DatagramSocket()) {
-                                        protect(taskSocket); // استثناء السوكت من التوجيه التكراري
+                                        protect(taskSocket);
                                         taskSocket.setSoTimeout(1500);
 
                                         DatagramPacket outPacket = new DatagramPacket(
@@ -187,8 +185,8 @@ public class ApexVpnService extends VpnService {
             byte[] ipPacket = new byte[totalLen];
 
             System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
-            System.arraycopy(requestPacket, 16, ipPacket, 12, 4); // المصدر -> الوجهة
-            System.arraycopy(requestPacket, 12, ipPacket, 16, 4); // الوجهة -> المصدر
+            System.arraycopy(requestPacket, 16, ipPacket, 12, 4);
+            System.arraycopy(requestPacket, 12, ipPacket, 16, 4);
 
             ipPacket[2] = (byte) (totalLen >> 8);
             ipPacket[3] = (byte) (totalLen & 0xFF);

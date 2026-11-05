@@ -34,32 +34,18 @@ public class ApexVpnService extends VpnService {
     private Thread vpnThread = null;
     private ExecutorService dnsThreadPool;
 
-    // إعدادات افتراضية لنفق التوجيه الشامل (Full Tunnel & WARP Node)
-    private String currentServerIp = "162.159.192.1";
-    private String currentServerName = "Cloudflare WARP Node";
-    private String warpPrivateKey = "";
-    private String warpClientIp = "10.0.0.2/32";
-    private String warpEndpoint = "162.159.192.1:2408";
-
-    private static final String PRIMARY_DNS = "1.1.1.1";
-    private static final String SECONDARY_DNS = "1.0.0.1";
     private static final String ADGUARD_DNS = "94.140.14.14";
+    private static final String SECONDARY_DNS = "1.1.1.1";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : "";
-
-        if (intent != null) {
-            currentServerName = intent.getStringExtra("serverName") != null ? intent.getStringExtra("serverName") : "Apex Shield Node";
-            currentServerIp = intent.getStringExtra("serverIp") != null ? intent.getStringExtra("serverIp") : "162.159.192.1";
-            warpPrivateKey = intent.getStringExtra("warpPrivateKey") != null ? intent.getStringExtra("warpPrivateKey") : "";
-            warpClientIp = intent.getStringExtra("warpClientIp") != null ? intent.getStringExtra("warpClientIp") : "10.0.0.2/32";
-            warpEndpoint = intent.getStringExtra("warpEndpoint") != null ? intent.getStringExtra("warpEndpoint") : currentServerIp + ":2408";
-        }
+        String serverName = intent != null ? intent.getStringExtra("serverName") : "Apex Shield Node";
+        String serverIp = intent != null ? intent.getStringExtra("serverIp") : ADGUARD_DNS;
 
         if (ACTION_CONNECT.equals(action) || "START".equals(action) || "START_VPN".equals(action)) {
-            startForegroundNotification(currentServerName);
-            startVpnConnection();
+            startForegroundNotification(serverName);
+            startVpnConnection(serverIp, serverName);
         } else if (ACTION_DISCONNECT.equals(action) || "STOP".equals(action) || "STOP_VPN".equals(action)) {
             stopVpnConnection();
         }
@@ -81,38 +67,26 @@ public class ApexVpnService extends VpnService {
         }
     }
 
-    private synchronized void startVpnConnection() {
+    private synchronized void startVpnConnection(String serverIp, String serverName) {
         if (isRunning) return;
         isRunning = true;
-
-        // زيادة حجم حوض الخيوط لمنع الاختناق مع حركة المرور العالية
-        dnsThreadPool = Executors.newFixedThreadPool(32);
+        
+        dnsThreadPool = Executors.newFixedThreadPool(16);
 
         vpnThread = new Thread(() -> {
             try {
                 Builder builder = new Builder();
-                
-                // استخراج عنوان IP المحلي للنفق
-                String assignedIp = "10.0.0.2";
-                if (warpClientIp != null && warpClientIp.contains("/")) {
-                    assignedIp = warpClientIp.split("/")[0];
-                }
-
-                builder.setSession("Apex Shield Full Tunnel")
-                       .addAddress(assignedIp, 32)
-                       .addDnsServer(PRIMARY_DNS)
-                       .addDnsServer(SECONDARY_DNS)
+                builder.setSession("Apex Shield Protection")
+                       .addAddress("10.0.0.2", 32)
                        .addDnsServer(ADGUARD_DNS)
-                       // 🌐 توجيه كافة حركة المرور (0.0.0.0/0) لتغيير الـ IP الحقيقي
-                       .addRoute("0.0.0.0", 0)
-                       .setMtu(1420);
+                       .addDnsServer(SECONDARY_DNS)
+                       .addRoute(ADGUARD_DNS, 32)
+                       .addRoute(SECONDARY_DNS, 32)
+                       .setMtu(1500);
 
-                // استثناء حزمة التطبيق لتفادي الحلقة التكرارية لربط الاتصالات
                 try {
                     builder.addDisallowedApplication(getPackageName());
-                } catch (Exception e) {
-                    Log.w(TAG, "تعذر استثناء التطبيق من النفق: ", e);
-                }
+                } catch (Exception ignored) {}
 
                 vpnInterface = builder.establish();
                 if (vpnInterface == null) {
@@ -120,7 +94,7 @@ public class ApexVpnService extends VpnService {
                     return;
                 }
 
-                Log.i(TAG, "✅ تم إطلاق نفق التوجيه الشامل وتغيير الـ IP عبر: " + currentServerName + " (" + warpEndpoint + ")");
+                Log.i(TAG, "✅ تم تشغيل النفق المحسن بنجاح عبر: " + serverName);
                 runPacketLoop();
 
             } catch (Exception ex) {
@@ -136,22 +110,23 @@ public class ApexVpnService extends VpnService {
              FileOutputStream out = new FileOutputStream(vpnInterface.getFileDescriptor())) {
 
             byte[] packetBuffer = new byte[32767];
-            InetAddress primaryDns = InetAddress.getByName(PRIMARY_DNS);
-            InetAddress fallbackDns = InetAddress.getByName(ADGUARD_DNS);
+            InetAddress primaryDns = InetAddress.getByName(ADGUARD_DNS);
+            InetAddress fallbackDns = InetAddress.getByName(SECONDARY_DNS);
 
             while (isRunning && !Thread.currentThread().isInterrupted()) {
                 int length = in.read(packetBuffer);
                 if (length > 28) {
                     int ipVersion = (packetBuffer[0] >> 4) & 0x0F;
-                    if (ipVersion != 4) continue;
+                    if (ipVersion != 4) continue; // فحص IPv4
 
                     int ipHeaderLen = (packetBuffer[0] & 0x0F) * 4;
                     int protocol = packetBuffer[9] & 0xFF;
 
-                    // معالجة وحقن طلبات UDP والـ DNS
+                    // معالجة حزم UDP (البروتوكول 17)
                     if (protocol == 17 && length >= ipHeaderLen + 8) {
                         int dstPort = ((packetBuffer[ipHeaderLen + 2] & 0xFF) << 8) | (packetBuffer[ipHeaderLen + 3] & 0xFF);
-
+                        
+                        // التحقق من أن منفذ الوجهة هو DNS (Port 53)
                         if (dstPort == 53) {
                             int dnsPayloadOffset = ipHeaderLen + 8;
                             int dnsPayloadLen = length - dnsPayloadOffset;
@@ -163,15 +138,15 @@ public class ApexVpnService extends VpnService {
                                 dnsThreadPool.execute(() -> {
                                     try (DatagramSocket taskSocket = new DatagramSocket()) {
                                         protect(taskSocket); // استثناء السوكت من التوجيه التكراري
-                                        taskSocket.setSoTimeout(2000);
+                                        taskSocket.setSoTimeout(1500);
 
                                         DatagramPacket outPacket = new DatagramPacket(
                                             requestCopy, dnsPayloadOffset, dnsPayloadLen, primaryDns, 53
                                         );
-
+                                        
                                         byte[] respBuffer = new byte[4096];
                                         DatagramPacket inPacket = new DatagramPacket(respBuffer, respBuffer.length);
-
+                                        
                                         try {
                                             taskSocket.send(outPacket);
                                             taskSocket.receive(inPacket);
@@ -212,8 +187,8 @@ public class ApexVpnService extends VpnService {
             byte[] ipPacket = new byte[totalLen];
 
             System.arraycopy(requestPacket, 0, ipPacket, 0, ipHeaderLen);
-            System.arraycopy(requestPacket, 16, ipPacket, 12, 4); 
-            System.arraycopy(requestPacket, 12, ipPacket, 16, 4); 
+            System.arraycopy(requestPacket, 16, ipPacket, 12, 4); // المصدر -> الوجهة
+            System.arraycopy(requestPacket, 12, ipPacket, 16, 4); // الوجهة -> المصدر
 
             ipPacket[2] = (byte) (totalLen >> 8);
             ipPacket[3] = (byte) (totalLen & 0xFF);

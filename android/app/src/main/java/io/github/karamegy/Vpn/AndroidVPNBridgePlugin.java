@@ -90,7 +90,7 @@ public class AndroidVPNBridgePlugin extends Plugin {
         call.resolve(ret);
     }
 
-    // ✅ دالة الفحص الحقيقي للعتاد والمساحة وذاكرة RAM (بدون أي أرقام محاكاة)
+    // ✅ دالة الفحص الحقيقي للعتاد والمساحة وذاكرة RAM
     @PluginMethod
     public void performNativeScan(PluginCall call) {
         try {
@@ -166,7 +166,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
                 appItem.put("isSystem", (app.flags & ApplicationInfo.FLAG_SYSTEM) != 0);
                 installedAppsList.put(appItem);
 
-                // فحص تطبيقات الطرف الثالث المرتفعة الصلاحيات
                 if ((app.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
                     try {
                         PackageInfo pkgInfo = pm.getPackageInfo(pkgName, PackageManager.GET_PERMISSIONS);
@@ -203,6 +202,9 @@ public class AndroidVPNBridgePlugin extends Plugin {
         }
     }
 
+    // ========================================================================
+    // نظام الاشتراكات والدفع عبر Google Play Billing
+    // ========================================================================
     @PluginMethod
     public void checkSubscriptionStatus(PluginCall call) {
         if (billingClient == null || !billingClient.isReady()) {

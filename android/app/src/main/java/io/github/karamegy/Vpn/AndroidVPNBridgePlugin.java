@@ -1,13 +1,23 @@
 package io.github.karamegy.Vpn;
 
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.VpnService;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
+import android.os.Environment;
+import android.os.StatFs;
 
 import androidx.activity.result.ActivityResult;
 import androidx.core.content.ContextCompat;
 
 import com.android.billingclient.api.*;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -15,6 +25,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
@@ -49,7 +60,6 @@ public class AndroidVPNBridgePlugin extends Plugin {
         }
     }
 
-    // ✅ الدالة المحدثة لتمرير بيانات التشفير و WireGuard إلى الخدمة
     @PluginMethod
     public void toggleVpn(PluginCall call) {
         boolean enable = call.getBoolean("enable", false);
@@ -80,22 +90,117 @@ public class AndroidVPNBridgePlugin extends Plugin {
         call.resolve(ret);
     }
 
+    // ✅ دالة الفحص الحقيقي للعتاد والمساحة وذاكرة RAM (بدون أي أرقام محاكاة)
     @PluginMethod
     public void performNativeScan(PluginCall call) {
-        int appsCount = 0;
         try {
-            if (getContext() != null && getContext().getPackageManager() != null) {
-                appsCount = getContext().getPackageManager().getInstalledApplications(0).size();
+            ActivityManager actManager = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
+            if (actManager != null) {
+                actManager.getMemoryInfo(memInfo);
             }
-        } catch (Exception e) {
-            appsCount = 0;
-        }
 
-        JSObject ret = new JSObject();
-        ret.put("scannedMB", "512.0");
-        ret.put("totalMB", "8192");
-        ret.put("scannedApps", appsCount);
-        call.resolve(ret);
+            File path = Environment.getDataDirectory();
+            StatFs stat = new StatFs(path.getPath());
+            long blockSize = stat.getBlockSizeLong();
+            long totalBlocks = stat.getBlockCountLong();
+            long availableBlocks = stat.getAvailableBlocksLong();
+
+            double totalStorageMB = (totalBlocks * blockSize) / (1024.0 * 1024.0);
+            double usedStorageMB = ((totalBlocks - availableBlocks) * blockSize) / (1024.0 * 1024.0);
+
+            int appsCount = getContext().getPackageManager().getInstalledApplications(0).size();
+
+            JSObject ret = new JSObject();
+            ret.put("scannedMB", String.format("%.1f", usedStorageMB));
+            ret.put("totalMB", String.format("%.0f", totalStorageMB));
+            ret.put("ramAvailableMB", String.format("%.1f", memInfo.availMem / (1024.0 * 1024.0)));
+            ret.put("scannedApps", appsCount);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("خطأ في قراءة بيانات الهاتف الحقيقية", e);
+        }
+    }
+
+    // ✅ دالة قراءة معلومات شبكة الواي فاي الحقيقية
+    @PluginMethod
+    public void getWifiInfo(PluginCall call) {
+        try {
+            WifiManager wifiManager = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            WifiInfo info = wifiManager != null ? wifiManager.getConnectionInfo() : null;
+
+            JSObject ret = new JSObject();
+            if (info != null && info.getNetworkId() != -1) {
+                ret.put("ssid", info.getSSID().replace("\"", ""));
+                ret.put("rssi", info.getRssi() + " dBm");
+                ret.put("linkSpeed", info.getLinkSpeed() + " Mbps");
+                ret.put("isConnected", true);
+            } else {
+                ret.put("ssid", "غير متصل شبكة لاسلكية");
+                ret.put("rssi", "N/A");
+                ret.put("linkSpeed", "N/A");
+                ret.put("isConnected", false);
+            }
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("خطأ في قراءة بيانات الواي فاي", e);
+        }
+    }
+
+    // ✅ دالة الفحص الحقيقي للتطبيقات وصلاحيات التجسس (Stalkerware & App Inspection)
+    @PluginMethod
+    public void auditInstalledApps(PluginCall call) {
+        try {
+            PackageManager pm = getContext().getPackageManager();
+            List<ApplicationInfo> apps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+            JSArray highRiskApps = new JSArray();
+            JSArray installedAppsList = new JSArray();
+
+            for (ApplicationInfo app : apps) {
+                String appLabel = pm.getApplicationLabel(app).toString();
+                String pkgName = app.packageName;
+
+                JSObject appItem = new JSObject();
+                appItem.put("name", appLabel);
+                appItem.put("packageName", pkgName);
+                appItem.put("isSystem", (app.flags & ApplicationInfo.FLAG_SYSTEM) != 0);
+                installedAppsList.put(appItem);
+
+                // فحص تطبيقات الطرف الثالث المرتفعة الصلاحيات
+                if ((app.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
+                    try {
+                        PackageInfo pkgInfo = pm.getPackageInfo(pkgName, PackageManager.GET_PERMISSIONS);
+                        if (pkgInfo.requestedPermissions != null) {
+                            boolean hasCam = false, hasMic = false, hasLoc = false, hasAccessibility = false;
+                            for (String p : pkgInfo.requestedPermissions) {
+                                if (p.contains("CAMERA")) hasCam = true;
+                                if (p.contains("RECORD_AUDIO")) hasMic = true;
+                                if (p.contains("ACCESS_FINE_LOCATION")) hasLoc = true;
+                                if (p.contains("BIND_ACCESSIBILITY_SERVICE")) hasAccessibility = true;
+                            }
+                            if ((hasCam && hasMic) || hasAccessibility) {
+                                JSObject riskApp = new JSObject();
+                                riskApp.put("appName", appLabel);
+                                riskApp.put("packageName", pkgName);
+                                riskApp.put("hasCam", hasCam);
+                                riskApp.put("hasMic", hasMic);
+                                riskApp.put("hasLoc", hasLoc);
+                                riskApp.put("hasAccessibility", hasAccessibility);
+                                highRiskApps.put(riskApp);
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            JSObject ret = new JSObject();
+            ret.put("highRiskApps", highRiskApps);
+            ret.put("installedApps", installedAppsList);
+            ret.put("totalApps", apps.size());
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("خطأ في فحص صلاحيات التطبيقات", e);
+        }
     }
 
     @PluginMethod

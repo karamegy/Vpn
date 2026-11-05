@@ -34,7 +34,6 @@ public class ApexVpnService extends VpnService {
     private Thread vpnThread = null;
     private ExecutorService dnsThreadPool;
 
-    // إعدادات افتراضية لنفق التوجيه الشامل (Full Tunnel & WARP Node)
     private String currentServerIp = "162.159.192.1";
     private String currentServerName = "Cloudflare WARP Node";
     private String warpPrivateKey = "";
@@ -85,14 +84,13 @@ public class ApexVpnService extends VpnService {
         if (isRunning) return;
         isRunning = true;
 
-        // زيادة حجم حوض الخيوط لمنع الاختناق مع حركة المرور العالية
         dnsThreadPool = Executors.newFixedThreadPool(32);
 
         vpnThread = new Thread(() -> {
             try {
                 Builder builder = new Builder();
                 
-                // استخراج عنوان IP المحلي للنفق
+                // استخراج عنوان الـ IP المحلي للنفق
                 String assignedIp = "10.0.0.2";
                 if (warpClientIp != null && warpClientIp.contains("/")) {
                     assignedIp = warpClientIp.split("/")[0];
@@ -103,11 +101,11 @@ public class ApexVpnService extends VpnService {
                        .addDnsServer(PRIMARY_DNS)
                        .addDnsServer(SECONDARY_DNS)
                        .addDnsServer(ADGUARD_DNS)
-                       // 🌐 توجيه كافة حركة المرور (0.0.0.0/0) لتغيير الـ IP الحقيقي
+                       // 🌐 توجيه كافة حركة مرور الإنترنت (Full-Tunnel) لتغيير الـ IP الحقيقي
                        .addRoute("0.0.0.0", 0)
                        .setMtu(1420);
 
-                // استثناء حزمة التطبيق لتفادي الحلقة التكرارية لربط الاتصالات
+                // استثناء حزمة التطبيق لتفادي الحلقات التكرارية للاتصالات الخارجه من السوكت
                 try {
                     builder.addDisallowedApplication(getPackageName());
                 } catch (Exception e) {
@@ -148,7 +146,7 @@ public class ApexVpnService extends VpnService {
                     int ipHeaderLen = (packetBuffer[0] & 0x0F) * 4;
                     int protocol = packetBuffer[9] & 0xFF;
 
-                    // معالجة وحقن طلبات UDP والـ DNS
+                    // معالجة وحقن طلبات الـ UDP والـ DNS
                     if (protocol == 17 && length >= ipHeaderLen + 8) {
                         int dstPort = ((packetBuffer[ipHeaderLen + 2] & 0xFF) << 8) | (packetBuffer[ipHeaderLen + 3] & 0xFF);
 
@@ -162,7 +160,7 @@ public class ApexVpnService extends VpnService {
 
                                 dnsThreadPool.execute(() -> {
                                     try (DatagramSocket taskSocket = new DatagramSocket()) {
-                                        protect(taskSocket); // استثناء السوكت من التوجيه التكراري
+                                        protect(taskSocket); // استثناء السوكت لمنع الارتداد التكراري
                                         taskSocket.setSoTimeout(2000);
 
                                         DatagramPacket outPacket = new DatagramPacket(

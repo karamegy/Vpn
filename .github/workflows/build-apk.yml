@@ -110,8 +110,12 @@ jobs:
           android.useAndroidX=true
           EOF
 
-          # حقن مكتبة Google Play Billing الإصدار 8.0.0 وتثبيت إعدادات منع حذف الجسر
+          # حقن مكتبة WireGuard ومكتبة Google Play Billing الإصدار 8.0.0 وتثبيت إعدادات منع حذف الجسر
           if [ -f "android/app/build.gradle" ]; then
+            if ! grep -q "com.wireguard.android:tunnel" android/app/build.gradle; then
+              printf "\ndependencies {\n    implementation 'com.wireguard.android:tunnel:1.0.20230707'\n}\n" >> android/app/build.gradle
+            fi
+
             if ! grep -q "com.android.billingclient:billing" android/app/build.gradle; then
               printf "\ndependencies {\n    implementation \"com.android.billingclient:billing:8.0.0\"\n}\n" >> android/app/build.gradle
             else
@@ -127,10 +131,11 @@ jobs:
             sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle || true
           fi
 
-          # حماية كلاسات الجسر ومكتبات الدفع في ProGuard
+          # حماية كلاسات الجسر ومكتبات WireGuard والدفع في ProGuard
           cat << 'PROGUARD_EOF' >> android/app/proguard-rules.pro
           -keep class **.AndroidVPNBridge { *; }
           -keep class io.github.karamegy.Vpn.** { *; }
+          -keep class com.wireguard.** { *; }
           -keepclasseswithmembers class * {
               @com.getcapacitor.annotation.CapacitorPlugin <methods>;
               @com.getcapacitor.PluginMethod <methods>;

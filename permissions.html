@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الأذونات والمستشعرات الأمنية - Apex Shield AI</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 31, 48, 0.7);
+            --accent-color: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.2);
+            --accent-blue: #38bdf8;
+            --accent-blue-glow: rgba(56, 189, 248, 0.2);
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            color: var(--accent-color);
+            font-size: 1.3rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-top: 35px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h2:first-of-type {
+            margin-top: 0;
+        }
+
+        p, li {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        ul {
+            padding-right: 20px;
+        }
+
+        li {
+            margin-bottom: 12px;
+        }
+
+        li strong {
+            color: var(--text-primary);
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--accent-glow);
+            color: var(--accent-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid var(--accent-color);
+            margin-top: 10px;
+        }
+
+        .badge-blue {
+            background: var(--accent-blue-glow);
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        /* شبكة بطاقات الأذونات المفصلة */
+        .permission-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .perm-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .perm-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .perm-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .perm-title {
+            font-weight: bold;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-tag {
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background: var(--accent-glow);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+
+        .status-local {
+            background: var(--accent-blue-glow);
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+        }
+
+        .perm-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .perm-api {
+            display: inline-block;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .permission-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ دليل الأذونات والمستشعرات الأمنية</h1>
+            <p>Apex Shield AI - Sovereign Production Edition (v18.0)</p>
+            <div class="badge">الشفافية المطلقة</div>
+            <div class="badge badge-blue">معالجة محلية 100% (Zero-Knowledge)</div>
+        </div>
+
+        <div class="content">
+            <p>لتوفير منظومة الحماية الدفاعية والاستباقية المتكاملة، يحتاج تطبيق <strong>Apex Shield AI</strong> إلى صلاحيات ومستشعرات محددة داخل جهازك. جميع البيانات التي يتم الوصول إليها بواسطة هذه الأذونات <strong>تُعالج فورياً ومحلياً داخل ذاكرة جهازك فقط</strong> دون أي مشاركة أو تخزين خارجي.</p>
+
+            <h2>🔐 1. الأذونات السيادية ونفق الحماية</h2>
+            <div class="permission-grid">
+                <div class="perm-card">
+                    <div class="perm-header">
+                        <span class="perm-title">🌐 خدمة الشبكة الافتراضية (VPN)</span>
+                        <span class="status-tag status-active">أساسي</span>
+                    </div>
+                    <p class="perm-desc">تأسيس نفق المشفر الآمن لحماية ترافيك الجهاز بالكامل وحجب التتبع والإعلانات الطفيلية.</p>
+                    <span class="perm-api">Android VpnService Bridge</span>
+                </div>
+
+                <div class="perm-card">
+                    <div class="perm-header">
+                        <span class="perm-title">📡 حالة الاتصال والشبكة</span>
+                        <span class="status-tag status-active">نشط</span>
+                    </div>
+                    <p class="perm-desc">مراقبة استقرار الـ Wi-Fi والبيانات لضمان إعادة التوجيه الفوري ورصد هجمات رجل في المنتصف (Anti-MITM).</p>
+                    <span class="perm-api">ACCESS_NETWORK_STATE</span>
+                </div>
+            </div>
+
+            <h2>🎙️ 2. أذونات مفاعل التمويه الضوئي والصوتي</h2>
+            <div class="permission-grid">
+                <div class="perm-card">
+                    <div class="perm-header">
+                        <span class="perm-title">🔊 التغذية الصوتية وتوليد الترددات</span>
+                        <span class="status-tag status-local">محلي</span>
+                    </div>
+                    <p class="perm-desc">توليد موجات تشويش عشوائية (Acoustic Jammer) لحماية الميكروفون وإحباط التنصت والتزييف العميق الصوتي.</p>
+                    <span class="perm-api">Web Audio API / AudioContext</span>
+                </div>
+
+                <div class="perm-card">
+                    <div class="perm-header">
+                        <span class="perm-title">📸 مفاعل التمويه الضوئي (Anti-CCTV)</span>
+                        <span class="status-tag status-local">محلي</span>
+                    </div>
+                    <p class="perm-desc">تنشيط الترددات الضوئية وتخريب الالتقاط البصري لكاميرات المراقبة المحيطة بدقة 120Hz.</p>
+                    <span class="perm-api">Chrono-Photonic Engine</span>
+                </div>
+            </div>
+
+            <h2>⚡ 3. مستشعرات العتاد والحماية الفيزيائية</h2>
+            <div class="permission-grid">
+                <div class="perm-card">
+                    <div class="perm-header">
+                        <span class="perm-title">📐 مستشعر الحركة والتسارع</span>
+                        <span class="status-tag status-active">طوارئ</span>
+                    </div>
+                    <p class="perm-desc">رصد قوى الجاذبية (G-Force) المفاجئة ومحاولات المصادرة العنيفة لتفعيل مسح الطوارئ الفوري للبيانات.</p>
+                    <span class="perm-api">devicemotion / Accelerometer</span>
+                </div>
+
+                <div class="perm-card">
+                    <div class="perm-header">
+                        <span class="perm-title">📋 درع الحافظة الذكية</span>
+                        <span class="status-tag status-local">محلي</span>
+                    </div>
+                    <p class="perm-desc">تشفير النصوص المنسوخة وتفريغ ذاكرة الحافظة بانتظام لمنع برمجيات التجسس من سرقة المقاطع.</p>
+                    <span class="perm-api">Neural Clipboard Vaporizer</span>
+                </div>
+
+                <div class="perm-card">
+                    <div class="perm-header">
+                        <span class="perm-title">🚨 درع الإكراه والتفاعل الفسيولوجي</span>
+                        <span class="status-tag status-active">تفاعلي</span>
+                    </div>
+                    <p class="perm-desc">الاستجابة للنقر السريع والضغط المتكرر للتحول الفوري للوضع الوهمي (الآلة الحاسبة السرية).</p>
+                    <span class="perm-api">Duress Reflex Engine</span>
+                </div>
+
+                <div class="perm-card">
+                    <div class="perm-header">
+                        <span class="perm-title">🔔 إشعارات النظام الدائمة</span>
+                        <span class="status-tag status-active">نشط</span>
+                    </div>
+                    <p class="perm-desc">عرض حالة الدرع والنفق المشفر بصفة مستمرة لضمان عدم إغلاق الحماية في الخلفية بواسطة النظام.</p>
+                    <span class="perm-api">POST_NOTIFICATIONS / System Toast</span>
+                </div>
+            </div>
+
+            <h2>🔍 4. كاشف برمجيات التجسس وجدار الحماية</h2>
+            <ul>
+                <li><strong>فحص صلاحيات التطبيقات المثبتة (Stalkerware Detector):</strong> الوصول لقائمة الأذونات الحساسة للتطبيقات المثبتة محلياً فقط لرصد برامج التجسس المخفية.</li>
+                <li><strong>جدار حماية الترافيك (App Traffic Inspector):</strong> تحديد وفحص مسارات اتصالات التطبيقات الخلفية لمنع تسريب البيانات غير المصرح به.</li>
+                <li><strong>تأمين الذاكرة الدائمة (AES-GCM 256 Vault):</strong> استخدام وحدة التشفير العسكري لحفظ الملاحظات وبيانات الخزنة مشفرة بمفتاح PBKDF2 المولد من كلمة مرورك الشخصية.</li>
+            </ul>
+
+            <h2>حقوق الملكية وتطوير النظام</h2>
+            <p>تم تطوير هذا النظام وإدارته وفق مبادئ السيادة الرقمية والحماية الذاتية:</p>
+            <ul>
+                <li><strong>المؤسس والمطور الرئيسي:</strong> كرم حمدي عبدالعظيم محمود عجاج (Karam Hamdy)</li>
+                <li><strong>حقوق النشر العالمية:</strong> محفوظة لـ <strong>EMA / Apex Shield AI</strong> (&copy; 2026)</li>
+                <li><strong>البصمة الأمنية للنواة:</strong> Sovereign WireGuard & Quantum Swarm Core</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            &copy; 2026 Apex Shield AI (v18.0). جميع الحقوق محفوظة لـ EMA | تصميم وتطوير: كرم حمدي
+        </div>
+    </div>
+
+</body>
+</html>
